@@ -20,6 +20,53 @@ return new class extends Migration
             $table->rememberToken();
             $table->foreignId('current_team_id')->nullable();
             $table->string('profile_photo_path', 2048)->nullable();
+
+            //$table->string('code')->nullable();//este es nuevo para el codigo del estudiante
+            $table->string('first_name')->nullable();
+            $table->string('last_name')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('address')->nullable();
+            $table->string('cedula')->nullable();
+            $table->date('fecha_nacimiento')->nullable();
+            $table->string('matricula_numero')->nullable();
+            $table->string('padre')->nullable();
+            $table->string('madre')->nullable();
+            $table->string('tutor')->nullable(); // Tutor legal
+
+            $table->string('nacionalidad')->nullable(); //AUTO IDENTIFICACION ETNICA ESPECIFICAR EN LAS VISTAS
+            $table->enum('genero', ['Masculino', 'Femenino', 'Otro'])->nullable();
+            $table->string('estado_civil')->nullable();
+            $table->string('telefono_emergencia')->nullable();
+            $table->string('contacto_emergencia')->nullable();
+            $table->string('tipo_sangre')->nullable();
+            $table->text('observaciones_medicas')->nullable();
+
+            $table->boolean('discapacidad')->nullable(); // UN RADIO BUTTON - CARGAR CERTIFICADO CON CONDICION
+            $table->string('discapacidad_descripcion')->nullable();
+            $table->string('certificado_discapacidad_path', 2048)->nullable();
+            //DATOS PARA FACTURA
+            $table->boolean('is_facturador')->default(true);
+            $table->string('fact_nombre')->nullable(); //
+            $table->string('fact_documento')->nullable();
+            $table->string('fact_correo')->nullable();
+            $table->string('fact_direccion')->nullable();
+            $table->string('fact_telefono')->nullable();
+
+            //datos por agregar
+            $table->string('etnia')->nullable();
+            $table->string('ocupacion')->nullable();
+            $table->string('bono_dh')->nullable();
+            $table->boolean('is_beca')->default(false);
+            $table->string('beca_motivo')->nullable();
+            $table->string('beca_porcentaje')->nullable();
+            $table->string('beca_monto')->nullable();
+            $table->string('ingresos_hogar')->nullable();
+            $table->string('miembros_hogar')->nullable();
+
+
+
+            $table->boolean('is_active')->default(true);
+
             $table->timestamps();
         });
 

@@ -9,9 +9,13 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
+    use HasRoles;
+
     use HasApiTokens;
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -19,6 +23,7 @@ class User extends Authenticatable
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
+
 
     /**
      * The attributes that are mass assignable.
@@ -29,6 +34,34 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'first_name',
+        'last_name',
+        'phone',
+        'address',
+        'cedula',
+        'fecha_nacimiento',
+        'matricula_numero',
+        'padre',
+        'madre',
+        'tutor',
+        'nacionalidad',
+        'genero',
+        'estado_civil',
+        'telefono_emergencia',
+        'contacto_emergencia',
+        'tipo_sangre',
+        'observaciones_medicas',
+        'is_active',
+        'discapacidad',
+        'discapacidad_descripcion',
+        /* 'certificado_discapacidad_path', */
+        'is_facturador',
+        'fact_nombre',
+        'fact_documento',
+        'fact_correo',
+        'fact_direccion',
+        'fact_telefono',
+        'profile_photo_path',
     ];
 
     /**
@@ -50,6 +83,8 @@ class User extends Authenticatable
      */
     protected $appends = [
         'profile_photo_url',
+        /* 'profile_photo_path', */
+        /* 'certificado_discapacidad_path' */
     ];
 
     /**
@@ -62,6 +97,154 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'fecha_nacimiento' => 'date',
+            'is_active' => 'boolean',
         ];
+    }
+
+    // ============ RELACIONES COMO ESTUDIANTE ============
+
+    /**
+     * Matrículas del estudiante
+     */
+    public function matriculas()
+    {
+        return $this->hasMany(Matricula::class, 'user_id');
+    }
+
+    /**
+     * Matrícula principal
+     */
+    /* public function matricula()
+    {
+        return $this->belongsTo(Matricula::class);
+    } */
+
+    /**
+     * Detalles de matrícula del estudiante
+     */
+    public function detalleMatriculas()
+    {
+        return $this->hasMany(DetalleMatricula::class, 'user_id');
+    }
+
+    /**
+     * Materias arrastradas por el estudiante
+     */
+    public function materiasArrastradas()
+    {
+        return $this->hasMany(MateriasArrastrada::class, 'user_id');
+    }
+
+    /**
+     * Pagos realizados por el estudiante
+     */
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'user_id');
+    }
+
+    /**
+     * Asistencias del estudiante (a través de detalle_matricula)
+     */
+    public function asistencias()
+    {
+        return $this->hasManyThrough(
+            Asistencia::class,
+            DetalleMatricula::class,
+            'user_id', // FK en detalle_matriculas
+            'detalle_matricula_id', // FK en asistencias
+            'id', // PK en users
+            'id' // PK en detalle_matriculas
+        );
+    }
+
+    // ============ RELACIONES COMO DOCENTE ============
+
+    /**
+     * Asignaciones como docente
+     */
+    public function asignacionesDocente()
+    {
+        return $this->hasMany(AsignacionDocente::class, 'docente_id');
+    }
+
+    /**
+     * Calificaciones registradas como docente
+     */
+    public function calificacionesRegistradas()
+    {
+        return $this->hasMany(Calificacion::class, 'docente_id');
+    }
+
+    /**
+     * Auditorías de calificaciones como docente
+     */
+    public function auditoriasCalificaciones()
+    {
+        return $this->hasMany(AuditoriaCalificacion::class, 'docente_id');
+    }
+
+    /**
+     * Asistencias registradas como docente
+     */
+    public function asistenciasRegistradas()
+    {
+        return $this->hasMany(Asistencia::class, 'docente_id');
+    }
+
+    // ============ MÉTODOS DE UTILIDAD ============
+
+    /**
+     * Verificar si es estudiante
+     */
+    public function esEstudiante(): bool
+    {
+        return $this->hasRole('estudiante');
+    }
+
+    /**
+     * Verificar si es docente
+     */
+    public function esDocente(): bool
+    {
+        return $this->hasRole('docente');
+    }
+
+    /**
+     * Verificar si es administrador
+     */
+    public function esAdministrador(): bool
+    {
+        return $this->hasRole(['admin', 'administrador']);
+    }
+
+    /**
+     * Obtener nombre completo
+     */
+    public function getNombreCompletoAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name) ?: $this->name;
+    }
+
+    public function document(): HasOne
+    {
+        return $this->hasOne(Document::class);
+    }
+
+    public function obligacionesFinancieras()
+    {
+        return $this->hasMany(ObligacionesFinanciera::class);
+    }
+
+    ///para practicas preprofesionales y titutlacion
+    public function practicasPreprofesionales()
+    {
+        return $this->hasMany(PracticaPreprofesional::class, 'user_id');
+    }
+
+    public function notasTitulacion()
+    {
+        return $this->hasMany(NotaTitulacion::class, 'user_id');
     }
 }

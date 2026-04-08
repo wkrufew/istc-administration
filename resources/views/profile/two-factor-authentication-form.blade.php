@@ -1,11 +1,15 @@
 <x-action-section>
-    <x-slot name="title">
-        {{ __('Two Factor Authentication') }}
+    {{-- <x-slot name="title">
+        <span class="text-gray-800 dark:text-gray-200">
+            {{ __('Two Factor Authentication') }}
+        </span>
     </x-slot>
 
     <x-slot name="description">
-        {{ __('Add additional security to your account using two factor authentication.') }}
-    </x-slot>
+        <span class="text-gray-800 dark:text-gray-200">
+            {{ __('Add additional security to your account using two factor authentication.') }}
+        </span>
+    </x-slot> --}}
 
     <x-slot name="content">
         <h3 class="text-lg font-medium text-gray-900">
@@ -52,8 +56,8 @@
                     <div class="mt-4">
                         <x-label for="code" value="{{ __('Code') }}" />
 
-                        <x-input id="code" type="text" name="code" class="block mt-1 w-1/2" inputmode="numeric" autofocus autocomplete="one-time-code"
-                            wire:model="code"
+                        <x-input id="code" type="text" name="code" class="block mt-1 w-1/2"
+                            inputmode="numeric" autofocus autocomplete="one-time-code" wire:model="code"
                             wire:keydown.enter="confirmTwoFactorAuthentication" />
 
                         <x-input-error for="code" class="mt-2" />
@@ -77,7 +81,7 @@
         @endif
 
         <div class="mt-5">
-            @if (! $this->enabled)
+            @if (!$this->enabled)
                 <x-confirms-password wire:then="enableTwoFactorAuthentication">
                     <x-button type="button" wire:loading.attr="disabled">
                         {{ __('Enable') }}
