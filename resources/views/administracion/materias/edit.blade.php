@@ -1,22 +1,49 @@
 <x-admin-layout>
-    <div class="max-w-5xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 sm:p-8">
-            <form action="{{ route('administracion.administrativa.materias.update', $materia) }}" method="POST">
-                @csrf
-                @method('PUT')
+    <div
+        class="max-w-7xl mx-auto bg-white dark:bg-gray-900 shadow-sm rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 mb-6">
 
-                {{-- @include('administracion.paralelos.partials.form') --}}
-                @include('administracion.materias.partials.form')
-
-                <div class="flex justify-center space-x-4 pt-4">
-                    <button type="submit"
-                        class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        Actualizar Materia
-                    </button>
-                    <a href="{{ route('administracion.administrativa.materias.index') }}"
-                        class="inline-flex justify-center rounded-md border border-transparent bg-neutral-800 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2">Cancelar</a>
-                </div>
-            </form>
+        {{-- Header --}}
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">
+                    Editar Materia
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Modifica los datos de la materia seleccionada.
+                </p>
+            </div>
+            <a href="{{ route('administracion.administrativa.materias.index') }}"
+                class="inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-xl transition font-semibold shadow-sm w-full sm:w-auto">
+                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Volver
+            </a>
         </div>
+
+        <form action="{{ route('administracion.administrativa.materias.update', $materia) }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            @include('administracion.materias.partials.form')
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="submit"
+                    class="inline-flex items-center justify-center gap-2 bg-lime-600 hover:bg-lime-700 text-white px-5 py-2.5 rounded-xl transition font-semibold shadow-sm">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Actualizar Materia
+                </button>
+                <a href="{{ route('administracion.administrativa.materias.index') }}"
+                    class="inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-xl transition font-semibold shadow-sm">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+
+        @livewire('administration.gestion-prerequisitos', ['materia_id' => $materia->id])
     </div>
 </x-admin-layout>

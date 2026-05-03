@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/laragon/www/istc-administrativa/app/Livewire/Administration/*.php)",
+      "Bash(git -C /c/laragon/www/istc-administrativa log --oneline)",
+      "Bash(php artisan *)"
+    ]
+  }
+}

@@ -32,15 +32,10 @@ class HorarioEstudiante extends Component
     {
         $this->periodos = Periodo::orderBy('fecha_inicio', 'desc')->get();
 
-        // Periodo actual por defecto
-        $periodo_actual = Periodo::where('is_current', true)->first();
-
-        if ($periodo_actual) {
-            $this->periodo_id = $periodo_actual->id;
-        } else {
-            // Si no hay periodo actual, tomar el último
-            $this->periodo_id = $this->periodos->first()?->id;
-        }
+        // Período activo para la carrera del estudiante, con fallback al primero disponible
+        $ultimaMatricula  = Auth::user()->matriculas()->with('carrera')->latest()->first();
+        $periodoDeCarrera = $ultimaMatricula?->carrera?->periodoActual();
+        $this->periodo_id = $periodoDeCarrera?->id ?? $this->periodos->first()?->id;
     }
 
     public function updatedPeriodoId()

@@ -24,6 +24,10 @@ return [
 
         // Para primer ingreso al sistema (incluye credenciales)
         'matricula_bienvenida'   => env('WHATSAPP_TEMPLATE_BIENVENIDA', 'matricula_bienvenida'),
+
+        // Tickets de soporte
+        'ticket_nuevo'           => env('WHATSAPP_TEMPLATE_TICKET_NUEVO', 'ticket_nuevo'),
+        'ticket_respuesta'       => env('WHATSAPP_TEMPLATE_TICKET_RESPUESTA', 'ticket_respuesta'),
     ],
 
 ];

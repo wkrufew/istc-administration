@@ -8,7 +8,6 @@ use App\Models\Periodo;
 use App\Models\AsignacionDocente;
 use App\Models\DetalleMatricula;
 use App\Models\Horario;
-use App\Models\Matricula;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -25,21 +24,30 @@ class ReportesCarrerasMaterias extends Component
 
     public function mount(): void
     {
-        // Preseleccionar periodo actual si existe
-        $actual = Periodo::where('is_current', true)->first();
-        if ($actual) $this->periodoId = $actual->id;
+        // Sin pre-selección: el admin elige carrera primero
+    }
+
+    public function updatedCarreraId(): void
+    {
+        $this->periodoId = null;
+        $this->materiaId = null;
+
+        if ($this->carreraId) {
+            $carrera = Carrera::find($this->carreraId);
+            $this->periodoId = $carrera?->periodoActual()?->id
+                ?? Periodo::whereHas('carreras', fn($q) => $q->where('carreras.id', $this->carreraId))
+                    ->orderByDesc('fecha_inicio')->first()?->id;
+        }
     }
 
     // Reset selección secundaria al cambiar tipo
     public function updatedTipoReporte(): void
     {
-        $this->carreraId = null;
         $this->materiaId = null;
     }
 
     public function updatedPeriodoId(): void
     {
-        $this->carreraId = null;
         $this->materiaId = null;
     }
 
@@ -49,7 +57,10 @@ class ReportesCarrerasMaterias extends Component
     #[Computed]
     public function periodos()
     {
-        return Periodo::orderByDesc('fecha_inicio')->get();
+        if (! $this->carreraId) return collect();
+
+        return Periodo::whereHas('carreras', fn($q) => $q->where('carreras.id', $this->carreraId))
+            ->orderByDesc('fecha_inicio')->get();
     }
 
     #[Computed]

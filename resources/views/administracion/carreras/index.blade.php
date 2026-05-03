@@ -176,12 +176,12 @@
                                     </form>
 
                                     {{-- Asignación --}}
-                                    <a href="#"
+                                    {{-- <a href="#"
                                         class="hidden lg:inline-flex items-center justify-center px-3 py-2 rounded-xl
                                         bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs
                                         dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-200 transition">
                                         Asignación
-                                    </a>
+                                    </a> --}}
                                 </div>
                             </td>
                         </tr>

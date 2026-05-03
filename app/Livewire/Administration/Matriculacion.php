@@ -20,12 +20,14 @@ use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
 use Livewire\Attributes\Computed;
 use Carbon\Carbon;
+use App\Jobs\EnviarEmailMatricula;
 use App\Jobs\EnviarWhatsappMatricula;
+use App\Services\SettingService;
+use App\Traits\WithAuthorization;
 
 class Matriculacion extends Component
 {
-
-    use WithPagination;
+    use WithPagination, WithAuthorization;
 
     // -------------------------------------------------------------------------
     // PROPIEDADES DE BÚSQUEDA Y FILTROS
@@ -87,7 +89,7 @@ class Matriculacion extends Component
     // =========================================================================
     public function mount()
     {
-        $this->selectedPeriodo = Periodo::where('is_current', true)->first()?->id ?? '';
+        $this->selectedPeriodo = Periodo::periodoActivoGlobal()?->id ?? '';
     }
 
     // =========================================================================
@@ -99,26 +101,34 @@ class Matriculacion extends Component
         return User::role('estudiante')
             ->when(
                 $this->search,
-                fn($q) =>
-                $q->where(
-                    fn($q2) =>
-                    $q2->where('name',              'like', "%{$this->search}%")
+                fn($q) => $q->where(
+                    fn($q2) => $q2
+                        ->where('name',              'like', "%{$this->search}%")
                         ->orWhere('email',           'like', "%{$this->search}%")
                         ->orWhere('cedula',          'like', "%{$this->search}%")
                         ->orWhere('matricula_numero', 'like', "%{$this->search}%")
                 )
             )
-            ->with([
-                'matriculas' => fn($q) =>
-                $q->when(
-                    $this->selectedPeriodo,
-                    fn($q2) =>
-                    $q2->where('periodo_id', $this->selectedPeriodo)
+            ->when(
+                $this->selectedCarrera || $this->selectedPeriodo,
+                fn($q) => $q->whereHas('matriculas', fn($q2) => $q2
+                    ->when($this->selectedCarrera, fn($q3) => $q3->where('carrera_id', $this->selectedCarrera))
+                    ->when($this->selectedPeriodo, fn($q3) => $q3->where('periodo_id', $this->selectedPeriodo))
                 )
+            )
+            ->with([
+                'matriculas' => fn($q) => $q
+                    ->when($this->selectedCarrera, fn($q2) => $q2->where('carrera_id', $this->selectedCarrera))
+                    ->when($this->selectedPeriodo, fn($q2) => $q2->where('periodo_id', $this->selectedPeriodo))
+                    ->latest(),
             ])
             ->orderBy('name')
             ->paginate(10);
     }
+
+    public function updatedSelectedCarrera(): void { $this->resetPage(); }
+    public function updatedSelectedPeriodo(): void  { $this->resetPage(); }
+    public function updatedSearch(): void           { $this->resetPage(); }
 
     #[Computed]
     public function carreras()
@@ -137,6 +147,8 @@ class Matriculacion extends Component
     // =========================================================================
     public function iniciarMatricula($estudianteId)
     {
+        if ($this->sinPermiso('gestionar_matriculas')) return;
+
         $this->resetFormulario();
 
         $this->estudiante = User::with([
@@ -144,7 +156,7 @@ class Matriculacion extends Component
             'matriculas.carrera',
         ])->find($estudianteId);
 
-        $this->periodo_id = Periodo::where('is_current', true)->first()?->id ?? '';
+        $this->periodo_id = Periodo::periodoActivoGlobal()?->id ?? '';
 
         // Pre-seleccionar carrera más reciente
         $ultimaMatricula = $this->estudiante->matriculas()->latest()->first();
@@ -160,6 +172,15 @@ class Matriculacion extends Component
             ->get()
             ->toArray();
 
+        // Auto-detectar tipo según historial
+        if (!empty($this->materiasArrastradas)) {
+            $this->tipo = 'Arrastre';
+        } elseif ($this->estudiante->matriculas()->count() > 0) {
+            $this->tipo = 'Renovacion';
+        } else {
+            $this->tipo = 'Nueva';
+        }
+
         $this->paso      = 1;
         $this->showModal = true;
         $this->dispatch('modal-opened');
@@ -167,6 +188,8 @@ class Matriculacion extends Component
 
     public function editarMatricula($matriculaId)
     {
+        if ($this->sinPermiso('gestionar_matriculas')) return;
+
         $this->resetFormulario();
 
         $matricula = Matricula::with([
@@ -231,6 +254,14 @@ class Matriculacion extends Component
         $this->paso--;
     }
 
+    public function siguientePasoConParalelos(array $paralelos): void
+    {
+        $this->paralelosSeleccionados = collect($paralelos)
+            ->mapWithKeys(fn($v, $k) => [(int) $k => (int) $v])
+            ->toArray();
+        $this->siguientePaso();
+    }
+
     // =========================================================================
     // CARGA DE DATOS
     // =========================================================================
@@ -262,7 +293,7 @@ class Matriculacion extends Component
                     'id'                     => $materia->id,
                     'name'                   => $materia->name,
                     'code'                   => $materia->code,
-                    'credits'                => $materia->credits,
+                    'credits'                => ($materia->horas_teoricas + $materia->horas_practicas) / 48,
                     'tipo'                   => $materia->tipo,
                     'puede_inscribir'        => $prerequisitosCumplidos,
                     'prerequisitos_faltantes' => $prerequisitosCumplidos
@@ -388,33 +419,43 @@ class Matriculacion extends Component
         $this->montoMatricula = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
         $this->montoArancel   = round($carrera->costo_carrera / $semestres, 2);
 
-        // Créditos y costo de materias normales (solo informativo en el resumen)
-        $this->totalCreditos = 0;
-        $costoArrastres      = 0;
+        // Créditos: acumular horas brutas de TODAS las materias y dividir una sola vez al final
+        // Esto evita pérdida de precisión al redondear créditos individuales antes de sumar
+        $totalHoras     = 0;
+        $costoArrastres = 0;
 
         if (! empty($this->materiasSeleccionadas)) {
             $materias = Materia::whereIn('id', $this->materiasSeleccionadas)->get();
             foreach ($materias as $materia) {
-                $this->totalCreditos += $materia->credits;
+                $totalHoras += $materia->horas_teoricas + $materia->horas_practicas;
             }
         }
 
-        // Calcular costo adicional de arrastres con +10%
+        // Costo de arrastres: usar el valor guardado en materias_arrastradas
         foreach ($this->materiasArrastradas as &$materiaArrastrada) {
             if (! ($materiaArrastrada['incluir'] ?? false)) continue;
 
             $materia = Materia::find($materiaArrastrada['materia_id']);
             if (! $materia) continue;
 
-            $this->totalCreditos += $materia->credits;
+            $totalHoras += $materia->horas_teoricas + $materia->horas_practicas;
 
-            // costo_credito(carrera) × creditos(materia) × 1.10
-            $costoBase = $carrera->costo_credito * $materia->credits;
-            $materiaArrastrada['costo_adicional'] = round($costoBase * 1.10, 2);
+            // Leer el costo ya calculado y guardado al momento de ingresar la nota
+            $costoAdicional = floatval($materiaArrastrada['costo_adicional'] ?? 0);
 
-            $costoArrastres += $materiaArrastrada['costo_adicional'];
+            // Fallback para registros legacy sin costo guardado
+            if ($costoAdicional <= 0) {
+                $porcentaje     = floatval($materiaArrastrada['porcentaje_penalizacion'] ?? 5) / 100;
+                $costoAdicional = round($materia->credits * $carrera->costo_credito * $porcentaje, 2);
+                $materiaArrastrada['costo_adicional'] = $costoAdicional;
+            }
+
+            $costoArrastres += $costoAdicional;
         }
         unset($materiaArrastrada);
+
+        // División única al final: suma de horas brutas / 48
+        $this->totalCreditos = $totalHoras / 48;
 
         // El total que aparece en el resumen = matrícula + arrastres
         $this->costoTotal  = $this->montoMatricula + $costoArrastres;
@@ -426,6 +467,8 @@ class Matriculacion extends Component
     // =========================================================================
     public function guardarMatricula()
     {
+        if ($this->sinPermiso('gestionar_matriculas')) return;
+
         $this->validate([
             'carrera_id'  => 'required|exists:carreras,id',
             'periodo_id'  => 'required|exists:periodos,id',
@@ -434,6 +477,8 @@ class Matriculacion extends Component
 
         try {
             DB::beginTransaction();
+
+            $esEdicion = (bool) $this->matriculaId;
 
             $carrera   = Carrera::find($this->carrera_id);
             $semestres = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
@@ -451,7 +496,7 @@ class Matriculacion extends Component
                 }
             }
 
-            $montoFinalMatricula = max(0, ($montoMatricula + $costoArrastres) - $this->descuento);
+            $montoFinalMatricula = max(0, ($montoMatricula + $costoArrastres) - (float) $this->descuento);
 
             // ------------------------------------------------------------------
             // CREAR / ACTUALIZAR MATRÍCULA
@@ -525,23 +570,25 @@ class Matriculacion extends Component
             // ------------------------------------------------------------------
             // DETALLES: MATERIAS NORMALES
             // ------------------------------------------------------------------
+            $paralelosUsados = collect();
+
             foreach ($this->materiasSeleccionadas as $materiaId) {
                 $materia = Materia::find($materiaId);
 
                 DetalleMatricula::create([
-                    'asignacion'  => now(),
-                    'code'        => $this->generarCodigoDetalle($matricula->code, $materia->code),
-                    'tipo'        => 'Normal',
-                    'estado'      => 'Inscrito',
+                    'asignacion'    => now(),
+                    'code'          => $this->generarCodigoDetalle($matricula->code, $materia->code),
+                    'tipo'          => 'Normal',
+                    'estado'        => 'Inscrito',
                     'costo_materia' => $materia->credits * $carrera->costo_credito,
                     'es_repeticion' => false,
-                    'matricula_id' => $matricula->id,
-                    'materia_id'   => $materiaId,
-                    'paralelo_id'  => $this->paralelosSeleccionados[$materiaId],
-                    'user_id'      => $this->estudiante->id,
+                    'matricula_id'  => $matricula->id,
+                    'materia_id'    => $materiaId,
+                    'paralelo_id'   => $this->paralelosSeleccionados[$materiaId],
+                    'user_id'       => $this->estudiante->id,
                 ]);
 
-                Paralelo::find($this->paralelosSeleccionados[$materiaId])->increment('cupo_actual');
+                $paralelosUsados->push($this->paralelosSeleccionados[$materiaId]);
             }
 
             // ------------------------------------------------------------------
@@ -553,38 +600,70 @@ class Matriculacion extends Component
                 $materia = Materia::find($materiaArrastrada['materia_id']);
 
                 DetalleMatricula::create([
-                    'asignacion'   => now(),
-                    'code'         => $this->generarCodigoDetalle($matricula->code, $materia->code),
-                    'tipo'         => 'Arrastre',
-                    'estado'       => 'Inscrito',
+                    'asignacion'    => now(),
+                    'code'          => $this->generarCodigoDetalle($matricula->code, $materia->code),
+                    'tipo'          => 'Arrastre',
+                    'estado'        => 'Inscrito',
                     'costo_materia' => $materiaArrastrada['costo_adicional'] ?? 0,
                     'es_repeticion' => true,
-                    'matricula_id' => $matricula->id,
-                    'materia_id'   => $materiaArrastrada['materia_id'],
-                    'paralelo_id'  => $this->paralelosSeleccionados[$materiaArrastrada['materia_id']],
-                    'user_id'      => $this->estudiante->id,
+                    'matricula_id'  => $matricula->id,
+                    'materia_id'    => $materiaArrastrada['materia_id'],
+                    'paralelo_id'   => $this->paralelosSeleccionados[$materiaArrastrada['materia_id']],
+                    'user_id'       => $this->estudiante->id,
                 ]);
 
                 MateriasArrastrada::find($materiaArrastrada['id'])?->update(['estado' => 'Inscrita']);
 
-                Paralelo::find($this->paralelosSeleccionados[$materiaArrastrada['materia_id']])?->increment('cupo_actual');
+                $paralelosUsados->push($this->paralelosSeleccionados[$materiaArrastrada['materia_id']]);
             }
+
+            // Incrementar cupo una sola vez por paralelo único (no una vez por materia)
+            $paralelosUsados->unique()->each(
+                fn($paraleloId) => Paralelo::find($paraleloId)?->increment('cupo_actual')
+            );
 
             DB::commit();
 
             // ------------------------------------------------------------------
             // WHATSAPP — solo en matrículas nuevas, no en ediciones
+            // El try independiente evita que un fallo del job (sync) rompa la UI
             // ------------------------------------------------------------------
             if (! $this->matriculaId) {
-                // Determinar si es la PRIMERA matrícula del estudiante en el sistema
-                // (antes del commit ya se creó esta matrícula, así que contamos > 1)
-                $totalMatriculas = Matricula::where('user_id', $this->estudiante->id)->count();
-                $esPrimerMatricula = $totalMatriculas === 1;
+                try {
+                    $whatsappActivo = SettingService::get('whatsapp.activo', '0') === '1';
+                    $notifWA        = SettingService::get('notificaciones.matricula_whatsapp', '0') === '1';
 
-                EnviarWhatsappMatricula::dispatch(
-                    $matricula->id,
-                    $esPrimerMatricula
-                );
+                    if ($whatsappActivo && $notifWA) {
+                        // Después del commit esta matrícula ya existe, contamos ≥1
+                        $totalMatriculas   = Matricula::where('user_id', $this->estudiante->id)->count();
+                        $esPrimerMatricula = $totalMatriculas === 1;
+
+                        EnviarWhatsappMatricula::dispatch(
+                            $matricula->id,
+                            $esPrimerMatricula
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('WhatsApp dispatch falló (no crítico)', [
+                        'matricula_id' => $matricula->id,
+                        'error'        => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // ------------------------------------------------------------------
+            // EMAIL — nuevas Y ediciones (el Job verifica internamente los settings)
+            // ------------------------------------------------------------------
+            try {
+                $totalMatriculas   = Matricula::where('user_id', $this->estudiante->id)->count();
+                $esPrimerMatricula = ! $esEdicion && $totalMatriculas === 1;
+
+                EnviarEmailMatricula::dispatch($matricula->id, $esPrimerMatricula, $esEdicion);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Email dispatch falló (no crítico)', [
+                    'matricula_id' => $matricula->id,
+                    'error'        => $e->getMessage(),
+                ]);
             }
 
             $this->cerrarModal();
@@ -640,6 +719,7 @@ class Matriculacion extends Component
             'observaciones',
             'materiasSeleccionadas',
             'materiasArrastradas',
+            'materiasDisponibles',
             'paralelosSeleccionados',
             'paralelosDisponibles',
             'paso',

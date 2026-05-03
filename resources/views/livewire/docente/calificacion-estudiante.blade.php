@@ -140,7 +140,7 @@
                         </h2>
                         <p class="text-sm text-gray-600 mt-2">
                             Total estudiantes: {{ count($estudiantes) }}
-                            | Arrastres: {{ collect($estudiantes)->where('estado_final', 'Reprobado')->count() }}
+                            | Arrastres: {{ collect($estudiantes)->where('tipo', 'Arrastre')->count() }}
                         </p>
                     </div>
 
@@ -490,7 +490,7 @@
                                 </div>
 
                                 <!-- Sección de Suspenso (solo visible si aplica) -->
-                                @if ($nota_final >= 4 && $nota_final < 7)
+                                @if ($suspenso)
                                     <div class="mt-6 pt-6 border-t-2 border-amber-200">
                                         <div class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 mb-4">
                                             <div class="flex items-center">
@@ -603,21 +603,14 @@
                                         @enderror
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="block text-sm font-semibold text-slate-700">Es Arrastre</label>
+                                        <label class="block text-sm font-semibold text-slate-700">Tipo de Matrícula</label>
                                         <div class="flex items-center justify-center h-full">
-                                            <label
-                                                class="flex items-center space-x-3 cursor-pointer bg-blue-50 px-4 py-3 rounded-xl border-2 border-blue-200 transition-all duration-200 hover:bg-blue-100">
-                                                <input type="checkbox" wire:model.live="es_arrastre"
-                                                    @if ($estudiante_seleccionado['tipo'] === 'Arrastre') checked disabled @endif
-                                                    class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
-                                                <span class="text-sm font-semibold text-blue-700">
-                                                    @if ($estudiante_seleccionado['tipo'] === 'Arrastre')
-                                                        Marcado como Arrastre
-                                                    @else
-                                                        Marcar como Arrastre
-                                                    @endif
-                                                </span>
-                                            </label>
+                                            <span class="inline-flex items-center px-4 py-3 rounded-xl text-sm font-semibold
+                                                @if ($estudiante_seleccionado['tipo'] === 'Arrastre') bg-amber-100 text-amber-800 border-2 border-amber-300
+                                                @elseif($estudiante_seleccionado['tipo'] === 'Validacion') bg-blue-100 text-blue-800 border-2 border-blue-300
+                                                @else bg-emerald-100 text-emerald-800 border-2 border-emerald-300 @endif">
+                                                {{ $estudiante_seleccionado['tipo'] }}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -664,12 +657,12 @@
                                             ({{ $examen_parcial ?: '0' }} × 0.2) +
                                             ({{ $examen_final ?: '0' }} × 0.2) =
                                             <span class="font-bold text-lg text-indigo-900">
-                                                {{ number_format($promedio_insumos * 0.6 + ($examen_parcial ?: 0) * 0.2 + ($examen_final ?: 0) * 0.2, 2) }}
+                                                {{ number_format($nota_base, 2) }}
                                             </span>
                                         </p>
                                     </div>
 
-                                    @if ($nota_final >= 4 && $nota_final < 7 && $nota_suspenso)
+                                    @if ($suspenso && $nota_suspenso)
                                         <div class="pt-3 border-t border-amber-200">
                                             <p class="text-amber-800 font-bold text-lg mb-2">
                                                 Cálculo con Suspenso:
@@ -682,7 +675,7 @@
                                             </p>
                                             <p class="text-amber-700 text-sm mt-1">
                                                 <span class="font-semibold">Nota Final:</span>
-                                                {{ number_format($promedio_insumos * 0.6 + ($examen_parcial ?: 0) * 0.2 + ($examen_final ?: 0) * 0.2, 2) }}
+                                                {{ number_format($nota_base, 2) }}
                                                 +
                                                 {{ number_format(($nota_suspenso / 10) * 2.99, 2) }} =
                                                 <span

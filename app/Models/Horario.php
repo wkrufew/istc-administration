@@ -13,8 +13,6 @@ class Horario extends Model
         'hora_fin',
         'is_active',
         'modalidad_clase',
-        'enlace_virtual',
-        'observaciones',
         'materia_id',
         'paralelo_id',
         'periodo_id',

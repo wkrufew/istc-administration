@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Matricula;
+use App\Services\SettingService;
 use App\Services\WhatsappService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -34,12 +35,16 @@ class EnviarWhatsappMatricula implements ShouldQueue
      */
     public function handle(WhatsappService $whatsapp): void
     {
+        if (SettingService::get('notificaciones.matricula_whatsapp') !== '1') {
+            return;
+        }
+
         // Cargar matrícula con todas las relaciones necesarias
         $matricula = Matricula::with([
             'estudiante',
             'carrera',
             'periodo',
-            'obligaciones' => fn($q) => $q->where('tipo', 'MATRICULA')->latest(),
+            'obligacionesFinancieras' => fn($q) => $q->where('tipo', 'MATRICULA')->latest(),
         ])->find($this->matriculaId);
 
         if (! $matricula) {
@@ -50,7 +55,7 @@ class EnviarWhatsappMatricula implements ShouldQueue
         }
 
         $estudiante = $matricula->estudiante;
-        $telefono   = $estudiante->telefono ?? $estudiante->phone ?? null;
+        $telefono   = $estudiante->phone ?? null;
 
         if (! $telefono) {
             Log::warning('WhatsApp Job: estudiante sin teléfono', [
@@ -69,7 +74,7 @@ class EnviarWhatsappMatricula implements ShouldQueue
         $periodo         = $matricula->periodo?->code ?? '—';
 
         // Monto de la obligación de matrícula
-        $obligacion      = $matricula->obligaciones->first();
+        $obligacion      = $matricula->obligacionesFinancieras->first();
         $monto           = $obligacion
             ? '$' . number_format($obligacion->monto_final, 2)
             : '—';

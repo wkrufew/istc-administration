@@ -118,13 +118,6 @@
                                     {{ $horario->periodo->code }}
                                 </span>
 
-                                @if ($horario->periodo->is_current)
-                                    <span
-                                        class="ml-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold
-                                               text-green-700 bg-green-100 dark:text-green-200 dark:bg-green-900/40">
-                                        Actual
-                                    </span>
-                                @endif
                             </div>
                         </div>
 
@@ -262,15 +255,6 @@
                                         {{ $horario->periodo->code }}
                                     </div>
 
-                                    @if ($horario->periodo->is_current)
-                                        <div class="mt-1">
-                                            <span
-                                                class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold
-                                                       text-green-700 bg-green-100 dark:text-green-200 dark:bg-green-900/40">
-                                                Actual
-                                            </span>
-                                        </div>
-                                    @endif
                                 </td>
 
                                 <td class="px-4 py-3 text-center">

@@ -14,9 +14,11 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\MateriaPeriodoParalelo;
 use Carbon\CarbonPeriod;
 use Livewire\Component;
+use App\Traits\WithAuthorization;
 
 class AsistenciaEstudiante extends Component
 {
+    use WithAuthorization;
     // =========================================================================
     // ESTADO PRINCIPAL
     // =========================================================================
@@ -82,7 +84,7 @@ class AsistenciaEstudiante extends Component
             ->whereHas(
                 'periodo',
                 fn($q) =>
-                $q->where('is_current', true)
+                $q->whereHas('carreras', fn($c) => $c->wherePivot('is_current', true))
             )
             ->first();
 
@@ -111,7 +113,7 @@ class AsistenciaEstudiante extends Component
             ->whereHas(
                 'periodo',
                 fn($q) =>
-                $q->where('is_current', true)
+                $q->whereHas('carreras', fn($c) => $c->wherePivot('is_current', true))
             )
             ->orderBy('hora_inicio')
             ->get();
@@ -333,6 +335,7 @@ class AsistenciaEstudiante extends Component
     // =========================================================================
     public function guardarAsistencias(): void
     {
+        if ($this->sinPermiso('gestionar_asistencias')) return;
         if (empty($this->estudiantes)) return;
 
         if ($this->yaRegistrada && ! $this->modoEdicion) {

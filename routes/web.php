@@ -28,16 +28,21 @@ use App\Http\Controllers\Estudiantil\HorariosController;
 use App\Http\Controllers\Estudiantil\PagosController as EstudiantilPagosController;
 use App\Http\Controllers\Estudiantil\UserProfileController;
 use App\Livewire\Administration\ActaCalificacionAdmin;
+use App\Livewire\Administration\DocumentosPersonalForm;
 use App\Livewire\Administration\ObligacionesEstudiante;
 use App\Livewire\Administration\PagoMatricula;
+use App\Livewire\Administration\TicketList;
+use App\Livewire\Administration\TicketCreate;
+use App\Livewire\Administration\TicketShow;
+use App\Livewire\Docente\AvisosDocente;
+use App\Livewire\Estudiante\AvisosEstudiante;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
-use Illuminate\Support\Facades\Artisan;
-
 // Redirigir la raíz al login
 Route::get('/', function () {
     if (Auth::check()) {
+        /** @var \App\Models\User $user */
         $user = auth()->user();
         $welcomeMessage = "¡Bienvenido, " . $user->name . "!";
         // Prioridad de redirección basada en permisos
@@ -91,15 +96,12 @@ Route::middleware([
         //});
         // Perfil de usuario (disponible para todos los administrativos)
         Route::get('users/profile', [UserController::class, 'profile'])->name('users.profile');
-        /* Route::get('/docente-perfil', function () {
-            return view('administracion.docente-perfil.index');
-        })->name('docente-profile'); */
-        // GESTIÓN DE DOCENTES
-        //Route::middleware('permission:gestionar_docentes')->group(function () {
+
         Route::resource('docentes', DocenteController::class)->names('docentes')->except('show');
         Route::get('docentes/{docente}/asignar', [DocenteController::class, 'showAsignar'])->name('docentes.asignar.form');
         Route::post('docentes/{docente}/asignar', [DocenteController::class, 'storeAsignacion'])->name('docentes.asignar.store');
         Route::delete('/docentes/{id}', [DocenteController::class, 'destroy'])->name('docentes.asignar.destroy');
+        Route::get('docentes/{user}/documentos', DocumentosPersonalForm::class)->name('docentes.documentos');
 
 
         //});
@@ -113,22 +115,24 @@ Route::middleware([
         // GESTIÓN ACADÉMICA
         //Route::middleware('permission:gestionar_estructura_academica')->group(function () {
         // Períodos
-        Route::resource('periodos', PeriodoController::class)->names('periodos');
+        Route::get('periodos', \App\Livewire\Administration\PeriodosIndex::class)->name('periodos.index');
+        Route::resource('periodos', PeriodoController::class)->names('periodos')->except('index');
         Route::post('/periodos/{periodo}/cerrar', [PeriodoController::class, 'cerrar'])->name('periodos.cerrar');
         // Carreras
         Route::resource('carreras', CarreraController::class)->names('carreras');
         // Semestres
         Route::resource('semestres', SemestreController::class)->names('semestres');
-        // Materias
-        Route::resource('materias', MateriaController::class)->names('materias');
+        // Materias — índice vía Livewire (modal create/edit integrado)
+        Route::get('materias', \App\Livewire\Administration\MateriasIndex::class)->name('materias.index');
         // Paralelos
         Route::resource('paralelos', ParaleloController::class)->names('paralelos');
-        // Horarios - Rutas adicionales para la gestión de horarios
-        Route::resource('horarios', HorarioController::class)->names('horarios');
+        // Horarios
+        Route::get('horarios', \App\Livewire\Administration\HorariosIndex::class)->name('horarios.index');
+        Route::resource('horarios', HorarioController::class)->names('horarios')->only('create', 'edit', 'destroy');
         //MODULOS POR MATERIA
         Route::resource('materia-periodo-paralelo', MateriaPeriodoParaleloController::class)
             ->names('materia_periodo_paralelo')
-            ->except('show');
+            ->only('index', 'create', 'edit', 'destroy');
         // Matriculacion
         Route::resource('matriculacion', MatriculacionController::class)->names('matriculacion');
         Route::get('/matriculas/{matricula}/pago', PagoMatricula::class)->name('matriculas.pago');
@@ -151,14 +155,38 @@ Route::middleware([
         Route::resource('actas-colegiado', ActasOCSController::class)->names('actas-colegiado');
         // Normas Aprobadas
         Route::resource('normas-aprobadas', NormasAprobadasController::class)->names('normas-aprobadas');
-        // Documentos aun no de docentes y personal administrativo
-        Route::get(
-            'documentacion-personal/create/{user}',
-            [DocumentacionPersonalController::class, 'create']
-        )->name('documentacion-personal.create');
-        Route::resource('documentacion-personal', DocumentacionPersonalController::class)->except(['create'])->names('documentacion-personal');
+        Route::get('documentacion-personal', [DocumentacionPersonalController::class, 'index'])->name('documentacion-personal.index');
 
         Route::get('reportes-carrera-materia', [ReporteCarreraMateriaController::class, 'index'])->name('reportes.carrera-materia');
+        Route::get('consolidado-cohortes', fn() => view('administracion.consolidado-cohortes.index'))->name('consolidado-cohortes');
+
+        // Tickets de soporte
+        Route::get('tickets', TicketList::class)->name('tickets.index');
+        Route::get('tickets/create', TicketCreate::class)->name('tickets.create');
+        Route::get('tickets/{ticket}', TicketShow::class)->name('tickets.show');
+
+        // Configuración del sistema
+        Route::get('settings', \App\Livewire\Administration\AdminSettings::class)->name('settings');
+
+        // Otras rutas administrativas (rutas de despliguegue) - Solo accesibles para usuarios con permisos específicos
+        //Rutas para despliegue
+        //deseo que estas rutas se accionen mediante un boton en el dashboard administrativo, y que solo sean accesibles para usuarios con permisos específicos
+        /* Route::middleware('permission:despliegue')->group(function () {
+            Route::get('/despliegue/clear-cache', function () {
+                Artisan::call('cache:clear');
+                return redirect()->back()->with('success', 'Cache limpiada correctamente.');
+            })->name('despliegue.clear-cache');
+
+            Route::get('/despliegue/optimize', function () {
+                Artisan::call('optimize');
+                return redirect()->back()->with('success', 'Aplicación optimizada correctamente.');
+            })->name('despliegue.optimize');
+
+            Route::get('/despliegue/migrate', function () {
+                Artisan::call('migrate', ['--force' => true]);
+                return redirect()->back()->with('success', 'Migraciones ejecutadas correctamente.');
+            })->name('despliegue.migrate');
+        }); */
     });
 
     Route::middleware('permisos:acceso_docencia')->prefix('administracion/docencia')->name('administracion.docencia.')->group(function () {
@@ -173,6 +201,9 @@ Route::middleware([
         Route::get('/docente-perfil', function () {
             return view('docencia.docente-perfil.index');
         })->name('docente-profile');
+
+        // Avisos a estudiantes
+        Route::get('avisos', AvisosDocente::class)->name('avisos');
     });
 
     Route::middleware('permisos:acceso_estudiantil')->prefix('administracion/estudiantil')->name('administracion.estudiantil.')->group(function () {
@@ -186,27 +217,28 @@ Route::middleware([
         Route::get('perfil-estudiante', [UserProfileController::class, 'index'])->name('estudiante-profile');
         Route::get('obligaciones-financieras', [EstudiantilPagosController::class, 'index'])->name('obligaciones-financieras');
         Route::get('acta-calificaciones', [ActaCalificacionesController::class, 'index'])->name('acta-calificaciones.index');
+        Route::get('avisos', AvisosEstudiante::class)->name('avisos');
+    });
+
+    Route::middleware('permisos:acceso_admision')->prefix('administracion/admision ')->name('administracion.admision.')->group(function () {
+        Route::get('/', function () {
+            return view('admision.dashboard-admision');
+        })->name('dashboard');
+
+        // Rutas para informacion para que el estudiante pueda ver los requisitos para el proceso de admision
+        // Ruta para que el estudiante pueda descargar los requisitos para el proceso de admision
+        // Ruta para que el estudiante pueda ver el estado de su proceso de admision
+        // Ruta para que el estudiante pueda rellenar un formulario para el proceso de admision con sus datos personales y academico
+        // Rutas para que el estudiante pueda subir documentos para el proceso de admision
     });
 });
 
 // Ruta para manejar accesos no autorizados
-Route::get('/acceso-denegado', function () {
+/* Route::get('/acceso-denegado', function () {
     return view('errors.403')->with('message', 'No tienes permisos para acceder a esta sección.');
-})->name('access.denied');
+})->name('access.denied'); */
 
-
-//Rutas para despliegue
-Route::get('key-generate', function () {
-    $exitCode = Artisan::call('key:generate');
-    return 'Key generada';
-});
-
-Route::get('storage-link', function () {
-    $exitCode = Artisan::call('storage:link');
-    return 'Simbolic Link establecido';
-});
-
-Route::get('/optimize-clear', function () {
+/* Route::get('/optimize-clear', function () {
     $exitCode = Artisan::call('optimize:clear');
     return 'Depurada cache';
-});
+}); */

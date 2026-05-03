@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\SettingService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -11,13 +12,11 @@ class WhatsappService
     private string $phoneNumberId;
     private string $accessToken;
     private string $apiVersion = 'v19.0';
-    /**
-     * Create a new class instance.
-     */
+
     public function __construct()
     {
-        $this->phoneNumberId = config('whatsapp.phone_number_id');
-        $this->accessToken   = config('whatsapp.access_token');
+        $this->phoneNumberId = SettingService::get('whatsapp.phone_number_id') ?: config('whatsapp.phone_number_id');
+        $this->accessToken   = SettingService::get('whatsapp.access_token')    ?: config('whatsapp.access_token');
         $this->apiUrl        = "https://graph.facebook.com/{$this->apiVersion}/{$this->phoneNumberId}/messages";
     }
 
@@ -115,7 +114,7 @@ class WhatsappService
 
         return $this->enviarTemplate(
             $telefono,
-            config('whatsapp.templates.matricula_confirmacion', 'matricula_confirmacion'),
+            SettingService::get('whatsapp.template_confirmacion') ?: config('whatsapp.templates.matricula_confirmacion', 'matricula_confirmacion'),
             'es',
             $componentes
         );
@@ -157,7 +156,110 @@ class WhatsappService
 
         return $this->enviarTemplate(
             $telefono,
-            config('whatsapp.templates.matricula_bienvenida', 'matricula_bienvenida'),
+            SettingService::get('whatsapp.template_bienvenida') ?: config('whatsapp.templates.matricula_bienvenida', 'matricula_bienvenida'),
+            'es',
+            $componentes
+        );
+    }
+
+    // =========================================================================
+    // CONFIRMACIÓN DE PAGO DE MATRÍCULA
+    // Template: pago_matricula_confirmacion
+    // Parámetros: {{1}} nombre  {{2}} numero_comprobante  {{3}} monto
+    //             {{4}} metodo_pago  {{5}} fecha_pago  {{6}} codigo_matricula
+    // =========================================================================
+    public function enviarConfirmacionPago(
+        string $telefono,
+        string $nombre,
+        string $numeroComprobante,
+        string $monto,
+        string $metodoPago,
+        string $fechaPago,
+        string $codigoMatricula,
+    ): bool {
+        $componentes = [
+            [
+                'type'       => 'body',
+                'parameters' => [
+                    ['type' => 'text', 'text' => $nombre],
+                    ['type' => 'text', 'text' => $numeroComprobante],
+                    ['type' => 'text', 'text' => $monto],
+                    ['type' => 'text', 'text' => $metodoPago],
+                    ['type' => 'text', 'text' => $fechaPago],
+                    ['type' => 'text', 'text' => $codigoMatricula],
+                ],
+            ],
+        ];
+
+        return $this->enviarTemplate(
+            $telefono,
+            SettingService::get('whatsapp.template_pago') ?: 'pago_matricula_confirmacion',
+            'es',
+            $componentes
+        );
+    }
+
+    // =========================================================================
+    // NUEVO TICKET (notifica al usuario que lo creó)
+    // Template: ticket_nuevo
+    // Parámetros: {{1}} nombre  {{2}} numero  {{3}} titulo  {{4}} prioridad  {{5}} estado
+    // =========================================================================
+    public function enviarNuevoTicket(
+        string $telefono,
+        string $nombre,
+        string $numero,
+        string $titulo,
+        string $prioridad,
+        string $estado
+    ): bool {
+        $componentes = [
+            [
+                'type'       => 'body',
+                'parameters' => [
+                    ['type' => 'text', 'text' => $nombre],
+                    ['type' => 'text', 'text' => $numero],
+                    ['type' => 'text', 'text' => $titulo],
+                    ['type' => 'text', 'text' => $prioridad],
+                    ['type' => 'text', 'text' => $estado],
+                ],
+            ],
+        ];
+
+        return $this->enviarTemplate(
+            $telefono,
+            config('whatsapp.templates.ticket_nuevo', 'ticket_nuevo'),
+            'es',
+            $componentes
+        );
+    }
+
+    // =========================================================================
+    // RESPUESTA EN TICKET (notifica cuando hay una nueva respuesta)
+    // Template: ticket_respuesta
+    // Parámetros: {{1}} nombre  {{2}} numero  {{3}} titulo  {{4}} respondido_por
+    // =========================================================================
+    public function enviarRespuestaTicket(
+        string $telefono,
+        string $nombre,
+        string $numero,
+        string $titulo,
+        string $respondidoPor
+    ): bool {
+        $componentes = [
+            [
+                'type'       => 'body',
+                'parameters' => [
+                    ['type' => 'text', 'text' => $nombre],
+                    ['type' => 'text', 'text' => $numero],
+                    ['type' => 'text', 'text' => $titulo],
+                    ['type' => 'text', 'text' => $respondidoPor],
+                ],
+            ],
+        ];
+
+        return $this->enviarTemplate(
+            $telefono,
+            config('whatsapp.templates.ticket_respuesta', 'ticket_respuesta'),
             'es',
             $componentes
         );

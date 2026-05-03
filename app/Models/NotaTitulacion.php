@@ -150,13 +150,17 @@ class NotaTitulacion extends Model
      */
     public function recalcularNotaFinal(): void
     {
+        // La nota de comunitarias viene de la relación, no es columna directa
+        $this->loadMissing('comunitaria');
+        $notaComunitaria = $this->comunitaria?->nota;
+
         if (
             $this->promedio_malla  !== null &&
             $this->nota_titulacion !== null &&
             $this->nota_practicas  !== null &&
-            $this->nota_comunitarias  !== null
+            $notaComunitaria       !== null
         ) {
-            $promedio_practicas = ((float) $this->nota_practicas + (float) $this->nota_comunitarias) / 2;
+            $promedio_practicas = ((float) $this->nota_practicas + (float) $notaComunitaria) / 2;
             $notaFinal = (
                 (float) $this->promedio_malla  +
                 (float) $this->nota_titulacion +

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->date('fecha_fin');
             $table->date('fecha_limite_matricula');
             $table->date('fecha_limite_pago');
-            $table->boolean('is_current')->default(false)->comment('Indica si es el periodo actual');
             $table->timestamps();
         });
     }

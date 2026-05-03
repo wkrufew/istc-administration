@@ -12,11 +12,11 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
+use App\Traits\WithAuthorization;
 
 class PracticasProfesionales extends Component
 {
-    use WithPagination;
-    use WithFileUploads;
+    use WithPagination, WithFileUploads, WithAuthorization;
 
     // =========================================================================
     // FILTROS INDEX
@@ -165,6 +165,7 @@ class PracticasProfesionales extends Component
         $this->resetFormulario();
         $this->modoEdicion = false;
         $this->showModal   = true;
+        $this->dispatch('modal-opened');
     }
 
     // =========================================================================
@@ -208,6 +209,7 @@ class PracticasProfesionales extends Component
         $this->certificadoPath     = $practica->certificado_empresa_path;
 
         $this->showModal = true;
+        $this->dispatch('modal-opened');
     }
 
     // =========================================================================
@@ -215,25 +217,27 @@ class PracticasProfesionales extends Component
     // =========================================================================
     public function guardar(): void
     {
+        if ($this->sinPermiso('gestionar_practicas_preprofesionales')) return;
+
         $this->validate([
-            'estudianteId'   => 'required|exists:users,id',
-            'carreraId'      => 'required|exists:carreras,id',
-            'empresa'        => 'required|string|max:255',
-            'tutorEmpresa'   => 'required|string|max:255',
+            'estudianteId'    => 'required|exists:users,id',
+            'carreraId'       => 'required|exists:carreras,id',
+            'empresa'         => 'required|string|max:255',
+            'tutorEmpresa'    => 'required|string|max:255',
             'cargoEstudiante' => 'required|string|max:255',
-            'fechaInicio'    => 'required|date',
-            'fechaFin'       => 'nullable|date|after_or_equal:fechaInicio',
-            'totalHoras'     => 'nullable|integer|min:1',
-            'nota'           => 'nullable|numeric|min:0|max:10',
-            'estado'         => 'required|in:En_Curso,Completada,Reprobada',
-            'sector'         => 'nullable|string|max:255',
-            'direccion'      => 'nullable|string|max:255',
-            'cargoTutor'     => 'nullable|string|max:255',
-            'telefono'       => 'nullable|string|max:50',
-            'email'          => 'nullable|email|max:255',
+            'fechaInicio'     => 'required|date',
+            'fechaFin'        => 'nullable|date|after_or_equal:fechaInicio',
+            'totalHoras'      => 'nullable|integer|min:1',
+            'nota'            => 'nullable|numeric|min:0|max:10',
+            'estado'          => 'required|in:En_Curso,Completada,Reprobada',
+            'sector'          => 'nullable|string|max:255',
+            'direccion'       => 'nullable|string|max:255',
+            'cargoTutor'      => 'nullable|string|max:255',
+            'telefono'        => 'nullable|string|max:50',
+            'email'           => 'nullable|email|max:255',
             'cartaAceptacion' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'informeFinal'   => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'certificado'    => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'informeFinal'    => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'certificado'     => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ], [
             'estudianteId.required'    => 'Debes seleccionar un estudiante.',
             'empresa.required'         => 'El nombre de la empresa es requerido.',
@@ -242,6 +246,27 @@ class PracticasProfesionales extends Component
             'fechaInicio.required'     => 'La fecha de inicio es requerida.',
             'fechaFin.after_or_equal'  => 'La fecha de fin debe ser igual o posterior al inicio.',
         ]);
+
+        // Validación de horas mínimas y determinación de estado según nota
+        $carrera   = Carrera::find($this->carreraId);
+        $horasMin  = $carrera ? $carrera->horasMinPreprofesional() : 240;
+        $nota      = $this->nota !== '' ? (float) $this->nota : null;
+        $horas     = (int) ($this->totalHoras ?: 0);
+
+        if ($nota !== null && $nota >= 7 && $horas < $horasMin) {
+            $this->addError('totalHoras', "Se requieren mínimo {$horasMin} horas para {$carrera->tipo_label} ({$horas} registradas).");
+            return;
+        }
+
+        // Auto-determinar estado basado en nota
+        $estadoCalculado = $this->estado;
+        if ($nota !== null) {
+            if ($nota >= 7 && $horas >= $horasMin) {
+                $estadoCalculado = 'Completada';
+            } elseif ($nota < 7) {
+                $estadoCalculado = 'Reprobada';
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -260,9 +285,9 @@ class PracticasProfesionales extends Component
                 'actividades_realizadas' => $this->actividades ?: null,
                 'fecha_inicio'           => $this->fechaInicio,
                 'fecha_fin'              => $this->fechaFin ?: null,
-                'total_horas'            => $this->totalHoras ?: 0,
-                'nota'                   => $this->nota !== '' ? $this->nota : null,
-                'estado'                 => $this->estado,
+                'total_horas'            => $horas,
+                'nota'                   => $nota,
+                'estado'                 => $estadoCalculado,
                 'observaciones'          => $this->observaciones ?: null,
             ];
 
@@ -311,8 +336,7 @@ class PracticasProfesionales extends Component
 
             DB::commit();
 
-            $this->showModal = false;
-            $this->resetFormulario();
+            $this->cerrarModal();
             $this->dispatch('swal', ['tipo' => 'success', 'mensaje' => $mensaje]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -348,6 +372,7 @@ class PracticasProfesionales extends Component
     // =========================================================================
     public function cerrarModal(): void
     {
+        $this->dispatch('modal-closed');
         $this->showModal = false;
         $this->resetFormulario();
     }

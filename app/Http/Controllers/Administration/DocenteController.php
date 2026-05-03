@@ -5,9 +5,6 @@ namespace App\Http\Controllers\Administration;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\Materia;
-use App\Models\Paralelo;
-use App\Models\Periodo;
 use App\Models\AsignacionDocente;
 
 class DocenteController extends Controller
@@ -19,13 +16,7 @@ class DocenteController extends Controller
 
     public function showAsignar(User $docente)
     {
-        $materias = Materia::where('is_active', true)->get();
-        $paralelos = Paralelo::where('is_active', true)->get();
-        $periodos = Periodo::where('is_current', true)->orderByDesc('id')->get();
-
-        $asignaciones = $docente->asignacionesDocente()->with(['materia', 'paralelo', 'periodo'])->get();
-
-        return view('administracion.docentes.asignacion', compact('docente', 'materias', 'paralelos', 'periodos', 'asignaciones'));
+        return view('administracion.docentes.asignacion', compact('docente'));
     }
 
     public function storeAsignacion(Request $request, User $docente)

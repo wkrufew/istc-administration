@@ -1,279 +1,232 @@
 <div>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {{-- Card principal --}}
-        <div
-            class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
-
-            {{-- Header --}}
-            <div class="p-5 sm:p-6 border-b border-gray-200 dark:border-gray-800">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">
-                            Documentación Personal
-                        </h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Gestión de archivos cargados por docentes (curriculum, senescyt, contrato, etc).
-                        </p>
-                    </div>
-
-                    <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-                        {{-- Buscador --}}
-                        <div class="relative w-full sm:w-[380px]">
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <svg class="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24" fill="currentColor">
-                                    <path fill-rule="evenodd"
-                                        d="M10.5 3.75a6.75 6.75 0 1 0 4.02 12.17l3.78 3.78a.75.75 0 1 0 1.06-1.06l-3.78-3.78A6.75 6.75 0 0 0 10.5 3.75Zm-5.25 6.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </div>
-
-                            <input wire:model.live="search" type="search"
-                                placeholder="Buscar por nombre o correo del docente..."
-                                class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 pl-10 pr-4 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
-                        </div>
-
-                        {{-- Botón volver --}}
-                        <a href="{{ route('administracion.administrativa.docentes.index') }}"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                                fill="currentColor">
-                                <path fill-rule="evenodd"
-                                    d="M7.72 12.53a.75.75 0 0 1 0-1.06l7.5-7.5a.75.75 0 1 1 1.06 1.06L9.31 12l6.97 6.97a.75.75 0 1 1-1.06 1.06l-7.5-7.5Z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            Volver
-                        </a>
-                    </div>
-                </div>
+    {{-- ── HEADER ────────────────────────────────────────────────────────────── --}}
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-5 sm:p-6 mb-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    Documentación del Personal
+                </h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Consulta el estado de los expedientes del personal. Para cargar o editar, ve al listado de docentes.
+                </p>
             </div>
 
-            {{-- Notificación --}}
-            @if (session('notificacion'))
-                <div class="px-5 sm:px-6 pt-5">
-                    <div x-data="{ open: true }" x-show="open"
-                        class="flex items-start justify-between gap-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 p-4">
-                        <div class="flex items-start gap-3">
-                            <div
-                                class="h-9 w-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
-                                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                                    fill="currentColor">
-                                    <path fill-rule="evenodd"
-                                        d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53-1.28-1.28a.75.75 0 1 0-1.06 1.06l1.92 1.92c.3.3.79.28 1.06-.1l3.816-5.258Z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </div>
+            <a href="{{ route('administracion.administrativa.docentes.index') }}"
+                class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700
+                       bg-white dark:bg-gray-950 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200
+                       hover:bg-gray-50 dark:hover:bg-gray-800 transition shrink-0">
+                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clip-rule="evenodd" />
+                </svg>
+                Volver a Docentes
+            </a>
+        </div>
 
-                            <div>
-                                <p class="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                                    ¡Acción completada!
-                                </p>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">
-                                    {{ session('notificacion') }}
-                                </p>
-                            </div>
-                        </div>
+        {{-- Buscador --}}
+        <div class="mt-5 relative max-w-sm">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg class="h-4 w-4 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 4.02 12.17l3.78 3.78a.75.75 0 1 0 1.06-1.06l-3.78-3.78A6.75 6.75 0 0 0 10.5 3.75Zm-5.25 6.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <input wire:model.live.debounce.300ms="search" type="search"
+                placeholder="Buscar por nombre, cédula o correo..."
+                class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950
+                       text-gray-900 dark:text-gray-100 pl-9 pr-4 py-2.5 text-sm
+                       placeholder:text-gray-400 dark:placeholder:text-gray-500
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 transition" />
+        </div>
+    </div>
 
-                        <button type="button" x-on:click="open = false"
-                            class="text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-200 transition">
-                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                                fill="currentColor">
-                                <path
-                                    d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                            </svg>
-                        </button>
-                    </div>
+    {{-- ── TABLA ─────────────────────────────────────────────────────────────── --}}
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
+
+        @if ($documentos->count())
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                    <thead class="bg-gray-50 dark:bg-gray-950">
+                        <tr>
+                            <th class="px-5 py-3.5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Docente / Personal
+                            </th>
+                            <th class="px-5 py-3.5 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Archivos
+                            </th>
+                            <th class="px-5 py-3.5 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                                Cargado
+                            </th>
+                            <th class="px-5 py-3.5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Acciones
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach ($documentos as $doc)
+                            @php
+                                $count = $this->countFiles($doc);
+                                $files = [
+                                    'file_curriculum' => ['label' => 'CV',    'full' => 'Curriculum'],
+                                    'file_senescyt'   => ['label' => 'SEN',   'full' => 'Senescyt'],
+                                    'file_contrato'   => ['label' => 'CONT',  'full' => 'Contrato'],
+                                    'file_otro'       => ['label' => 'CED',   'full' => 'Cédula'],
+                                ];
+                            @endphp
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition group">
+
+                                {{-- Docente --}}
+                                <td class="px-5 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-10 w-10 shrink-0 rounded-xl bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+                                            <span class="text-blue-700 dark:text-blue-300 font-bold text-sm">
+                                                {{ strtoupper(substr($doc->user->name ?? 'NA', 0, 2)) }}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                                                {{ $doc->user->name ?? 'Sin usuario' }}
+                                            </p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                {{ $doc->user->email ?? '—' }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {{-- Archivos --}}
+                                <td class="px-5 py-4 text-center">
+                                    <div class="flex flex-col items-center gap-2">
+                                        {{-- Contador --}}
+                                        <span @class([
+                                            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold',
+                                            'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300' => $count === 4,
+                                            'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'  => $count > 0 && $count < 4,
+                                            'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500'      => $count === 0,
+                                        ])>
+                                            {{ $count }} / 4
+                                        </span>
+
+                                        {{-- Links de archivo --}}
+                                        <div class="flex flex-wrap justify-center gap-1">
+                                            @foreach ($files as $field => $meta)
+                                                @if ($doc->$field)
+                                                    <a href="{{ asset('storage/' . $doc->$field) }}" target="_blank"
+                                                        title="{{ $meta['full'] }}"
+                                                        class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold
+                                                               bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300
+                                                               hover:bg-green-200 dark:hover:bg-green-900 transition">
+                                                        <svg class="w-2.5 h-2.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+                                                            <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                                                        </svg>
+                                                        {{ $meta['label'] }}
+                                                    </a>
+                                                @else
+                                                    <span title="{{ $meta['full'] }}"
+                                                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold
+                                                               bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600">
+                                                        {{ $meta['label'] }}
+                                                    </span>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {{-- Fecha --}}
+                                <td class="px-5 py-4 text-center hidden md:table-cell">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                                        {{ $doc->created_at->isoFormat('D MMM YYYY') }}
+                                    </span>
+                                    <p class="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+                                        {{ $doc->created_at->diffForHumans() }}
+                                    </p>
+                                </td>
+
+                                {{-- Acciones --}}
+                                <td class="px-5 py-4 whitespace-nowrap text-right">
+                                    <div class="inline-flex items-center gap-2">
+                                        {{-- Eliminar --}}
+                                        <button
+                                            x-data
+                                            @click="Swal.fire({
+                                                title: '¿Eliminar documentos?',
+                                                html: 'Se eliminarán todos los archivos de <strong>{{ addslashes($doc->user->name ?? 'este docente') }}</strong>. Esta acción no se puede deshacer.',
+                                                icon: 'warning',
+                                                showCancelButton: true,
+                                                confirmButtonColor: '#dc2626',
+                                                cancelButtonColor: '#64748b',
+                                                confirmButtonText: 'Sí, eliminar',
+                                                cancelButtonText: 'Cancelar',
+                                            }).then(r => r.isConfirmed && $wire.deleteDocument({{ $doc->id }}))"
+                                            title="Eliminar"
+                                            class="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-red-200 dark:border-red-900
+                                                   bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950
+                                                   text-red-600 dark:text-red-400 transition">
+                                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- Paginación --}}
+            @if ($documentos->hasPages())
+                <div class="px-5 py-4 border-t border-gray-100 dark:border-gray-800">
+                    {{ $documentos->links() }}
                 </div>
             @endif
 
-            {{-- Tabla --}}
-            <div class="p-5 sm:p-6">
-                @if ($documentacion_personals->count())
-                    <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                            <thead class="bg-gray-50 dark:bg-gray-950">
-                                <tr>
-                                    <th
-                                        class="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                        Docente
-                                    </th>
-
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                        Archivos
-                                    </th>
-
-                                    <th
-                                        class="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                        Fecha
-                                    </th>
-
-                                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300">
-                                        Acciones
-                                    </th>
-                                </tr>
-                            </thead>
-
-                            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                                @foreach ($documentacion_personals as $documentacion_personal)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition">
-                                        {{-- Docente --}}
-                                        <td class="px-4 py-4 whitespace-nowrap">
-                                            <div class="flex items-center gap-3">
-                                                {{-- Avatar --}}
-                                                <div
-                                                    class="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-                                                    <span class="text-blue-700 dark:text-blue-300 font-bold text-sm">
-                                                        {{ strtoupper(substr($documentacion_personal->user->name ?? 'NA', 0, 2)) }}
-                                                    </span>
-                                                </div>
-
-                                                {{-- Nombre + correo --}}
-                                                <div>
-                                                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                        {{ $documentacion_personal->user->name ?? 'Sin usuario' }}
-                                                    </p>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                        {{ $documentacion_personal->user->email ?? '—' }}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        {{-- Archivos --}}
-                                        <td class="px-4 py-4 whitespace-nowrap text-center">
-                                            <div class="flex flex-col items-center gap-2">
-                                                <span
-                                                    class="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200">
-                                                    {{ $this->countFiles($documentacion_personal) }}
-                                                </span>
-
-                                                <div class="flex flex-wrap justify-center gap-1">
-                                                    @php
-                                                        $badges = [
-                                                            'file_curriculum' => 'Curriculum',
-                                                            'file_senescyt' => 'Senescyt',
-                                                            'file_contrato' => 'Contrato',
-                                                            'file_otro' => 'Otro',
-                                                        ];
-                                                    @endphp
-
-                                                    @foreach ($badges as $field => $label)
-                                                        @if ($documentacion_personal->$field)
-                                                            <span
-                                                                class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-200">
-                                                                <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg"
-                                                                    viewBox="0 0 20 20" fill="currentColor">
-                                                                    <path fill-rule="evenodd"
-                                                                        d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.333a1 1 0 0 1-1.425.006L3.29 9.704A1 1 0 1 1 4.704 8.29l3.01 3.01 6.54-6.61a1 1 0 0 1 1.45.6Z"
-                                                                        clip-rule="evenodd" />
-                                                                </svg>
-                                                                {{ $label }}
-                                                            </span>
-                                                        @endif
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        {{-- Fecha --}}
-                                        <td class="px-4 py-4 whitespace-nowrap text-center">
-                                            <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                                {{ $documentacion_personal->created_at->isoFormat('D [de] MMMM [de] Y') }}
-                                            </span>
-                                        </td>
-
-                                        {{-- Acciones --}}
-                                        <td class="px-4 py-4 whitespace-nowrap text-right">
-                                            <div class="inline-flex items-center gap-2">
-                                                {{-- Editar --}}
-                                                <a href="{{ route('administracion.administrativa.documentacion-personal.edit', $documentacion_personal) }}"
-                                                    class="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-                                                    title="Editar">
-                                                    <svg class="w-4 h-4 text-green-600 dark:text-green-400"
-                                                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                                                        fill="currentColor">
-                                                        <path
-                                                            d="M21.7 5.3a1 1 0 0 0 0-1.4l-1.6-1.6a1 1 0 0 0-1.4 0l-1.7 1.7 3 3 1.7-1.7ZM3 17.3V21h3.7l10.9-10.9-3-3L3 17.3Z" />
-                                                    </svg>
-                                                </a>
-
-                                                {{-- Eliminar --}}
-                                                <button wire:click="deleteDocument({{ $documentacion_personal->id }})"
-                                                    wire:confirm="¿Está seguro que desea eliminar todos los documentos de este docente?"
-                                                    class="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950 transition"
-                                                    title="Eliminar">
-                                                    <svg class="w-4 h-4 text-red-600 dark:text-red-300"
-                                                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                                                        fill="currentColor">
-                                                        <path
-                                                            d="M9 3a1 1 0 0 0-1 1v1H4a1 1 0 1 0 0 2h1v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7h1a1 1 0 1 0 0-2h-4V4a1 1 0 0 0-1-1H9Zm1 4h4v13h-4V7Z" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {{-- Paginación --}}
-                    @if ($documentacion_personals->hasPages())
-                        <div class="pt-4">
-                            {{ $documentacion_personals->links() }}
-                        </div>
+        @else
+            {{-- Empty state --}}
+            <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+                <div class="h-16 w-16 rounded-2xl bg-blue-100 dark:bg-blue-950 flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75-6.75a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z" clip-rule="evenodd" />
+                        <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z" />
+                    </svg>
+                </div>
+                <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">
+                    @if($search)
+                        Sin resultados para "{{ $search }}"
+                    @else
+                        No hay documentos registrados
                     @endif
-                @else
-                    {{-- Empty state --}}
-                    <div
-                        class="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center bg-gray-50 dark:bg-gray-950">
-                        <div
-                            class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 dark:bg-blue-950">
-                            <svg class="w-6 h-6 text-blue-700 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24" fill="currentColor">
-                                <path
-                                    d="M7 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-6-6H7Zm7 1.5L19.5 9H14V3.5Z" />
-                            </svg>
-                        </div>
-
-                        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">
-                            No hay resultados
-                        </h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            No se encuentran documentos con ese criterio de búsqueda.
-                        </p>
-                    </div>
-                @endif
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
+                    @if($search)
+                        Intenta con otro nombre, cédula o correo electrónico.
+                    @else
+                        Aún no hay expedientes. Cárgalos desde el listado de docentes.
+                    @endif
+                </p>
             </div>
-        </div>
-
-        {{-- Alerts --}}
-        @push('js')
-            <script>
-                document.addEventListener('livewire:init', () => {
-                    Livewire.on('alert', (eventData) => {
-                        const data = eventData[0];
-
-                        const Toast = Swal.mixin({
-                            toast: true,
-                            position: "top-end",
-                            showConfirmButton: false,
-                            timer: 3000,
-                            timerProgressBar: true,
-                            didOpen: (toast) => {
-                                toast.onmouseenter = Swal.stopTimer;
-                                toast.onmouseleave = Swal.resumeTimer;
-                            }
-                        });
-
-                        Toast.fire({
-                            icon: data.type,
-                            title: data.message,
-                        });
-                    });
-                });
-            </script>
-        @endpush
+        @endif
     </div>
+
+    @push('js')
+        <script>
+            document.addEventListener('livewire:init', () => {
+                Livewire.on('toast', ({ message, type }) => {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3500,
+                        timerProgressBar: true,
+                        didOpen: (t) => {
+                            t.onmouseenter = Swal.stopTimer;
+                            t.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({ icon: type, title: message });
+                });
+            });
+        </script>
+    @endpush
 </div>

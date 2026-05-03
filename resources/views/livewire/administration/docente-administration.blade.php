@@ -249,8 +249,8 @@
                                         Editar
                                     </a>
 
-                                    <a title="Asignación de Documentos"
-                                        href="{{ route('administracion.administrativa.documentacion-personal.create', $user->id) }}"
+                                    <a title="Documentos del docente"
+                                        href="{{ route('administracion.administrativa.docentes.documentos', $user) }}"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.7rem] font-medium
                                                text-slate-400 border border-white/[0.06] bg-slate-800
                                                hover:text-sky-400 hover:border-sky-500/30 hover:bg-sky-500/[0.06]
@@ -511,10 +511,10 @@
                                             ✏
                                         </a>
 
-                                        <a title="Asignacion de Documentos"
-                                            href="{{ route('administracion.administrativa.documentacion-personal.create', $user->id) }}"
-                                            class="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 
-                                              hover:bg-indigo-500 hover:text-white 
+                                        <a title="Documentos del docente"
+                                            href="{{ route('administracion.administrativa.docentes.documentos', $user) }}"
+                                            class="p-2 rounded-lg bg-indigo-500/10 text-indigo-600
+                                              hover:bg-indigo-500 hover:text-white
                                               transition shadow-sm">
                                             📄
                                         </a>

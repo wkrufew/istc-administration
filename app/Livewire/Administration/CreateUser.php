@@ -5,13 +5,14 @@ namespace App\Livewire\Administration;
 use App\Models\User;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
+use App\Traits\WithAuthorization;
 
 class CreateUser extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithAuthorization;
 
     // Datos básicos
     public $first_name, $last_name, $email, $password, $password_confirmation;
@@ -65,11 +66,11 @@ class CreateUser extends Component
             'discapacidad_descripcion' => 'required_if:discapacidad,true|nullable|string',
             'certificado_discapacidad' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'is_facturador' => 'boolean',
-            'fact_nombre' => 'required_if:is_facturador,false|nullable|string|max:255',
-            'fact_documento' => 'required_if:is_facturador,false|nullable|string|max:50',
-            'fact_correo' => 'required_if:is_facturador,false|nullable|email',
-            'fact_direccion' => 'required_if:is_facturador,false|nullable|string',
-            'fact_telefono' => 'required_if:is_facturador,false|nullable|string|max:20',
+            'fact_nombre' => 'required_if:is_facturador,true|nullable|string|max:255',
+            'fact_documento' => 'required_if:is_facturador,true|nullable|string|max:50',
+            'fact_correo' => 'required_if:is_facturador,true|nullable|email',
+            'fact_direccion' => 'required_if:is_facturador,true|nullable|string',
+            'fact_telefono' => 'required_if:is_facturador,true|nullable|string|max:20',
             'profile_photo' => 'nullable|image|max:2048',
             'role_id' => 'required|exists:roles,id',
         ];
@@ -111,6 +112,8 @@ class CreateUser extends Component
 
     public function save()
     {
+        if ($this->sinPermiso('gestionar_usuarios')) return;
+
         $this->validate();
 
         $profilePhotoPath = null;
@@ -123,42 +126,43 @@ class CreateUser extends Component
             $certificadoPath = $this->certificado_discapacidad->store('users-data/certificados-discapacidad', 'public');
         }
 
-        $user = User::create([
-            'name' => $this->first_name . ' ' . $this->last_name,
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name,
-            'email' => $this->email,
-            'password' => Hash::make($this->password),
-            'cedula' => $this->cedula,
-            'phone' => $this->phone,
-            'address' => $this->address,
-            'fecha_nacimiento' => $this->fecha_nacimiento,
-            'matricula_numero' => $this->matricula_numero,
-            'padre' => $this->padre,
-            'madre' => $this->madre,
-            'tutor' => $this->tutor,
-            'nacionalidad' => $this->nacionalidad,
-            'genero' => $this->genero,
-            'estado_civil' => $this->estado_civil,
-            'telefono_emergencia' => $this->telefono_emergencia,
-            'contacto_emergencia' => $this->contacto_emergencia,
-            'tipo_sangre' => $this->tipo_sangre,
-            'observaciones_medicas' => $this->observaciones_medicas,
-            'discapacidad' => $this->discapacidad,
-            'discapacidad_descripcion' => $this->discapacidad_descripcion,
-            'certificado_discapacidad_path' => $certificadoPath,
-            'is_facturador' => $this->is_facturador,
-            'fact_nombre' => $this->fact_nombre,
-            'fact_documento' => $this->fact_documento,
-            'fact_correo' => $this->fact_correo,
-            'fact_direccion' => $this->fact_direccion,
-            'fact_telefono' => $this->fact_telefono,
-            'profile_photo_path' => $profilePhotoPath,
-            'is_active' => $this->is_active,
-        ]);
+        DB::transaction(function () use ($profilePhotoPath, $certificadoPath) {
+            $user = User::create([
+                'name' => $this->first_name . ' ' . $this->last_name,
+                'first_name' => $this->first_name,
+                'last_name' => $this->last_name,
+                'email' => $this->email,
+                'password' => Hash::make($this->password),
+                'cedula' => $this->cedula,
+                'phone' => $this->phone,
+                'address' => $this->address,
+                'fecha_nacimiento' => $this->fecha_nacimiento,
+                'matricula_numero' => $this->matricula_numero,
+                'padre' => $this->padre,
+                'madre' => $this->madre,
+                'tutor' => $this->tutor,
+                'nacionalidad' => $this->nacionalidad,
+                'genero' => $this->genero,
+                'estado_civil' => $this->estado_civil,
+                'telefono_emergencia' => $this->telefono_emergencia,
+                'contacto_emergencia' => $this->contacto_emergencia,
+                'tipo_sangre' => $this->tipo_sangre,
+                'observaciones_medicas' => $this->observaciones_medicas,
+                'discapacidad' => $this->discapacidad,
+                'discapacidad_descripcion' => $this->discapacidad_descripcion,
+                'certificado_discapacidad_path' => $certificadoPath,
+                'is_facturador' => $this->is_facturador,
+                'fact_nombre' => $this->fact_nombre,
+                'fact_documento' => $this->fact_documento,
+                'fact_correo' => $this->fact_correo,
+                'fact_direccion' => $this->fact_direccion,
+                'fact_telefono' => $this->fact_telefono,
+                'profile_photo_path' => $profilePhotoPath,
+                'is_active' => $this->is_active,
+            ]);
 
-        $role = Role::find($this->role_id);
-        $user->assignRole($role);
+            $user->assignRole(Role::find($this->role_id));
+        });
 
         session()->flash('message', 'Usuario creado exitosamente.');
 

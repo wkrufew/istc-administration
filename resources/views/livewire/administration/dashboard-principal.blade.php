@@ -4,18 +4,22 @@
         <div class="w-full px-4 sm:px-6 lg:px-8 pt-6">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
-                    <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Panel de Administración</h2>
-                    <p class="text-sm text-slate-500 mt-0.5">Resumen general del instituto, métricas y alertas.</p>
+                    <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Panel de Administración
+                    </h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Resumen general del instituto, métricas y alertas.</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <label
-                        class="text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Periodo</label>
+                        class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Periodo</label>
                     <select wire:model.live="periodoId"
-                        class="rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-semibold min-w-40">
+                        class="rounded-xl border border-slate-200 dark:border-slate-600
+                               bg-white dark:bg-slate-800
+                               text-slate-900 dark:text-gray-100
+                               shadow-sm focus:border-blue-500 focus:ring-blue-500
+                               text-sm font-semibold min-w-40 py-2 px-3
+                               transition">
                         @foreach ($this->periodos as $p)
-                            <option value="{{ $p->id }}">
-                                {{ $p->code }}{{ $p->is_current ? ' (Actual)' : '' }}
-                            </option>
+                            <option value="{{ $p->id }}">{{ $p->code }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -24,14 +28,14 @@
 
         {{-- LOADING OVERLAY --}}
         <div wire:loading wire:target="periodoId"
-            class="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-            <div class="flex items-center gap-3 bg-white rounded-2xl shadow-xl px-6 py-4 border border-slate-200">
+            class="fixed inset-0 z-50 bg-white/60 dark:bg-slate-950/60 backdrop-blur-sm flex items-center justify-center">
+            <div class="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-2xl shadow-xl px-6 py-4 border border-slate-200 dark:border-slate-700">
                 <svg class="animate-spin w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                         stroke-width="4" />
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
-                <span class="text-sm font-semibold text-slate-700">Actualizando dashboard...</span>
+                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Actualizando dashboard...</span>
             </div>
         </div>
 
@@ -50,11 +54,11 @@
 
                 {{-- Estudiantes --}}
                 <div
-                    class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm hover:shadow-md transition group">
+                    class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm hover:shadow-md transition group">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estudiantes</p>
-                            <p class="mt-1 text-3xl font-bold text-slate-900">
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Estudiantes</p>
+                            <p class="mt-1 text-3xl font-bold text-slate-900 dark:text-gray-100">
                                 {{ number_format($sg['total_estudiantes']) }}</p>
                         </div>
                         <div
@@ -69,17 +73,17 @@
                         <p class="mt-3 text-xs font-semibold text-emerald-600">▲ +{{ $sg['nuevos_este_mes'] }} este mes
                         </p>
                     @else
-                        <p class="mt-3 text-xs text-slate-400">Total registrados</p>
+                        <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">Total registrados</p>
                     @endif
                 </div>
 
                 {{-- Docentes --}}
                 <div
-                    class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm hover:shadow-md transition group">
+                    class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm hover:shadow-md transition group">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Docentes</p>
-                            <p class="mt-1 text-3xl font-bold text-slate-900">{{ number_format($sg['total_docentes']) }}
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Docentes</p>
+                            <p class="mt-1 text-3xl font-bold text-slate-900 dark:text-gray-100">{{ number_format($sg['total_docentes']) }}
                             </p>
                         </div>
                         <div
@@ -91,7 +95,7 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-xs text-slate-400">
+                    <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">
                         @if (!empty($sp))
                             <span class="text-violet-600 font-semibold">{{ $sp['docentes_asignados'] }}</span> asignados
                             este periodo
@@ -103,11 +107,11 @@
 
                 {{-- Carreras --}}
                 <div
-                    class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm hover:shadow-md transition group">
+                    class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm hover:shadow-md transition group">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Carreras</p>
-                            <p class="mt-1 text-3xl font-bold text-slate-900">{{ number_format($sg['total_carreras']) }}
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Carreras</p>
+                            <p class="mt-1 text-3xl font-bold text-slate-900 dark:text-gray-100">{{ number_format($sg['total_carreras']) }}
                             </p>
                         </div>
                         <div
@@ -119,16 +123,16 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-xs text-slate-400">Programas activos</p>
+                    <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">Programas activos</p>
                 </div>
 
                 {{-- Materias --}}
                 <div
-                    class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm hover:shadow-md transition group">
+                    class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm hover:shadow-md transition group">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Materias</p>
-                            <p class="mt-1 text-3xl font-bold text-slate-900">{{ number_format($sg['total_materias']) }}
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Materias</p>
+                            <p class="mt-1 text-3xl font-bold text-slate-900 dark:text-gray-100">{{ number_format($sg['total_materias']) }}
                             </p>
                         </div>
                         <div
@@ -140,7 +144,7 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-xs text-slate-400">Incluye todas las carreras</p>
+                    <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">Incluye todas las carreras</p>
                 </div>
             </div>
 
@@ -151,34 +155,34 @@
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
                     {{-- Matrículas --}}
-                    <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm">
+                    <div class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Matrículas</p>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Matrículas</p>
                             <span
-                                class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Periodo</span>
+                                class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 font-semibold">Periodo</span>
                         </div>
-                        <p class="text-3xl font-bold text-slate-900">{{ $sp['matriculas_habilitadas'] }}</p>
-                        <div class="mt-3 space-y-1 text-xs text-slate-500">
-                            <p>Total: <span class="font-semibold text-slate-700">{{ $sp['matriculas_total'] }}</span>
+                        <p class="text-3xl font-bold text-slate-900 dark:text-gray-100">{{ $sp['matriculas_habilitadas'] }}</p>
+                        <div class="mt-3 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                            <p>Total: <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $sp['matriculas_total'] }}</span>
                             </p>
                             <p>Pendientes pago: <span
                                     class="font-semibold text-amber-600">{{ $sp['matriculas_pendientes'] }}</span></p>
                             <p>Borrador: <span
-                                    class="font-semibold text-slate-500">{{ $sp['matriculas_borrador'] }}</span></p>
+                                    class="font-semibold text-slate-500 dark:text-slate-400">{{ $sp['matriculas_borrador'] }}</span></p>
                         </div>
                     </div>
 
                     {{-- Docentes asignados --}}
-                    <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm">
+                    <div class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Docentes</p>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Docentes</p>
                             <span
-                                class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">Periodo</span>
+                                class="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 font-semibold">Periodo</span>
                         </div>
-                        <p class="text-3xl font-bold text-slate-900">{{ $sp['docentes_asignados'] }}</p>
-                        <div class="mt-3 space-y-1 text-xs text-slate-500">
+                        <p class="text-3xl font-bold text-slate-900 dark:text-gray-100">{{ $sp['docentes_asignados'] }}</p>
+                        <div class="mt-3 space-y-1 text-xs text-slate-500 dark:text-slate-400">
                             <p>Paralelos activos: <span
-                                    class="font-semibold text-slate-700">{{ $sp['paralelos_activos'] }}</span></p>
+                                    class="font-semibold text-slate-700 dark:text-slate-200">{{ $sp['paralelos_activos'] }}</span></p>
                             @if ($sp['docentes_sin_asig'] > 0)
                                 <p>Sin asignar: <span
                                         class="font-semibold text-red-500">{{ $sp['docentes_sin_asig'] }}</span></p>
@@ -194,40 +198,40 @@
                     </div>
 
                     {{-- Tasa de aprobación --}}
-                    <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm">
+                    <div class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Aprobación</p>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Aprobación</p>
                             <span
-                                class="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">Periodo</span>
+                                class="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 font-semibold">Periodo</span>
                         </div>
                         <p
-                            class="text-3xl font-bold {{ $sp['tasa_aprobacion'] >= 70 ? 'text-emerald-600' : ($sp['tasa_aprobacion'] ? 'text-amber-600' : 'text-slate-400') }}">
+                            class="text-3xl font-bold {{ $sp['tasa_aprobacion'] >= 70 ? 'text-emerald-600' : ($sp['tasa_aprobacion'] ? 'text-amber-600' : 'text-slate-400 dark:text-slate-500') }}">
                             {{ $sp['tasa_aprobacion'] !== null ? $sp['tasa_aprobacion'] . '%' : '—' }}
                         </p>
-                        <div class="mt-3 space-y-1 text-xs text-slate-500">
+                        <div class="mt-3 space-y-1 text-xs text-slate-500 dark:text-slate-400">
                             <p>Aprobados: <span class="font-semibold text-emerald-600">{{ $sp['aprobados'] }}</span>
                             </p>
                             <p>Total evaluados: <span
-                                    class="font-semibold text-slate-700">{{ $sp['total_calificaciones'] }}</span></p>
+                                    class="font-semibold text-slate-700 dark:text-slate-200">{{ $sp['total_calificaciones'] }}</span></p>
                         </div>
                     </div>
 
                     {{-- Ocupación paralelos --}}
-                    <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm">
+                    <div class="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Ocupación</p>
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Ocupación</p>
                             <span
-                                class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Paralelos</span>
+                                class="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 font-semibold">Paralelos</span>
                         </div>
-                        <p class="text-3xl font-bold text-slate-900">
+                        <p class="text-3xl font-bold text-slate-900 dark:text-gray-100">
                             {{ $sp['ocupacion_promedio'] !== null ? $sp['ocupacion_promedio'] . '%' : '—' }}
                         </p>
                         <div class="mt-3">
-                            <div class="w-full bg-slate-100 rounded-full h-2">
+                            <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
                                 <div class="h-2 rounded-full bg-amber-500 transition-all duration-500"
                                     style="width: {{ $sp['ocupacion_promedio'] ?? 0 }}%"></div>
                             </div>
-                            <p class="text-xs text-slate-400 mt-1">Promedio de {{ $sp['paralelos_activos'] }}
+                            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Promedio de {{ $sp['paralelos_activos'] }}
                                 paralelos</p>
                         </div>
                     </div>
@@ -301,20 +305,20 @@
 
                     {{-- ESTADO ACADÉMICO (barras) --}}
                     @if (!empty($this->estadoAcademico))
-                        <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-                            <h3 class="font-bold text-slate-900 text-base mb-5">Estado académico del periodo</h3>
+                        <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm p-6">
+                            <h3 class="font-bold text-slate-900 dark:text-gray-100 text-base mb-5">Estado académico del periodo</h3>
                             <div class="space-y-4">
                                 @foreach ($this->estadoAcademico as $bar)
                                     <div>
                                         <div class="flex items-center justify-between mb-1.5">
-                                            <span class="text-sm text-slate-600">{{ $bar['label'] }}</span>
+                                            <span class="text-sm text-slate-600 dark:text-slate-300">{{ $bar['label'] }}</span>
                                             <div class="flex items-center gap-2">
-                                                <span class="text-xs text-slate-400">{{ $bar['valor'] }}</span>
+                                                <span class="text-xs text-slate-400 dark:text-slate-500">{{ $bar['valor'] }}</span>
                                                 <span
-                                                    class="text-sm font-bold text-slate-900">{{ $bar['pct'] }}%</span>
+                                                    class="text-sm font-bold text-slate-900 dark:text-gray-100">{{ $bar['pct'] }}%</span>
                                             </div>
                                         </div>
-                                        <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5">
                                             <div class="h-2.5 rounded-full {{ $bar['color'] }} transition-all duration-700"
                                                 style="width: {{ $bar['pct'] }}%"></div>
                                         </div>
@@ -325,11 +329,11 @@
                     @endif
 
                     {{-- ÚLTIMAS MATRÍCULAS --}}
-                    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="p-5 flex items-center justify-between border-b border-slate-100">
+                    <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
+                        <div class="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60">
                             <div>
-                                <h3 class="font-bold text-slate-900">Últimas matrículas</h3>
-                                <p class="text-xs text-slate-500 mt-0.5">Registros más recientes del periodo</p>
+                                <h3 class="font-bold text-slate-900 dark:text-gray-100">Últimas matrículas</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Registros más recientes del periodo</p>
                             </div>
                             <a href="{{ route('administracion.administrativa.matriculacion.index') ?? '#' }}"
                                 class="text-xs font-semibold text-sky-600 hover:text-sky-700 transition">
@@ -339,24 +343,24 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead>
-                                    <tr class="bg-slate-50 border-b border-slate-100">
+                                    <tr class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-700/60">
                                         <th
-                                            class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                            class="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             Estudiante</th>
                                         <th
-                                            class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                            class="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             Carrera</th>
                                         <th
-                                            class="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                            class="px-5 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             Estado</th>
                                         <th
-                                            class="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                            class="px-5 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             Fecha</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/40">
                                     @forelse ($this->ultimasMatriculas as $mat)
-                                        <tr class="hover:bg-slate-50 transition">
+                                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                                             <td class="px-5 py-3">
                                                 <div class="flex items-center gap-3">
                                                     <div
@@ -365,26 +369,26 @@
                                                         {{ strtoupper(substr($mat->estudiante?->name ?? '?', 0, 1)) }}
                                                     </div>
                                                     <div>
-                                                        <p class="font-semibold text-slate-800 text-xs">
+                                                        <p class="font-semibold text-slate-800 dark:text-gray-100 text-xs">
                                                             {{ $mat->estudiante?->name ?? '—' }}</p>
-                                                        <p class="text-xs text-slate-400">
+                                                        <p class="text-xs text-slate-400 dark:text-slate-500">
                                                             {{ $mat->estudiante?->cedula ?? '' }}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="px-5 py-3">
-                                                <span class="text-xs font-semibold text-slate-600">
+                                                <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">
                                                     {{ $mat->carrera?->code ?? '—' }}
                                                 </span>
                                             </td>
                                             <td class="px-5 py-3 text-center">
                                                 @php
                                                     $cfg = match ($mat->estado) {
-                                                        'Habilitada' => 'bg-emerald-100 text-emerald-700',
-                                                        'Pendiente_Pago' => 'bg-amber-100 text-amber-700',
-                                                        'Borrador' => 'bg-slate-100 text-slate-600',
-                                                        'Cancelada' => 'bg-red-100 text-red-600',
-                                                        default => 'bg-slate-100 text-slate-500',
+                                                        'Habilitada' => 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400',
+                                                        'Pendiente_Pago' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
+                                                        'Borrador' => 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+                                                        'Cancelada' => 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400',
+                                                        default => 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
                                                     };
                                                     $lbl = match ($mat->estado) {
                                                         'Pendiente_Pago' => 'Pend. Pago',
@@ -396,13 +400,13 @@
                                                     {{ $lbl }}
                                                 </span>
                                             </td>
-                                            <td class="px-5 py-3 text-center text-xs text-slate-400">
+                                            <td class="px-5 py-3 text-center text-xs text-slate-400 dark:text-slate-500">
                                                 {{ $mat->created_at?->diffForHumans() ?? '—' }}
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="px-5 py-8 text-center text-slate-400 text-xs">
+                                            <td colspan="4" class="px-5 py-8 text-center text-slate-400 dark:text-slate-500 text-xs">
                                                 No hay matrículas en este periodo
                                             </td>
                                         </tr>
@@ -420,45 +424,45 @@
                     {{-- ESTADO DEL PERIODO --}}
                     @if ($this->periodoActual)
                         @php $pa = $this->periodoActual; @endphp
-                        <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
+                        <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm p-6">
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="font-bold text-slate-900">Estado del periodo</h3>
-                                @if ($pa->is_current)
+                                <h3 class="font-bold text-slate-900 dark:text-gray-100">Estado del periodo</h3>
+                                @if ($pa->carreras()->wherePivot('is_current', true)->exists())
                                     <span
-                                        class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Actual</span>
+                                        class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 font-semibold">Activo</span>
                                 @endif
                             </div>
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between">
-                                    <p class="text-sm text-slate-500">Código</p>
-                                    <span class="text-sm font-bold text-slate-900">{{ $pa->code }}</span>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Código</p>
+                                    <span class="text-sm font-bold text-slate-900 dark:text-gray-100">{{ $pa->code }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <p class="text-sm text-slate-500">Inicio</p>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Inicio</p>
                                     <span
-                                        class="text-sm font-bold text-slate-900">{{ $pa->fecha_inicio?->format('d/m/Y') }}</span>
+                                        class="text-sm font-bold text-slate-900 dark:text-gray-100">{{ $pa->fecha_inicio?->format('d/m/Y') }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <p class="text-sm text-slate-500">Fin</p>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Fin</p>
                                     <span
-                                        class="text-sm font-bold text-slate-900">{{ $pa->fecha_fin?->format('d/m/Y') }}</span>
+                                        class="text-sm font-bold text-slate-900 dark:text-gray-100">{{ $pa->fecha_fin?->format('d/m/Y') }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <p class="text-sm text-slate-500">Límite matrícula</p>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Límite matrícula</p>
                                     <span
-                                        class="text-sm font-bold {{ now()->gt($pa->fecha_limite_matricula) ? 'text-red-500' : 'text-slate-900' }}">
+                                        class="text-sm font-bold {{ now()->gt($pa->fecha_limite_matricula) ? 'text-red-500' : 'text-slate-900 dark:text-gray-100' }}">
                                         {{ $pa->fecha_limite_matricula?->format('d/m/Y') }}
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <p class="text-sm text-slate-500">Límite pago</p>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Límite pago</p>
                                     <span
-                                        class="text-sm font-bold {{ now()->gt($pa->fecha_limite_pago) ? 'text-red-500' : 'text-slate-900' }}">
+                                        class="text-sm font-bold {{ now()->gt($pa->fecha_limite_pago) ? 'text-red-500' : 'text-slate-900 dark:text-gray-100' }}">
                                         {{ $pa->fecha_limite_pago?->format('d/m/Y') }}
                                     </span>
                                 </div>
-                                <div class="flex items-center justify-between border-t border-slate-100 pt-3">
-                                    <p class="text-sm text-slate-500">Matrículas abiertas</p>
+                                <div class="flex items-center justify-between border-t border-slate-100 dark:border-slate-700/60 pt-3">
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Matrículas abiertas</p>
                                     @if (now()->lte($pa->fecha_limite_matricula))
                                         <span class="text-sm font-bold text-emerald-600">Sí</span>
                                     @else
@@ -470,28 +474,36 @@
                     @endif
 
                     {{-- ALERTAS --}}
-                    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-                        <h3 class="font-bold text-slate-900 mb-4">Alertas del sistema</h3>
+                    <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm p-6">
+                        <h3 class="font-bold text-slate-900 dark:text-gray-100 mb-4">Alertas del sistema</h3>
                         <div class="space-y-3">
                             @foreach ($this->alertas as $alerta)
                                 @php
                                     $alertConfig = match ($alerta['tipo']) {
-                                        'error' => ['bg-red-50 border-red-200', 'text-red-700', 'text-red-500'],
-                                        'warning' => [
-                                            'bg-amber-50 border-amber-200',
-                                            'text-amber-700',
-                                            'text-amber-500',
+                                        'error' => [
+                                            'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50',
+                                            'text-red-700 dark:text-red-400',
+                                            'text-red-500 dark:text-red-400',
                                         ],
-                                        'info' => ['bg-sky-50 border-sky-200', 'text-sky-700', 'text-sky-500'],
+                                        'warning' => [
+                                            'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50',
+                                            'text-amber-700 dark:text-amber-400',
+                                            'text-amber-500 dark:text-amber-400',
+                                        ],
+                                        'info' => [
+                                            'bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-900/50',
+                                            'text-sky-700 dark:text-sky-400',
+                                            'text-sky-500 dark:text-sky-400',
+                                        ],
                                         'success' => [
-                                            'bg-emerald-50 border-emerald-200',
-                                            'text-emerald-700',
-                                            'text-emerald-500',
+                                            'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50',
+                                            'text-emerald-700 dark:text-emerald-400',
+                                            'text-emerald-500 dark:text-emerald-400',
                                         ],
                                         default => [
-                                            'bg-slate-50 border-slate-200',
-                                            'text-slate-700',
-                                            'text-slate-500',
+                                            'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700',
+                                            'text-slate-700 dark:text-slate-200',
+                                            'text-slate-500 dark:text-slate-400',
                                         ],
                                     };
                                     $iconPath = match ($alerta['icono']) {
@@ -528,25 +540,25 @@
 
                     {{-- ESTUDIANTES POR CARRERA --}}
                     @if (!empty($this->estudiantesPorCarrera))
-                        <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-                            <h3 class="font-bold text-slate-900 mb-4">Estudiantes por carrera</h3>
+                        <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm p-6">
+                            <h3 class="font-bold text-slate-900 dark:text-gray-100 mb-4">Estudiantes por carrera</h3>
                             <div class="space-y-3">
                                 @foreach ($this->estudiantesPorCarrera as $ec)
                                     <div>
                                         <div class="flex items-center justify-between mb-1">
                                             <div class="flex items-center gap-2">
                                                 <span
-                                                    class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">
+                                                    class="text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-lg">
                                                     {{ $ec['carrera'] }}
                                                 </span>
-                                                <span class="text-xs text-slate-500 truncate max-w-28"
+                                                <span class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-28"
                                                     title="{{ $ec['nombre'] }}">
                                                     {{ $ec['nombre'] }}
                                                 </span>
                                             </div>
-                                            <span class="text-xs font-bold text-slate-900">{{ $ec['total'] }}</span>
+                                            <span class="text-xs font-bold text-slate-900 dark:text-gray-100">{{ $ec['total'] }}</span>
                                         </div>
-                                        <div class="w-full bg-slate-100 rounded-full h-1.5">
+                                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
                                             <div class="h-1.5 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500"
                                                 style="width: {{ $ec['pct'] }}%"></div>
                                         </div>
@@ -557,8 +569,8 @@
                     @endif
 
                     {{-- ACCIONES RÁPIDAS --}}
-                    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-                        <h3 class="font-bold text-slate-900 mb-4">Acciones rápidas</h3>
+                    <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm p-6">
+                        <h3 class="font-bold text-slate-900 dark:text-gray-100 mb-4">Acciones rápidas</h3>
                         <div class="space-y-2">
                             @php
                                 $acciones = [
@@ -596,9 +608,9 @@
                             @endphp
                             @foreach ($acciones as $ac)
                                 <a href="{{ $ac['route'] }}"
-                                    class="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200
-                                       hover:bg-slate-50 transition">
-                                    <span class="text-sm font-semibold text-slate-800">{{ $ac['label'] }}</span>
+                                    class="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700
+                                       hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                                    <span class="text-sm font-semibold text-slate-800 dark:text-gray-100">{{ $ac['label'] }}</span>
                                     <span
                                         class="text-xs font-semibold {{ $ac['color'] }}">{{ $ac['tag'] }}</span>
                                 </a>

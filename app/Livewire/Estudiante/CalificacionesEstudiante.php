@@ -30,10 +30,10 @@ class CalificacionesEstudiante extends Component
         // Periodos activos (puedes ajustar el filtro si deseas)
         $this->periodos = Periodo::orderBy('id', 'desc')->get();
 
-        // Periodo actual por defecto
-        $periodoActual = Periodo::where('is_current', true)->first();
-
-        $this->periodo_id = $periodoActual?->id ?? $this->periodos->first()?->id;
+        // Período activo para la carrera del estudiante
+        $ultimaMatricula  = Auth::user()->matriculas()->with('carrera')->latest()->first();
+        $periodoDeCarrera = $ultimaMatricula?->carrera?->periodoActual();
+        $this->periodo_id = $periodoDeCarrera?->id ?? $this->periodos->first()?->id;
 
         $this->cargarActa();
     }

@@ -18,7 +18,7 @@ class Asistencia extends Model
 
     protected $casts = [
         'fecha' => 'date',
-        'hora_entrada' => 'datetime:H:i:s',
+        'hora_entrada' => 'string',
     ];
 
     /**

@@ -470,7 +470,7 @@
             </div>
 
             {{-- Título --}}
-            <h2 class="card-title">Bienvenido a ISTC</h2>
+            <h2 class="card-title">Bienvenido a {{ \App\Services\SettingService::get('instituto.nombre_corto') ?: 'ISTC' }}</h2>
             <p class="card-sub">Ingresa tus credenciales</p>
 
             {{-- Color bar decorativa --}}

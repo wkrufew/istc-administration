@@ -19,9 +19,11 @@ use App\Models\Horario;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Log;
+use App\Traits\WithAuthorization;
 
 class CalificacionEstudiante extends Component
 {
+    use WithAuthorization;
     // Constante de penalización (puedes cambiarla cuando quieras)
     const PORCENTAJE_PENALIZACION = 5; // 5%
     const NOTA_MINIMA_APROBACION = 7;
@@ -58,6 +60,7 @@ class CalificacionEstudiante extends Component
 
     // Propiedades calculadas
     public $promedio_insumos = 0;
+    public $nota_base  = 0;   // nota antes de aplicar suspenso
     public $nota_final = 0;
     public $examen_parcial = 0;
     public $examen_final = '';
@@ -255,11 +258,8 @@ class CalificacionEstudiante extends Component
     {
         $this->periodos = Periodo::orderBy('fecha_inicio', 'desc')->get();
 
-        // Seleccionar período actual por defecto
-        $periodo_actual = Periodo::where('is_current', true)->first();
-        if ($periodo_actual) {
-            $this->periodo_id = $periodo_actual->id;
-        }
+        // Seleccionar período activo por defecto
+        $this->periodo_id = Periodo::periodoActivoGlobal()?->id ?? '';
     }
 
     public function cargarMateriasAsignadas()
@@ -418,6 +418,7 @@ class CalificacionEstudiante extends Component
         $this->es_arrastre = false;
         $this->numero_intento = 1;
         $this->promedio_insumos = 0;
+        $this->nota_base  = 0;
         $this->nota_final = 0;
         $this->estado_final = '';
         $this->mostrar_formulario = false;
@@ -451,65 +452,47 @@ class CalificacionEstudiante extends Component
     {
         $promedio = $this->promedio_insumos;
         $parcial = $this->examen_parcial !== '' && $this->examen_parcial !== null ? floatval($this->examen_parcial) : 0;
-        $final = $this->examen_final !== '' && $this->examen_final !== null ? floatval($this->examen_final) : 0;
+        $final   = $this->examen_final   !== '' && $this->examen_final   !== null ? floatval($this->examen_final)   : 0;
 
-        // Fórmula: 60% Insumos + 20% Parcial + 20% Final
-        if ($promedio > 0 || $parcial > 0 || $final > 0) {
-            $this->nota_final = round(
-                ($promedio * 0.6) + ($parcial * 0.2) + ($final * 0.2),
-                2
-            );
-        } else {
-            $this->nota_final = 0;
-        }
+        // Nota base (sin suspenso): 60% Insumos + 20% Parcial + 20% Final
+        $this->nota_base = ($promedio > 0 || $parcial > 0 || $final > 0)
+            ? round(($promedio * 0.6) + ($parcial * 0.2) + ($final * 0.2), 2)
+            : 0;
 
-        // Si la nota está entre 4 y 7, puede dar suspenso
-        if ($this->nota_final >= 4 && $this->nota_final < 7) {
+        $this->nota_final = $this->nota_base;
+
+        // Suspenso: solo si la nota BASE está entre 4 y 7
+        if ($this->nota_base >= 4 && $this->nota_base < 7) {
             $this->suspenso = true;
 
-            // Si ya ingresó la nota de suspenso, calcular
             if ($this->nota_suspenso !== '' && $this->nota_suspenso !== null) {
-                $nota_suspenso_valor = floatval($this->nota_suspenso);
-                $incremento = ($nota_suspenso_valor / 10) * 2.99;
-                $this->nota_final = round($this->nota_final + $incremento, 2);
+                $incremento       = (floatval($this->nota_suspenso) / 10) * 2.99;
+                $this->nota_final = round($this->nota_base + $incremento, 2);
             }
         } else {
-            $this->suspenso = false;
+            $this->suspenso      = false;
             $this->nota_suspenso = '';
         }
 
-        // Determinar estado final
         $this->determinarEstadoFinal();
     }
 
     public function determinarEstadoFinal()
     {
-        // Si la nota final es mayor o igual a 7, está aprobado
         if ($this->nota_final >= self::NOTA_MINIMA_APROBACION) {
             $this->estado_final = 'Aprobado';
-        }
-        // Si la nota está entre 4 y 7 (rango de suspenso)
-        elseif ($this->nota_final >= self::NOTA_MINIMA_ARRASTRE && $this->nota_final < self::NOTA_MINIMA_APROBACION) {
-            // Si ya tiene nota de suspenso
+        } elseif ($this->nota_base >= self::NOTA_MINIMA_ARRASTRE && $this->nota_base < self::NOTA_MINIMA_APROBACION) {
+            // Estaba en rango de suspenso
             if ($this->nota_suspenso !== null && $this->nota_suspenso !== '') {
-                // Después de aplicar el suspenso, verificar si alcanzó el 7
-                if ($this->nota_final >= self::NOTA_MINIMA_APROBACION) {
-                    $this->estado_final = 'Aprobado';
-                } else {
-                    // No alcanzó el 7 ni con el suspenso
-                    $this->estado_final = 'Reprobado';
-                }
+                $this->estado_final = $this->nota_final >= self::NOTA_MINIMA_APROBACION
+                    ? 'Aprobado'
+                    : 'Reprobado';
             } else {
-                // Aún no tiene nota de suspenso
-                $this->estado_final = 'Incompleto'; // cuando formatee la  base poner este valor Suspenso_Pendiente
+                $this->estado_final = 'Incompleto';
             }
-        }
-        // Si la nota es menor a 4, está reprobado directamente
-        elseif ($this->nota_final < self::NOTA_MINIMA_ARRASTRE) {
+        } elseif ($this->nota_base < self::NOTA_MINIMA_ARRASTRE) {
             $this->estado_final = 'Reprobado';
-        }
-        // En cualquier otro caso
-        else {
+        } else {
             $this->estado_final = 'Incompleto';
         }
     }
@@ -546,7 +529,6 @@ class CalificacionEstudiante extends Component
     public function updatedNotaSuspenso()
     {
         $this->calcularNotaFinal();
-        $this->determinarEstadoFinal();
     }
 
     /**
@@ -562,10 +544,10 @@ class CalificacionEstudiante extends Component
         $tiene_parcial = !empty($this->examen_parcial) && $this->examen_parcial !== '';
         $tiene_final = !empty($this->examen_final) && $this->examen_final !== '';
 
-        // Si la nota está entre 4 y 7, debe tener nota de suspenso
+        // Si la nota BASE está entre 4 y 7, debe tener nota de suspenso
         if (
-            $this->nota_final >= self::NOTA_MINIMA_ARRASTRE &&
-            $this->nota_final < self::NOTA_MINIMA_APROBACION
+            $this->nota_base >= self::NOTA_MINIMA_ARRASTRE &&
+            $this->nota_base < self::NOTA_MINIMA_APROBACION
         ) {
             $tiene_suspenso = !empty($this->nota_suspenso) && $this->nota_suspenso !== '';
             return $tiene_insumo && $tiene_parcial && $tiene_final && $tiene_suspenso;
@@ -721,6 +703,8 @@ class CalificacionEstudiante extends Component
 
     public function guardarCalificacion()
     {
+        if ($this->sinPermiso('ingresar_notas_estudiantes')) return;
+
         // 🔥 Forzar siempre insumo1 desde asistencias (por seguridad)
         $this->cargarAsistenciaDelEstudiante($this->estudiante_seleccionado['detalle_matricula_id']);
 

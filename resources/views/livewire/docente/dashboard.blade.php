@@ -74,9 +74,6 @@
                             @foreach ($periodos as $periodo)
                                 <option value="{{ $periodo->id }}">
                                     {{ $periodo->code }} - {{ $periodo->description }}
-                                    @if ($periodo->is_current)
-                                        (Actual)
-                                    @endif
                                 </option>
                             @endforeach
                         </select>

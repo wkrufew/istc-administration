@@ -136,14 +136,19 @@
 <body>
 
     {{-- HEADER --}}
+    @php
+        $rptLogoPath = \App\Services\SettingService::get('instituto.logo_path');
+        $rptLogoFile = $rptLogoPath ? storage_path('app/public/' . $rptLogoPath) : public_path('imagenes/icono.webp');
+        $rptNombre   = \App\Services\SettingService::get('instituto.nombre_largo') ?: 'Instituto Superior Tecnológico Cumandá';
+    @endphp
     <div class="header">
         <table class="header-table">
             <tr>
                 <td width="70">
-                    <img src="{{ public_path('imagenes/icono.webp') }}" class="logo">
+                    <img src="{{ $rptLogoFile }}" class="logo">
                 </td>
                 <td>
-                    <div class="title">INSTITUTO SUPERIOR TECNOLÓGICO CUMANDA</div>
+                    <div class="title">{{ strtoupper($rptNombre) }}</div>
                     <div class="subtitle">Sistema Académico · Reportes Institucionales</div>
                     <div class="subtitle">Generado: {{ now()->format('d/m/Y H:i') }}</div>
                 </td>

@@ -2,17 +2,20 @@
 
 namespace App\Livewire\Administration;
 
-use Livewire\Component;
-use Livewire\Attributes\Layout;
+use App\Jobs\EnviarNotificacionPago;
 use App\Models\Matricula;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Pago;
+use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
 use Livewire\WithFileUploads;
 
 class PagoMatricula extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithAuthorization;
 
     // -------------------------------------------------------------------------
     // PROPIEDADES PÚBLICAS
@@ -53,8 +56,8 @@ class PagoMatricula extends Component
         // Si ya está pagada, redirigir a obligaciones
         if (in_array($this->obligacion->estado, ['Pagado', 'Parcial'])) {
             session()->flash('info', 'La obligación de matrícula ya tiene pagos registrados.');
-            $this->redirectRoute('admin.obligaciones.index', ['matricula' => $this->matricula->id]);
-            return;
+            return redirect()->route('administracion.administrativa.obligaciones.index');
+
         }
 
         $this->montoFinal    = $this->obligacion->monto_final;
@@ -84,6 +87,8 @@ class PagoMatricula extends Component
     // =========================================================================
     public function guardarPago()
     {
+        if ($this->sinPermiso('gestionar_matriculas')) return;
+
         $this->validate([
             'metodoPago'  => 'required|in:Efectivo,Tarjeta,Transferencia,Deposito,Payphone',
             'referencia'  => 'nullable|string|max:100',
@@ -106,10 +111,8 @@ class PagoMatricula extends Component
                 //$comprobantePath = $this->comprobante->store('pagos/comprobantes', 'public');
             }
 
-            $numero = $this->generarNumeroComprobante();
-
-            Pago::create([
-                'numero_comprobante' => $numero,
+            $pago = Pago::create([
+                'numero_comprobante' => 'TEMP',
                 'codigo_referencia'  => $this->referencia ?: null,
                 'obligacion_id'      => $this->obligacion->id,
                 'monto'              => $this->montoFinal,
@@ -121,6 +124,8 @@ class PagoMatricula extends Component
                 'comprobante_path'   => $comprobantePath,
             ]);
 
+            $pago->update(['numero_comprobante' => $this->generarNumeroComprobante($pago->id)]);
+
             // Actualizar estado de la obligación a Parcial hasta que admin apruebe
             $this->obligacion->update(['estado' => 'Pagado']);
 
@@ -129,13 +134,22 @@ class PagoMatricula extends Component
 
             DB::commit();
 
-            session()->flash('success', 'Pago registrado correctamente. Pendiente de verificación por administración.');
+            $pagoId = $pago->id;
 
-            // Redirigir a la vista de obligaciones del estudiante
-            return $this->redirect(
-                route('administracion.administrativa.obligaciones.index', ['user' => $this->matricula->user_id]),
-                navigate: true
-            );
+            session()->flash('success', 'Pago de matrícula registrado correctamente.');
+
+            // Redirigir a obligaciones sin parámetros en la URL (recarga completa)
+            return redirect()->route('administracion.administrativa.obligaciones.index');
+
+            // Despachar notificación DESPUÉS del redirect para no bloquear la respuesta
+            try {
+                EnviarNotificacionPago::dispatch($pagoId);
+            } catch (\Throwable $e) {
+                Log::warning('PagoMatricula: no se pudo despachar notificación', [
+                    'pago_id' => $pagoId,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
         } catch (\Exception $e) {
             DB::rollBack();
             $this->addError('general', 'Error al registrar el pago: ' . $e->getMessage());
@@ -145,10 +159,9 @@ class PagoMatricula extends Component
     // =========================================================================
     // HELPER
     // =========================================================================
-    private function generarNumeroComprobante(): string
+    private function generarNumeroComprobante(int $pagoId): string
     {
-        $ultimo = Pago::max('id') + 1;
-        return 'ISTC-CP-MATRICULA-' . now()->year . '-' . str_pad($ultimo, 5, '0', STR_PAD_LEFT);
+        return 'ISTC-CP-MATRICULA-' . now()->year . '-' . str_pad($pagoId, 5, '0', STR_PAD_LEFT);
     }
 
     // =========================================================================

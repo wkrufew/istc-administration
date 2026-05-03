@@ -91,7 +91,14 @@
             <path strokeLinecap="round" strokeLinejoin="round"
                 d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
         </svg> --}}
-        <img class="object-cover overflow-hidden w-10 h-10" src="{{ asset('../imagenes/icono.webp') }}" alt="">
+        @php
+            $asideLogo = \App\Services\SettingService::get('instituto.logo_path');
+            $asideLogoSrc =
+                $asideLogo && \Illuminate\Support\Facades\Storage::disk('public')->exists($asideLogo)
+                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($asideLogo)
+                    : asset('../imagenes/icono.webp');
+        @endphp
+        <img class="object-cover overflow-hidden w-10 h-10" src="{{ $asideLogoSrc }}" alt="">
 
     </div>
     <!-- MAX SIDEBAR-->
@@ -117,6 +124,52 @@ flex flex-row items-center space-x-2"
                 </div>
             </a>
         </div>
+        {{-- Sistema de tickets --}}
+        <div class="hover:ml-3 w-full 
+text-slate-700 dark:text-slate-200
+hover:text-slate-900 dark:hover:text-white
+bg-slate-100/70 dark:bg-[#111827]
+hover:bg-slate-200/80 dark:hover:bg-slate-800
+p-2 pl-4 rounded-xl
+transform ease-in-out duration-300 
+flex flex-row items-center space-x-2"
+            {{-- class =  "hover:ml-4 w-full text-white hover:text-[#7ea41e] dark:hover:text-[#7ea41e] bg-[#1E293B] p-2 pl-4 rounded-full transform ease-in-out duration-300 flex flex-row items-center space-x-2" --}}>
+            <a href="{{ route('administracion.administrativa.tickets.index') }}" class="flex items-center space-x-2">
+                <svg class="dark:fill-white fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 640 640">
+                    <path
+                        d="M96 128C60.7 128 32 156.7 32 192L32 256C32 264.8 39.4 271.7 47.7 274.6C66.5 281.1 80 299 80 320C80 341 66.5 358.9 47.7 365.4C39.4 368.3 32 375.2 32 384L32 448C32 483.3 60.7 512 96 512L544 512C579.3 512 608 483.3 608 448L608 384C608 375.2 600.6 368.3 592.3 365.4C573.5 358.9 560 341 560 320C560 299 573.5 281.1 592.3 274.6C600.6 271.7 608 264.8 608 256L608 192C608 156.7 579.3 128 544 128L96 128zM448 400L448 240L192 240L192 400L448 400zM144 224C144 206.3 158.3 192 176 192L464 192C481.7 192 496 206.3 496 224L496 416C496 433.7 481.7 448 464 448L176 448C158.3 448 144 433.7 144 416L144 224z" />
+                </svg>
+                <div>
+                    Sistema de Tickets
+                </div>
+            </a>
+        </div>
+
+        {{-- Configuración del Sistema --}}
+        <div class="hover:ml-3 w-full 
+text-slate-700 dark:text-slate-200
+hover:text-slate-900 dark:hover:text-white
+bg-slate-100/70 dark:bg-[#111827]
+hover:bg-slate-200/80 dark:hover:bg-slate-800
+p-2 pl-4 rounded-xl
+transform ease-in-out duration-300 
+flex flex-row items-center space-x-2"
+            {{-- class =  "hover:ml-4 w-full text-white hover:text-[#7ea41e] dark:hover:text-[#7ea41e] bg-[#1E293B] p-2 pl-4 rounded-full transform ease-in-out duration-300 flex flex-row items-center space-x-2" --}}>
+            <a href="{{ route('administracion.administrativa.settings') }}" class="flex items-center space-x-2">
+
+                <svg class="dark:fill-white fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24">
+                    <path fill-rule="evenodd"
+                        d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 0 0-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 0 0-2.282.819l-.922 1.597a1.875 1.875 0 0 0 .432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 0 0 0 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 0 0-.432 2.385l.922 1.597a1.875 1.875 0 0 0 2.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 0 0 2.28-.819l.923-1.597a1.875 1.875 0 0 0-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 0 0 0-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 0 0-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 0 0-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 0 0-1.85-1.567h-1.843ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z"
+                        clip-rule="evenodd" />
+                </svg>
+                <div>
+                    Configuración General
+                </div>
+            </a>
+        </div>
+
         <div class="hover:ml-3 w-full 
 text-slate-700 dark:text-slate-200
 hover:text-slate-900 dark:hover:text-white
@@ -248,7 +301,8 @@ p-2 pl-4 rounded-xl
 transform ease-in-out duration-300 
 flex flex-row items-center space-x-2"
             {{-- class =  "hover:ml-4 w-full text-white hover:text-[#7ea41e] dark:hover:text-[#7ea41e] bg-[#1E293B] p-2 pl-4 rounded-full transform ease-in-out duration-300 flex flex-row items-center space-x-2" --}}>
-            <a href="{{ route('administracion.administrativa.semestres.index') }}" class="flex items-center space-x-2">
+            <a href="{{ route('administracion.administrativa.semestres.index') }}"
+                class="flex items-center space-x-2">
                 <svg class="dark:fill-white fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 576 512">
                     <path
@@ -268,7 +322,8 @@ p-2 pl-4 rounded-xl
 transform ease-in-out duration-300 
 flex flex-row items-center space-x-2"
             {{-- class =  "hover:ml-4 w-full text-white hover:text-[#7ea41e] dark:hover:text-[#7ea41e] bg-[#1E293B] p-2 pl-4 rounded-full transform ease-in-out duration-300 flex flex-row items-center space-x-2" --}}>
-            <a href="{{ route('administracion.administrativa.materias.index') }}" class="flex items-center space-x-2">
+            <a href="{{ route('administracion.administrativa.materias.index') }}"
+                class="flex items-center space-x-2">
                 <svg class="dark:fill-white fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 576 512">
                     <path
@@ -402,6 +457,27 @@ flex flex-row items-center space-x-2">
                 </svg>
                 <div>
                     Obligaciones Financieras
+                </div>
+            </a>
+        </div>
+        <div class="hover:ml-3 w-full 
+text-slate-700 dark:text-slate-200
+hover:text-slate-900 dark:hover:text-white
+bg-slate-100/70 dark:bg-[#111827]
+hover:bg-slate-200/80 dark:hover:bg-slate-800
+p-2 pl-4 rounded-xl
+transform ease-in-out duration-300 
+flex flex-row items-center space-x-2"
+            {{-- class =  "hover:ml-4 w-full text-white hover:text-[#7ea41e] dark:hover:text-[#7ea41e] bg-[#1E293B] p-2 pl-4 rounded-full transform ease-in-out duration-300 flex flex-row items-center space-x-2" --}}>
+            <a href="{{ route('administracion.administrativa.consolidado-cohortes') }}"
+                class="flex items-center space-x-2">
+                <svg class="dark:fill-white fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 640 640">
+                    <path
+                        d="M160 64C142.3 64 128 78.3 128 96C128 113.7 142.3 128 160 128L160 139C160 181.4 176.9 222.1 206.9 252.1L274.8 320L206.9 387.9C176.9 417.9 160 458.6 160 501L160 512C142.3 512 128 526.3 128 544C128 561.7 142.3 576 160 576L480 576C497.7 576 512 561.7 512 544C512 526.3 497.7 512 480 512L480 501C480 458.6 463.1 417.9 433.1 387.9L365.2 320L433.1 252.1C463.1 222.1 480 181.4 480 139L480 128C497.7 128 512 113.7 512 96C512 78.3 497.7 64 480 64L160 64zM224 139L224 128L416 128L416 139C416 158 410.4 176.4 400 192L240 192C229.7 176.4 224 158 224 139zM240 448C243.5 442.7 247.6 437.7 252.1 433.1L320 365.2L387.9 433.1C392.5 437.7 396.5 442.7 400.1 448L240 448z" />
+                </svg>
+                <div>
+                    Reporte Cohortes Consolidadas
                 </div>
             </a>
         </div>
@@ -569,6 +645,29 @@ flex flex-row items-center space-x-2"
                     viewBox="0 0 512 512">
                     <path
                         d="M64 64c0-17.7-14.3-32-32-32S0 46.3 0 64L0 400c0 44.2 35.8 80 80 80l400 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L80 416c-8.8 0-16-7.2-16-16L64 64zm406.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L320 210.7l-57.4-57.4c-12.5-12.5-32.8-12.5-45.3 0l-112 112c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L240 221.3l57.4 57.4c12.5 12.5 32.8 12.5 45.3 0l128-128z" />
+                </svg>
+            </div>
+        </a>
+        {{-- Configuración del Sistema --}}
+        <a href="{{ route('administracion.administrativa.settings') }}" title="Configuración del Sistema">
+            <div
+                class="hover:ml-4 justify-end pr-6 w-full dark:bg-slate-200 bg-[#1E293B] p-3 rounded-full transform ease-in-out duration-300 flex">
+                <svg class="fill-white dark:fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24">
+                    <path fill-rule="evenodd"
+                        d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 0 0-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 0 0-2.282.819l-.922 1.597a1.875 1.875 0 0 0 .432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 0 0 0 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 0 0-.432 2.385l.922 1.597a1.875 1.875 0 0 0 2.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 0 0 2.28-.819l.923-1.597a1.875 1.875 0 0 0-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 0 0 0-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 0 0-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 0 0-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 0 0-1.85-1.567h-1.843ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z"
+                        clip-rule="evenodd" />
+                </svg>
+            </div>
+        </a>
+        {{-- Sistema de tickets --}}
+        <a href="{{ route('administracion.administrativa.tickets.index') }}" title="Sistema de tickets">
+            <div
+                class="hover:ml-4 justify-end pr-6 w-full dark:bg-slate-200 bg-[#1E293B] p-3 rounded-full transform ease-in-out duration-300 flex">
+                <svg class="fill-white dark:fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 640 640">
+                    <path
+                        d="M96 128C60.7 128 32 156.7 32 192L32 256C32 264.8 39.4 271.7 47.7 274.6C66.5 281.1 80 299 80 320C80 341 66.5 358.9 47.7 365.4C39.4 368.3 32 375.2 32 384L32 448C32 483.3 60.7 512 96 512L544 512C579.3 512 608 483.3 608 448L608 384C608 375.2 600.6 368.3 592.3 365.4C573.5 358.9 560 341 560 320C560 299 573.5 281.1 592.3 274.6C600.6 271.7 608 264.8 608 256L608 192C608 156.7 579.3 128 544 128L96 128zM448 400L448 240L192 240L192 400L448 400zM144 224C144 206.3 158.3 192 176 192L464 192C481.7 192 496 206.3 496 224L496 416C496 433.7 481.7 448 464 448L176 448C158.3 448 144 433.7 144 416L144 224z" />
                 </svg>
             </div>
         </a>
@@ -789,6 +888,17 @@ flex flex-row items-center space-x-2"
                 </svg>
             </div>
         </a>
+        {{-- REPORTES COHORTES CONSOLIDADOS --}}
+        <a href="{{ route('administracion.administrativa.consolidado-cohortes') }}" title="Cohortes Consolidados">
+            <div
+                class= "hover:ml-4 justify-end pr-6 w-full dark:bg-slate-200 bg-[#1E293B] p-3 rounded-full transform ease-in-out duration-300 flex">
+                <svg class="fill-white dark:fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 640 640">
+                    <path
+                        d="M160 64C142.3 64 128 78.3 128 96C128 113.7 142.3 128 160 128L160 139C160 181.4 176.9 222.1 206.9 252.1L274.8 320L206.9 387.9C176.9 417.9 160 458.6 160 501L160 512C142.3 512 128 526.3 128 544C128 561.7 142.3 576 160 576L480 576C497.7 576 512 561.7 512 544C512 526.3 497.7 512 480 512L480 501C480 458.6 463.1 417.9 433.1 387.9L365.2 320L433.1 252.1C463.1 222.1 480 181.4 480 139L480 128C497.7 128 512 113.7 512 96C512 78.3 497.7 64 480 64L160 64zM224 139L224 128L416 128L416 139C416 158 410.4 176.4 400 192L240 192C229.7 176.4 224 158 224 139zM240 448C243.5 442.7 247.6 437.7 252.1 433.1L320 365.2L387.9 433.1C392.5 437.7 396.5 442.7 400.1 448L240 448z" />
+                </svg>
+            </div>
+        </a>
         {{-- Actas del Organo Colegiado Superior --}}
         <a href="{{ route('administracion.administrativa.actas-colegiado.index') }}"
             title="Actas del Organo Colegiado Superior">
@@ -813,6 +923,7 @@ flex flex-row items-center space-x-2"
                 </svg>
             </div>
         </a>
+
     </div>
 
 </aside>

@@ -36,7 +36,6 @@ class Calificacion extends Model
         'examen_parcial' => 'decimal:2',
         'examen_final' => 'decimal:2',
         'nota_final' => 'decimal:2',
-        'suspenso' => 'boolean',
         'es_arrastre' => 'boolean',
         'numero_intento' => 'integer',
     ];

@@ -22,12 +22,9 @@
                         class="w-full rounded-xl border-gray-200 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                         @foreach ($periodos as $p)
                             <option value="{{ $p->id }}">
-                                {{ $p->code }}: <br>
+                                {{ $p->code }}
                                 ({{ \Carbon\Carbon::parse($p->fecha_inicio)->format('d/m/Y') }} -
                                 {{ \Carbon\Carbon::parse($p->fecha_fin)->format('d/m/Y') }})
-                                @if ($p->is_current)
-                                    (Actual)
-                                @endif
                             </option>
                         @endforeach
                     </select>

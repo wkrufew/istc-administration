@@ -22,8 +22,7 @@ class DashboardPrincipal extends Component
 
     public function mount(): void
     {
-        $actual = Periodo::where('is_current', true)->first();
-        $this->periodoId = $actual?->id ?? Periodo::latest()->first()?->id;
+        $this->periodoId = Periodo::periodoActivoGlobal()?->id ?? Periodo::latest()->first()?->id;
     }
 
     // =========================================================================

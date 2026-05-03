@@ -89,23 +89,48 @@
                             </td>
 
                             <td class="px-4 py-3 text-center">
-                                @if ($periodo->is_current)
+                                @if ($periodo->carreras->isEmpty())
                                     <span
                                         class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
-                                        bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-800">
-                                        ● Activo
+                                        bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                                        Sin carreras
                                     </span>
                                 @else
-                                    <span
-                                        class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
-                                        bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200 border border-red-200 dark:border-red-800">
-                                        ● Inactivo
-                                    </span>
+                                    <div class="flex flex-col items-center gap-1">
+                                        @foreach ($periodo->carreras as $carrera)
+                                            @if ($carrera->pivot->is_current)
+                                                <span
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+                                                    bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-800">
+                                                    ● {{ $carrera->code }}
+                                                </span>
+                                            @else
+                                                <span
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+                                                    bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                                                    ● {{ $carrera->code }}
+                                                </span>
+                                            @endif
+                                        @endforeach
+                                    </div>
                                 @endif
                             </td>
 
                             <td class="px-4 py-3">
-                                <div class="flex items-center justify-center gap-3">
+                                <div class="flex items-center justify-center gap-3 flex-wrap">
+
+                                    {{-- Gestionar Carreras --}}
+                                    <button
+                                        onclick="Livewire.dispatch('openGestionCarreras', { periodoId: {{ $periodo->id }} })"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg
+                                        bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800
+                                        text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                        </svg>
+                                        Carreras
+                                    </button>
 
                                     {{-- Edit --}}
                                     <a href="{{ route('administracion.administrativa.periodos.edit', $periodo) }}"
@@ -138,32 +163,34 @@
                                             </svg>
                                         </button>
                                     </form>
-                                    @if ($periodo->is_current)
+                                    @php $activeCarreras = $periodo->carreras->filter(fn($c) => $c->pivot->is_current); @endphp
+                                    @forelse ($activeCarreras as $carrera)
                                         <form
                                             action="{{ route('administracion.administrativa.periodos.cerrar', $periodo) }}"
                                             method="POST"
-                                            onsubmit="return confirm('¿Está seguro de cerrar el periodo {{ $periodo->code }}? Los saldos pendientes se arrastrarán al siguiente periodo.')">
+                                            onsubmit="return confirm('¿Cerrar el periodo {{ $periodo->code }} para {{ $carrera->name }}? Los saldos pendientes se arrastrarán al siguiente periodo.')">
                                             @csrf
+                                            <input type="hidden" name="carrera_id" value="{{ $carrera->id }}">
                                             <button type="submit"
                                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg
-                       bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300
-                       dark:hover:bg-red-900/60 transition">
+                                                bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300
+                                                dark:hover:bg-red-900/60 transition">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5"
                                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
                                                         stroke-width="2"
                                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                                 </svg>
-                                                Cerrar Periodo
+                                                Cerrar {{ $carrera->code }}
                                             </button>
                                         </form>
-                                    @else
+                                    @empty
                                         <span
                                             class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg
-                 bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+                                            bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
                                             Cerrado
                                         </span>
-                                    @endif
+                                    @endforelse
 
                                 </div>
                             </td>
@@ -196,16 +223,25 @@
                             </p>
                         </div>
 
-                        @if ($periodo->is_current)
+                        @if ($periodo->carreras->isEmpty())
                             <span
-                                class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200">
-                                Activo
+                                class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                Sin carreras
                             </span>
                         @else
-                            <span
-                                class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200">
-                                Inactivo
-                            </span>
+                            <div class="flex flex-wrap gap-1">
+                                @foreach ($periodo->carreras as $carrera)
+                                    @if ($carrera->pivot->is_current)
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200">
+                                            ● {{ $carrera->code }}
+                                        </span>
+                                    @else
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                            ● {{ $carrera->code }}
+                                        </span>
+                                    @endif
+                                @endforeach
+                            </div>
                         @endif
                     </div>
 
@@ -228,9 +264,15 @@
                         </p>
                     </div>
 
-                    <div class="mt-4 flex gap-3">
+                    <div class="mt-4 flex gap-3 flex-wrap">
+                        <button
+                            onclick="Livewire.dispatch('openGestionCarreras', { periodoId: {{ $periodo->id }} })"
+                            class="flex-1 text-center px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition text-sm">
+                            Carreras
+                        </button>
+
                         <a href="{{ route('administracion.administrativa.periodos.edit', $periodo) }}"
-                            class="flex-1 text-center px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition">
+                            class="flex-1 text-center px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm">
                             Editar
                         </a>
 
@@ -241,11 +283,25 @@
                             @method('DELETE')
 
                             <button type="submit"
-                                class="w-full px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition">
+                                class="w-full px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm">
                                 Eliminar
                             </button>
                         </form>
                     </div>
+
+                    @foreach ($periodo->carreras->filter(fn($c) => $c->pivot->is_current) as $carrera)
+                        <form
+                            action="{{ route('administracion.administrativa.periodos.cerrar', $periodo) }}"
+                            method="POST" class="mt-2"
+                            onsubmit="return confirm('¿Cerrar el periodo {{ $periodo->code }} para {{ $carrera->name }}? Los saldos pendientes se arrastrarán al siguiente periodo.')">
+                            @csrf
+                            <input type="hidden" name="carrera_id" value="{{ $carrera->id }}">
+                            <button type="submit"
+                                class="w-full px-4 py-2 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition text-sm">
+                                Cerrar periodo — {{ $carrera->code }}
+                            </button>
+                        </form>
+                    @endforeach
 
                 </div>
             @empty
@@ -256,4 +312,8 @@
         </div>
 
     </div>
+
+    {{-- Modal de gestión de carreras por cohorte --}}
+    @livewire('administration.gestion-carrera-periodo')
+
 </x-admin-layout>

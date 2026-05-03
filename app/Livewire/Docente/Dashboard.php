@@ -19,9 +19,9 @@ class Dashboard extends Component
     {
         $this->periodos = Periodo::orderByDesc('fecha_inicio')->get();
 
-        // Seleccionar el periodo actual por defecto
-        $actual = $this->periodos->firstWhere('is_current', true);
-        $this->periodo_id = $actual ? $actual->id : ($this->periodos->first()->id ?? null);
+        // Seleccionar el periodo activo por defecto
+        $actual = Periodo::periodoActivoGlobal();
+        $this->periodo_id = $actual?->id ?? $this->periodos->first()?->id;
 
         $this->cargarDatos();
     }

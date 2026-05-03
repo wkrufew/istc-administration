@@ -34,14 +34,15 @@ class CarreraController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:255|unique:carreras,code',
-            'description' => 'nullable|string|max:1000',
-            'costo_credito' => 'required|numeric|min:0',
-            'costo_carrera' => 'required|numeric|min:0',
+            'name'              => 'required|string|max:255',
+            'code'              => 'required|string|max:255|unique:carreras,code',
+            'description'       => 'nullable|string|max:1000',
+            'costo_credito'     => 'required|numeric|min:0',
+            'costo_carrera'     => 'required|numeric|min:0',
             'duracion_semestres' => 'required|integer|min:1',
-            'modalidad' => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
-            'is_active' => 'nullable|boolean',
+            'modalidad'         => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
+            'tipo'              => 'required|in:Tecnologica,Tecnicatura',
+            'is_active'         => 'nullable|boolean',
         ]);
 
         Carrera::create($request->all());
@@ -70,14 +71,15 @@ class CarreraController extends Controller
     public function update(Request $request, Carrera $carrera)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:255|unique:carreras,code,' . $carrera->id,
-            'description' => 'nullable|string|max:1000',
-            'costo_credito' => 'required|numeric|min:0',
-            'costo_carrera' => 'required|numeric|min:0',
+            'name'              => 'required|string|max:255',
+            'code'              => 'required|string|max:255|unique:carreras,code,' . $carrera->id,
+            'description'       => 'nullable|string|max:1000',
+            'costo_credito'     => 'required|numeric|min:0',
+            'costo_carrera'     => 'required|numeric|min:0',
             'duracion_semestres' => 'required|integer|min:1',
-            'modalidad' => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
-            'is_active' => 'nullable|boolean',
+            'modalidad'         => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
+            'tipo'              => 'required|in:Tecnologica,Tecnicatura',
+            'is_active'         => 'nullable|boolean',
         ]);
 
         $carrera->update($request->all());

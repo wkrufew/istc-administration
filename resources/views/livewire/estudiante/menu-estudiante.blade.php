@@ -88,8 +88,28 @@
                     </div>
                 </div>
 
-                {{-- DERECHA: usuario dropdown --}}
+                {{-- DERECHA: campanita + usuario dropdown --}}
                 <div class="hidden md:flex items-center gap-2">
+
+                    {{-- Campana avisos --}}
+                    <a href="{{ route('administracion.estudiantil.avisos') }}"
+                       class="relative inline-flex items-center justify-center w-9 h-9 rounded-xl
+                              text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200
+                              {{ request()->routeIs('administracion.estudiantil.avisos') ? 'text-blue-600 bg-blue-50' : '' }}"
+                       title="Mis avisos">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        @if($this->avisosNoLeidos > 0)
+                        <span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-0.5
+                                     flex items-center justify-center rounded-full
+                                     bg-red-500 text-white text-[10px] font-bold leading-none
+                                     ring-2 ring-white">
+                            {{ $this->avisosNoLeidos > 9 ? '9+' : $this->avisosNoLeidos }}
+                        </span>
+                        @endif
+                    </a>
                     <x-dropdown align="right" width="56">
                         <x-slot name="trigger">
                             <button
@@ -189,6 +209,27 @@
                         {{ $link['label'] }}
                     </a>
                 @endforeach
+
+                {{-- Avisos (móvil) --}}
+                @php $isAvisos = request()->routeIs('administracion.estudiantil.avisos'); @endphp
+                <a href="{{ route('administracion.estudiantil.avisos') }}"
+                    class="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all
+                           {{ $isAvisos ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800' }}">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 {{ $isAvisos ? 'text-blue-600' : 'text-slate-400' }}" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        Avisos
+                    </div>
+                    @if($this->avisosNoLeidos > 0)
+                    <span class="inline-flex items-center justify-center min-w-[1.3rem] h-5 px-1.5
+                                 rounded-full bg-red-500 text-white text-xs font-bold">
+                        {{ $this->avisosNoLeidos > 9 ? '9+' : $this->avisosNoLeidos }}
+                    </span>
+                    @endif
+                </a>
             </div>
             <div class="border-t border-slate-100 p-4 bg-slate-50/50">
                 <div class="flex items-center gap-3 mb-3">

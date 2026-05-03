@@ -1,4 +1,24 @@
-<div class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+<div class="max-w-7xl mx-auto px-4 pb-2 space-y-4"
+    x-data="{ _scroll: 0 }"
+    x-init="
+        document.addEventListener('livewire:request', () => {
+            if (!document.body.style.position) {
+                this._scroll = window.scrollY;
+            }
+        });
+    "
+    x-on:modal-opened.window="
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${_scroll}px`;
+        document.body.style.width = '100%';
+    "
+    x-on:modal-closed.window="
+        const sy = _scroll;
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, sy);
+    ">
 
     {{-- ═══════════════════════════════════════
          BLOQUE 1 — HEADER FUSIONADO
@@ -295,8 +315,22 @@
                 <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" wire:click="cerrarModal"></div>
 
                 {{-- Panel --}}
-                <div
-                    class="relative w-full max-w-5xl bg-slate-900 rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="relative w-full max-w-5xl bg-slate-900 rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden flex flex-col max-h-[90vh]"
+                    x-data="{
+                        paralelosLocales: {},
+                        init() {
+                            this.paralelosLocales = Object.assign({}, $wire.paralelosSeleccionados ?? {});
+                        },
+                        async avanzarPaso() {
+                            if ($wire.paso == 3) {
+                                const p = {};
+                                for (const [k, v] of Object.entries(this.paralelosLocales)) p[k] = v;
+                                await $wire.siguientePasoConParalelos(p);
+                            } else {
+                                await $wire.siguientePaso();
+                            }
+                        }
+                    }">
 
                     {{-- Shimmer top --}}
                     <div class="h-px bg-gradient-to-r from-transparent via-lime-500/40 to-transparent flex-shrink-0"></div>
@@ -376,7 +410,7 @@
 
                     {{-- Modal Body --}}
                     <div
-                        class="flex-1 overflow-y-auto px-6 py-5
+                        class="flex-1 overflow-y-auto overscroll-contain px-6 pb-5
                     [&::-webkit-scrollbar]:w-1.5
                     [&::-webkit-scrollbar-track]:bg-slate-800/50
                     [&::-webkit-scrollbar-thumb]:bg-slate-600
@@ -384,7 +418,7 @@
 
                         {{-- ── PASO 1: Información ── --}}
                         @if ($paso == 1)
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            <div class="pt-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                                 {{-- Info estudiante --}}
                                 <div class="bg-slate-800 border border-white/[0.06] rounded-xl p-4">
@@ -415,24 +449,6 @@
                                 {{-- Formulario --}}
                                 <div class="space-y-4">
 
-                                    {{-- Carrera --}}
-                                    <div>
-                                        <label
-                                            class="block text-[0.65rem] font-medium tracking-[0.15em] uppercase text-lime-400/70 mb-1.5">
-                                            Carrera <span class="text-red-400">*</span>
-                                        </label>
-                                        <select wire:model="carrera_id"
-                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-white/80 bg-slate-800 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('carrera_id') border-red-500/50 @enderror">
-                                            <option value="">Seleccionar carrera</option>
-                                            @foreach ($carreras as $carrera)
-                                                <option value="{{ $carrera->id }}">{{ $carrera->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('carrera_id')
-                                            <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-
                                     {{-- Período --}}
                                     <div>
                                         <label
@@ -448,6 +464,24 @@
                                             @endforeach
                                         </select>
                                         @error('periodo_id')
+                                            <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+
+                                    {{-- Carrera --}}
+                                    <div>
+                                        <label
+                                            class="block text-[0.65rem] font-medium tracking-[0.15em] uppercase text-lime-400/70 mb-1.5">
+                                            Carrera <span class="text-red-400">*</span>
+                                        </label>
+                                        <select wire:model="carrera_id"
+                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-white/80 bg-slate-800 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('carrera_id') border-red-500/50 @enderror">
+                                            <option value="">Seleccionar carrera</option>
+                                            @foreach ($carreras as $carrera)
+                                                <option value="{{ $carrera->id }}">{{ $carrera->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('carrera_id')
                                             <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
                                         @enderror
                                     </div>
@@ -515,7 +549,7 @@
 
                         {{-- ── PASO 2: Materias ── --}}
                         @if ($paso == 2)
-                            <div>
+                            <div class="pt-5">
                                 <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 mb-4">
                                     Materias Disponibles</h4>
 
@@ -558,7 +592,7 @@
                                                                     {{ $materia['code'] }}</p>
                                                                 <div class="flex items-center justify-between">
                                                                     <span
-                                                                        class="text-[0.62rem] text-slate-500">{{ $materia['credits'] }}
+                                                                        class="text-[0.62rem] text-slate-500">{{ number_format($materia['credits'], 2) }}
                                                                         créd.</span>
                                                                     <span
                                                                         class="px-1.5 py-0.5 rounded-full text-[0.6rem] font-medium
@@ -597,7 +631,10 @@
                         {{-- ── PASO 3: Paralelos ── --}}
                         @if ($paso == 3)
                             <div>
-                                <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 mb-4">
+                                <h4
+                                    class="sticky top-0 z-10 -mx-6 px-6 pt-5 pb-3 mb-4
+                                           bg-slate-900 border-b border-white/[0.04]
+                                           text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
                                     Selección de Paralelos</h4>
                                 @php
                                     $todasLasMaterias = collect($materiasSeleccionadas)
@@ -628,11 +665,11 @@
                                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                                         @foreach ($paralelos as $paralelo)
                                                             <label
-                                                                class="cursor-pointer {{ !$paralelo['tiene_cupo'] ? 'opacity-50 cursor-not-allowed' : '' }}">
-                                                                <input type="radio" class="sr-only peer"
+                                                                class="relative cursor-pointer {{ !$paralelo['tiene_cupo'] ? 'opacity-50 cursor-not-allowed' : '' }}">
+                                                                <input type="radio" class="sr-only peer" tabindex="-1"
                                                                     name="paralelo_{{ $materiaId }}"
                                                                     value="{{ $paralelo['id'] }}"
-                                                                    wire:model="paralelosSeleccionados.{{ $materiaId }}"
+                                                                    x-model="paralelosLocales[{{ $materiaId }}]"
                                                                     {{ !$paralelo['tiene_cupo'] ? 'disabled' : '' }}>
                                                                 <div
                                                                     class="border border-white/[0.06] rounded-lg p-3 bg-slate-900 transition-all duration-150
@@ -664,7 +701,7 @@
 
                         {{-- ── PASO 4: Resumen ── --}}
                         @if ($paso == 4)
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                            <div class="pt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
 
                                 {{-- Tablas de materias --}}
                                 <div class="lg:col-span-2 space-y-4">
@@ -715,7 +752,8 @@
                                                                         {{ $materia->code }}</p>
                                                                 </td>
                                                                 <td class="px-4 py-2.5 text-center text-xs text-slate-400">
-                                                                    {{ $materia->credits }}</td>
+                                                                    {{ number_format(($materia->horas_teoricas + $materia->horas_practicas) / 48, 2) }}
+                                                                </td>
                                                                 <td class="px-4 py-2.5 text-center text-xs text-slate-400">
                                                                     {{ $paralelo ? $paralelo->name : '—' }}</td>
                                                                 <td
@@ -783,7 +821,8 @@
                                                                         {{ $materia->code }}</p>
                                                                 </td>
                                                                 <td class="px-4 py-2.5 text-center text-xs text-slate-400">
-                                                                    {{ $materia->credits }}</td>
+                                                                    {{ number_format(($materia->horas_teoricas + $materia->horas_practicas) / 48, 2) }}
+                                                                </td>
                                                                 <td class="px-4 py-2.5 text-center text-xs text-slate-400">
                                                                     {{ $paralelo ? $paralelo->name : '—' }}</td>
                                                                 <td
@@ -809,48 +848,93 @@
                                         </div>
                                         <div class="p-4 space-y-4">
 
-                                            {{-- Descuento --}}
-                                            <div>
-                                                <label
-                                                    class="block text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 mb-1.5">
-                                                    Descuento ($)
-                                                </label>
-                                                <input type="number" wire:model.blur="descuento" min="0"
-                                                    max="{{ $costoTotal }}" step="0.01" placeholder="0.00"
-                                                    class="w-full px-3 py-2 rounded-lg text-sm text-white/80 bg-slate-900 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('descuento') border-red-500/50 @enderror">
-                                                @error('descuento')
-                                                    <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
-                                                @enderror
-                                            </div>
-
-                                            <div class="h-px bg-white/[0.05]"></div>
-
-                                            <div class="space-y-2.5">
+                                            {{-- ── SECCIÓN CRÉDITOS (informativo) ── --}}
+                                            @php $costoPorCredito = $totalCreditos > 0 ? $montoArancel / $totalCreditos : 0; @endphp
+                                            <div
+                                                class="bg-sky-500/[0.06] border border-sky-500/20 rounded-lg p-3 space-y-2">
+                                                <p
+                                                    class="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-sky-400/80 mb-2.5">
+                                                    Créditos
+                                                </p>
                                                 <div class="flex justify-between items-center">
                                                     <span class="text-xs text-slate-400">Total Créditos</span>
-                                                    <span
-                                                        class="text-xs font-medium text-white/70">{{ $totalCreditos }}</span>
+                                                    <span class="text-xs font-semibold text-sky-300">
+                                                        {{ number_format($totalCreditos, 2) }}
+                                                    </span>
                                                 </div>
                                                 <div class="flex justify-between items-center">
-                                                    <span class="text-xs text-slate-400">Costo Total</span>
-                                                    <span
-                                                        class="text-xs font-medium text-white/70">${{ number_format($costoTotal, 2) }}</span>
+                                                    <span class="text-xs text-slate-400">Costo por Crédito</span>
+                                                    <span class="text-xs font-semibold text-sky-300">
+                                                        ${{ number_format($costoPorCredito, 2) }}
+                                                    </span>
                                                 </div>
-                                                @if ($descuento > 0)
+                                            </div>
+
+                                            {{-- ── SECCIÓN MATRÍCULA (pago inmediato) ── --}}
+                                            <div class="space-y-3">
+                                                <p
+                                                    class="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-lime-400/80">
+                                                    Costo Matrícula
+                                                </p>
+
+                                                {{-- Descuento --}}
+                                                <div>
+                                                    <label
+                                                        class="block text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 mb-1.5">
+                                                        Descuento ($)
+                                                    </label>
+                                                    <input type="number" wire:model.blur="descuento" min="0"
+                                                        max="{{ $costoTotal }}" step="0.01" placeholder="0.00"
+                                                        class="w-full px-3 py-2 rounded-lg text-sm text-white/80 bg-slate-900 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('descuento') border-red-500/50 @enderror">
+                                                    @error('descuento')
+                                                        <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
+                                                    @enderror
+                                                </div>
+
+                                                <div class="space-y-2">
                                                     <div class="flex justify-between items-center">
-                                                        <span class="text-xs text-lime-400/70">Descuento</span>
-                                                        <span
-                                                            class="text-xs font-medium text-lime-400">-${{ number_format($descuento, 2) }}</span>
+                                                        <span class="text-xs text-slate-400">Costo Matrícula</span>
+                                                        <span class="text-xs font-medium text-white/70">
+                                                            ${{ number_format($montoMatricula, 2) }}
+                                                        </span>
                                                     </div>
-                                                @endif
+                                                    @if ($descuento > 0)
+                                                        <div class="flex justify-between items-center">
+                                                            <span class="text-xs text-lime-400/70">Descuento</span>
+                                                            <span class="text-xs font-medium text-lime-400">
+                                                                -${{ number_format($descuento, 2) }}
+                                                            </span>
+                                                        </div>
+                                                    @endif
+                                                </div>
+
+                                                <div
+                                                    class="flex justify-between items-center bg-lime-500/[0.07] border border-lime-500/20 rounded-lg px-3 py-2">
+                                                    <span class="text-xs font-semibold text-white/70">Total a Pagar</span>
+                                                    <span class="text-base font-bold text-lime-400">
+                                                        ${{ number_format($totalPagar, 2) }}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             <div class="h-px bg-white/[0.05]"></div>
 
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-xs font-medium text-white/60">Total a Pagar</span>
-                                                <span
-                                                    class="text-lg font-semibold text-lime-400">${{ number_format($totalPagar, 2) }}</span>
+                                            {{-- ── SECCIÓN VALOR PENDIENTE (pago futuro) ── --}}
+                                            <div
+                                                class="bg-amber-500/[0.06] border border-amber-500/20 rounded-lg p-3 space-y-2">
+                                                <p
+                                                    class="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-amber-400/80 mb-2.5">
+                                                    Valor Pendiente
+                                                </p>
+                                                <div class="flex justify-between items-center">
+                                                    <span class="text-xs text-slate-400">Arancel Semestral</span>
+                                                    <span class="text-xs font-semibold text-amber-300">
+                                                        ${{ number_format($montoArancel, 2) }}
+                                                    </span>
+                                                </div>
+                                                <p class="text-[0.6rem] text-amber-400/50 leading-relaxed">
+                                                    Valor a pagar durante el transcurso del semestre.
+                                                </p>
                                             </div>
 
                                         </div>
@@ -891,7 +975,7 @@
                             </button>
 
                             @if ($paso < $totalPasos)
-                                <button type="button" wire:click="siguientePaso"
+                                <button type="button" x-on:click="avanzarPaso()"
                                     class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium tracking-wide uppercase
                                        text-white/90
                                        bg-gradient-to-r from-green-800/70 via-sky-800/60 to-purple-900/55
@@ -976,6 +1060,13 @@
                     });
                 });
             });
+            Livewire.on('modal-opened', () => {
+                document.documentElement.style.overflow = 'hidden';
+            });
+            Livewire.on('modal-closed', () => {
+                document.documentElement.style.overflow = '';
+            });
+
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') Livewire.dispatch('cerrarModal');
             });

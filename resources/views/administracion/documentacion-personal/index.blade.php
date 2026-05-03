@@ -1,6 +1,5 @@
 <x-admin-layout>
-    <div class="">
-        {{-- @livewire('administration.documents-index') --}}
-        @livewire('administration.documentos-personal-listado' /* , ['user' => $user] */)
+    <div class="p-4 sm:p-6">
+        @livewire('administration.documentos-personal-listado')
     </div>
 </x-admin-layout>

@@ -3,98 +3,62 @@
 namespace App\Livewire\Administration;
 
 use App\Models\Document;
-use Livewire\Component;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Component;
 use Livewire\WithPagination;
-use App\Models\User;
 
 class DocumentosPersonalListado extends Component
 {
     use WithPagination;
 
-    public $search;
+    public string $search = '';
 
-    /* public ?User $user = null;
-
-    public function mount(?User $user = null)
-    {
-        $this->user = $user;
-    } */
-
-    public function render()
-    {
-        /* $documents = Document::with('user')
-            ->whereHas('user', function ($query) {
-                $query->where('name', 'LIKE', '%' . $this->search . '%')
-                    ->orWhere('email', 'LIKE', '%' . $this->search . '%');
-            })
-            ->latest('id')
-            ->paginate(10); */
-        $documentacion_personals = Document::with('user.roles')
-            ->whereHas('user', function ($query) {
-                // Filtrar usuarios que NO tengan los roles de 'estudiante' o 'admision'
-                $query->whereDoesntHave('roles', function ($roleQuery) {
-                    $roleQuery->whereIn('name', ['Estudiante', 'Admision']);
-                })
-                    ->where(function ($searchQuery) {
-                        $searchQuery->where('name', 'LIKE', '%' . $this->search . '%')
-                            ->orWhere('email', 'LIKE', '%' . $this->search . '%')
-                            ->orWhere('cedula', 'LIKE', '%' . $this->search . '%');
-                    });
-            })
-            ->latest('id')
-            ->paginate(10);
-
-        return view('livewire.administration.documentos-personal-listado', compact('documentacion_personals'));
-    }
-
-    public function updatingSearch()
+    public function updatingSearch(): void
     {
         $this->resetPage();
     }
 
-    public function countFiles($documentacion_personal)
+    public function deleteDocument(int $documentId): void
     {
-        $count = 0;
-        if ($documentacion_personal->file_curriculum) $count++;
-        if ($documentacion_personal->file_senescyt) $count++;
-        if ($documentacion_personal->file_contrato) $count++;
-        if ($documentacion_personal->file_otro) $count++;
-        return $count;
+        $doc = Document::find($documentId);
+
+        if (! $doc) {
+            $this->dispatch('toast', message: 'Documento no encontrado.', type: 'error');
+            return;
+        }
+
+        foreach (['file_curriculum', 'file_senescyt', 'file_contrato', 'file_otro'] as $field) {
+            if ($doc->$field && Storage::disk('public')->exists($doc->$field)) {
+                Storage::disk('public')->delete($doc->$field);
+            }
+        }
+
+        $doc->delete();
+
+        $this->dispatch('toast', message: 'Documentos eliminados correctamente.', type: 'success');
     }
 
-    public function deleteDocument($documentId)
+    public function countFiles(Document $doc): int
     {
-        $documentacion_personal = Document::find($documentId);
+        return collect(['file_curriculum', 'file_senescyt', 'file_contrato', 'file_otro'])
+            ->filter(fn($f) => (bool) $doc->$f)
+            ->count();
+    }
 
-        try {
-            // Eliminar todos los archivos asociados
-            if ($documentacion_personal->file_curriculum && Storage::disk('public')->exists($documentacion_personal->file_curriculum)) {
-                Storage::disk('public')->delete($documentacion_personal->file_curriculum);
-            }
-            if ($documentacion_personal->file_senescyt && Storage::disk('public')->exists($documentacion_personal->file_senescyt)) {
-                Storage::disk('public')->delete($documentacion_personal->file_senescyt);
-            }
-            if ($documentacion_personal->file_contrato && Storage::disk('public')->exists($documentacion_personal->file_contrato)) {
-                Storage::disk('public')->delete($documentacion_personal->file_contrato);
-            }
-            if ($documentacion_personal->file_otro && Storage::disk('public')->exists($documentacion_personal->file_otro)) {
-                Storage::disk('public')->delete($documentacion_personal->file_otro);
-            }
+    public function render()
+    {
+        $documentos = Document::with('user.roles')
+            ->whereHas('user', function ($q) {
+                $q->whereDoesntHave('roles', fn($r) => $r->whereIn('name', ['Estudiante', 'Admision']))
+                  ->where(fn($s) => $s
+                      ->where('name', 'like', "%{$this->search}%")
+                      ->orWhere('email', 'like', "%{$this->search}%")
+                      ->orWhere('cedula', 'like', "%{$this->search}%")
+                  );
+            })
+            ->latest()
+            ->paginate(12);
 
-            $documentacion_personal->delete();
-
-            $this->dispatch('alert', [
-                'message' => 'Documentos eliminados con éxito.',
-                'type' => 'success',
-                'title' => 'Eliminación exitosa'
-            ]);
-        } catch (\Exception $e) {
-            $this->dispatch('alert', [
-                'message' => 'Error al eliminar los documentos',
-                'type' => 'error',
-                'title' => 'Error'
-            ]);
-        }
+        return view('livewire.administration.documentos-personal-listado', compact('documentos'));
     }
 }

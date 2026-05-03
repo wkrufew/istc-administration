@@ -3,87 +3,94 @@
 
         {{-- HEADER --}}
         <div>
-            <h2 class="text-2xl font-bold text-gray-800">Reportes Académicos</h2>
-            <p class="text-gray-500 text-sm mt-1">Consulta detallada por periodo, carrera o materia</p>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Reportes Académicos</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Consulta detallada por periodo, carrera o materia</p>
         </div>
 
         {{-- ================================================================
              PANEL DE FILTROS
              ================================================================ --}}
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-4">Parámetros del reporte</p>
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700/60 shadow-sm p-6">
+            <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-4">Parámetros del reporte</p>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
-                {{-- Periodo --}}
+                {{-- 1. Carrera (siempre visible, requerida) --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">
-                        Periodo <span class="text-red-500">*</span>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">
+                        Carrera <span class="text-red-500">*</span>
                     </label>
-                    <select wire:model.live="periodoId"
-                        class="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
-                        <option value="">Seleccionar periodo...</option>
-                        @foreach ($this->periodos as $p)
-                            <option value="{{ $p->id }}">
-                                {{ $p->code }} {{ $p->is_current ? '(Actual)' : '' }}
-                            </option>
+                    <select wire:model.live="carreraId"
+                        class="w-full rounded-xl border border-gray-200 dark:border-slate-600
+                               bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100
+                               shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                        <option value="">Seleccionar carrera...</option>
+                        @foreach ($this->carreras as $c)
+                            <option value="{{ $c->id }}">{{ $c->name }}</option>
                         @endforeach
                     </select>
                 </div>
 
-                {{-- Tipo de reporte --}}
+                {{-- 2. Periodo (filtrado por carrera, auto-seleccionado) --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">
+                        Periodo <span class="text-red-500">*</span>
+                    </label>
+                    <select wire:model.live="periodoId"
+                        class="w-full rounded-xl border border-gray-200 dark:border-slate-600
+                               bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100
+                               shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        @disabled(! $carreraId)>
+                        <option value="">Seleccionar periodo...</option>
+                        @foreach ($this->periodos as $p)
+                            <option value="{{ $p->id }}">{{ $p->code }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- 3. Tipo de reporte --}}
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">
                         Tipo de reporte <span class="text-red-500">*</span>
                     </label>
                     <select wire:model.live="tipoReporte"
-                        class="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                        @disabled(!$periodoId)>
+                        class="w-full rounded-xl border border-gray-200 dark:border-slate-600
+                               bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100
+                               shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                        @disabled(! $carreraId || ! $periodoId)>
                         <option value="">Seleccionar tipo...</option>
                         <option value="carrera">Por Carrera</option>
                         <option value="materia">Por Materia</option>
                     </select>
                 </div>
 
-                {{-- Carrera o Materia según tipo --}}
-                @if ($tipoReporte === 'carrera')
+                {{-- 4. Materia (solo si tipo = materia) --}}
+                @if ($tipoReporte === 'materia')
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">
-                            Carrera <span class="text-red-500">*</span>
-                        </label>
-                        <select wire:model.live="carreraId"
-                            class="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
-                            <option value="">Seleccionar carrera...</option>
-                            @foreach ($this->carreras as $c)
-                                <option value="{{ $c->id }}">{{ $c->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                @elseif ($tipoReporte === 'materia')
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">
                             Materia <span class="text-red-500">*</span>
                         </label>
                         <select wire:model.live="materiaId"
-                            class="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            class="w-full rounded-xl border border-gray-200 dark:border-slate-600
+                                   bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100
+                                   shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                             <option value="">Seleccionar materia...</option>
                             @foreach ($this->materias as $m)
-                                <option value="{{ $m->id }}">
-                                    {{ $m->name }} — {{ $m->semestre?->carrera?->code }}
-                                </option>
+                                <option value="{{ $m->id }}">{{ $m->name }}</option>
                             @endforeach
                         </select>
                     </div>
                 @else
                     <div></div>
                 @endif
+
             </div>
         </div>
 
         {{-- Loading --}}
-        <div wire:loading wire:target="periodoId,tipoReporte,carreraId,materiaId"
+        <div wire:loading wire:target="carreraId,periodoId,tipoReporte,materiaId"
             class="flex items-center justify-center py-12">
-            <div class="flex items-center gap-3 text-gray-500">
+            <div class="flex items-center gap-3 text-gray-500 dark:text-slate-400">
                 <svg class="animate-spin w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                         stroke-width="4" />
@@ -94,15 +101,23 @@
         </div>
 
         {{-- Estado inicial --}}
-        @if (!$periodoId || !$tipoReporte)
+        @if (! $carreraId || ! $periodoId || ! $tipoReporte)
             <div wire:loading.remove
-                class="bg-white rounded-2xl border border-dashed border-gray-200 py-16 text-center">
-                <svg class="w-14 h-14 mx-auto mb-4 text-gray-200" fill="none" stroke="currentColor"
+                class="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 py-16 text-center">
+                <svg class="w-14 h-14 mx-auto mb-4 text-gray-200 dark:text-slate-700" fill="none" stroke="currentColor"
                     viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                         d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p class="text-gray-400 font-semibold">Selecciona el periodo y tipo de reporte para comenzar</p>
+                <p class="text-gray-400 dark:text-gray-500 font-semibold">
+                    @if (! $carreraId)
+                        Selecciona una carrera para comenzar
+                    @elseif (! $periodoId)
+                        Selecciona el periodo
+                    @else
+                        Selecciona el tipo de reporte
+                    @endif
+                </p>
             </div>
         @endif
 
@@ -116,7 +131,7 @@
                 <div wire:loading.remove wire:target="periodoId,tipoReporte,carreraId" class="space-y-6">
 
                     {{-- Encabezado del reporte --}}
-                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
                         <div class="bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-5">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
@@ -163,19 +178,19 @@
 
                     {{-- Semestres --}}
                     @foreach ($rc['semestres'] as $sem)
-                        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
 
                             {{-- Header semestre --}}
                             <div
-                                class="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                                class="px-5 py-3 bg-gray-50 dark:bg-slate-800/60 border-b border-gray-200 dark:border-slate-700/60 flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
                                         class="w-8 h-8 rounded-xl bg-gray-800 flex items-center justify-center text-white text-xs font-bold">
                                         {{ $sem['semestre']->order }}
                                     </div>
-                                    <p class="font-bold text-gray-800">{{ $sem['semestre']->name }}</p>
+                                    <p class="font-bold text-gray-800 dark:text-gray-100">{{ $sem['semestre']->name }}</p>
                                 </div>
-                                <div class="flex items-center gap-5 text-xs text-gray-500">
+                                <div class="flex items-center gap-5 text-xs text-gray-500 dark:text-slate-400">
                                     <span>{{ $sem['total_materias'] }} materias</span>
                                     <span>{{ $sem['total_estudiantes'] }} estudiantes</span>
                                     <span>{{ $sem['total_horas_semana'] }} hrs/sem</span>
@@ -183,7 +198,7 @@
                             </div>
 
                             {{-- Materias --}}
-                            <div class="divide-y divide-gray-100">
+                            <div class="divide-y divide-gray-100 dark:divide-slate-700/40">
                                 @foreach ($sem['materias'] as $mat)
                                     <div class="p-5">
 
@@ -192,20 +207,20 @@
                                             class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                                             <div>
                                                 <div class="flex items-center gap-2 flex-wrap">
-                                                    <h4 class="font-bold text-gray-800">{{ $mat['materia']->name }}
+                                                    <h4 class="font-bold text-gray-800 dark:text-gray-100">{{ $mat['materia']->name }}
                                                     </h4>
                                                     <span
-                                                        class="text-xs px-2 py-0.5 rounded-full font-mono bg-gray-100 text-gray-600">
+                                                        class="text-xs px-2 py-0.5 rounded-full font-mono bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300">
                                                         {{ $mat['materia']->code }}
                                                     </span>
                                                     <span
                                                         class="text-xs px-2 py-0.5 rounded-full font-semibold
-                                                        {{ $mat['materia']->tipo === 'Obligatoria' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
+                                                        {{ $mat['materia']->tipo === 'Obligatoria' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400' }}">
                                                         {{ $mat['materia']->tipo }}
                                                     </span>
                                                 </div>
                                                 <div
-                                                    class="flex items-center gap-4 mt-1.5 text-xs text-gray-500 flex-wrap">
+                                                    class="flex items-center gap-4 mt-1.5 text-xs text-gray-500 dark:text-slate-400 flex-wrap">
                                                     <span>{{ $mat['materia']->credits }} créditos</span>
                                                     <span>{{ $mat['materia']->horas_teoricas }}h teóricas</span>
                                                     <span>{{ $mat['materia']->horas_practicas }}h prácticas</span>
@@ -215,7 +230,7 @@
                                             </div>
                                             @if ($mat['sin_asignacion'])
                                                 <span
-                                                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                                                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
                                                     Sin docente asignado
                                                 </span>
                                             @endif
@@ -225,15 +240,14 @@
                                         @if (!empty($mat['paralelos']))
                                             <div class="space-y-4">
                                                 @foreach ($mat['paralelos'] as $par)
-                                                    <div class="bg-gray-50 rounded-xl p-4">
+                                                    <div class="bg-gray-50 dark:bg-slate-800/60 rounded-xl p-4">
                                                         <div
                                                             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
 
                                                             {{-- Paralelo + Docente --}}
                                                             <div class="flex items-center gap-3">
                                                                 <span
-                                                                    class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-700">
-                                                                    {{-- Paralelo --}}
+                                                                    class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400">
                                                                     {{ $par['paralelo']?->name }}
                                                                 </span>
                                                                 @if ($par['docente'])
@@ -245,7 +259,7 @@
                                                                         </div>
                                                                         <div>
                                                                             <p
-                                                                                class="text-xs font-semibold text-gray-700">
+                                                                                class="text-xs font-semibold text-gray-700 dark:text-gray-200">
                                                                                 {{ $par['docente']->name }}</p>
                                                                             <p class="text-xs text-gray-400">Docente
                                                                             </p>
@@ -257,12 +271,12 @@
                                                             {{-- Stats paralelo --}}
                                                             <div class="flex items-center gap-4 text-xs flex-wrap">
                                                                 <div class="text-center">
-                                                                    <p class="font-bold text-gray-800">
+                                                                    <p class="font-bold text-gray-800 dark:text-gray-100">
                                                                         {{ $par['estudiantes'] }}</p>
                                                                     <p class="text-gray-400">Inscritos</p>
                                                                 </div>
                                                                 <div class="text-center">
-                                                                    <p class="font-bold text-gray-800">
+                                                                    <p class="font-bold text-gray-800 dark:text-gray-100">
                                                                         {{ $par['cupo_actual'] }}/{{ $par['cupo_maximo'] }}
                                                                     </p>
                                                                     <p class="text-gray-400">Cupo</p>
@@ -270,7 +284,7 @@
                                                                 @if ($par['promedio_grupo'])
                                                                     <div class="text-center">
                                                                         <p
-                                                                            class="font-bold {{ $par['promedio_grupo'] >= 7 ? 'text-green-600' : 'text-red-500' }}">
+                                                                            class="font-bold {{ $par['promedio_grupo'] >= 7 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
                                                                             {{ number_format($par['promedio_grupo'], 2) }}
                                                                         </p>
                                                                         <p class="text-gray-400">Promedio</p>
@@ -278,7 +292,7 @@
                                                                 @endif
                                                                 @if ($par['horas_semana'])
                                                                     <div class="text-center">
-                                                                        <p class="font-bold text-gray-800">
+                                                                        <p class="font-bold text-gray-800 dark:text-gray-100">
                                                                             {{ $par['horas_semana'] }}h</p>
                                                                         <p class="text-gray-400">Hrs/sem</p>
                                                                     </div>
@@ -292,14 +306,12 @@
                                                                 @foreach ($par['horarios'] as $h)
                                                                     <div
                                                                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg
-                                                                                bg-white border border-gray-200 text-xs">
+                                                                                bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-600 text-xs">
                                                                         <span
-                                                                            class="font-semibold text-gray-700">{{ $h->dia_semana }}</span>
+                                                                            class="font-semibold text-gray-700 dark:text-gray-200">{{ $h->dia_semana }}</span>
                                                                         <span class="text-gray-400">
-                                                                            {{-- {{ substr($h->hora_inicio, 0, 5) }} --}}
                                                                             {{ \Carbon\Carbon::parse($h->hora_inicio)->format('H:i') }}
                                                                             –
-                                                                            {{-- {{ substr($h->hora_fin, 0, 5) }} --}}
                                                                             {{ \Carbon\Carbon::parse($h->hora_fin)->format('H:i') }}
                                                                         </span>
                                                                         @if ($h->aula)
@@ -309,14 +321,14 @@
                                                                         @php
                                                                             $mc = match ($h->modalidad_clase) {
                                                                                 'Presencial'
-                                                                                    => 'bg-green-100 text-green-700',
+                                                                                    => 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
                                                                                 'Virtual'
-                                                                                    => 'bg-blue-100 text-blue-700',
+                                                                                    => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
                                                                                 'Híbrida'
-                                                                                    => 'bg-purple-100 text-purple-700',
+                                                                                    => 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400',
                                                                                 'Semipresencial'
-                                                                                    => 'bg-orange-100 text-orange-700',
-                                                                                default => 'bg-gray-100 text-gray-600',
+                                                                                    => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
+                                                                                default => 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300',
                                                                             };
                                                                         @endphp
                                                                         <span
@@ -354,7 +366,7 @@
                 <div wire:loading.remove wire:target="periodoId,tipoReporte,materiaId" class="space-y-6">
 
                     {{-- Encabezado --}}
-                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
                         <div class="bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-5">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
@@ -420,21 +432,21 @@
 
                 @if ($rm['sin_asignacion'])
                     <div
-                        class="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-700 text-sm font-semibold text-center">
+                        class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-5 text-amber-700 dark:text-amber-400 text-sm font-semibold text-center">
                         Esta materia no tiene docente asignado en el periodo seleccionado
                     </div>
                 @endif
 
                 {{-- Paralelos --}}
                 @foreach ($rm['paralelos'] as $par)
-                    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
 
                         {{-- Header paralelo --}}
-                        <div class="px-5 py-4 bg-gray-50 border-b border-gray-200">
+                        <div class="px-5 py-4 bg-gray-50 dark:bg-slate-800/60 border-b border-gray-200 dark:border-slate-700/60">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div class="flex items-center gap-3 flex-wrap">
                                     <span
-                                        class="inline-flex items-center px-3 py-1.5 rounded-xl text-sm font-bold bg-indigo-100 text-indigo-700">
+                                        class="inline-flex items-center px-3 py-1.5 rounded-xl text-sm font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400">
                                         Paralelo {{ $par['paralelo']?->name }}
                                     </span>
                                     @if ($par['docente'])
@@ -445,7 +457,7 @@
                                                 {{ strtoupper(substr($par['docente']->name, 0, 1)) }}
                                             </div>
                                             <div>
-                                                <p class="text-sm font-semibold text-gray-800">
+                                                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
                                                     {{ $par['docente']->name }}</p>
                                                 <p class="text-xs text-gray-400">Docente ·
                                                     {{ $par['docente']->email }}</p>
@@ -457,21 +469,21 @@
                                 {{-- Stats paralelo --}}
                                 <div class="flex items-center gap-5 text-center">
                                     <div>
-                                        <p class="text-lg font-bold text-gray-800">{{ $par['inscritos'] }}</p>
+                                        <p class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ $par['inscritos'] }}</p>
                                         <p class="text-xs text-gray-400">Inscritos</p>
                                     </div>
                                     <div>
-                                        <p class="text-lg font-bold text-green-600">{{ $par['aprobados'] }}</p>
+                                        <p class="text-lg font-bold text-green-600 dark:text-green-400">{{ $par['aprobados'] }}</p>
                                         <p class="text-xs text-gray-400">Aprobados</p>
                                     </div>
                                     <div>
-                                        <p class="text-lg font-bold text-red-500">{{ $par['reprobados'] }}</p>
+                                        <p class="text-lg font-bold text-red-500 dark:text-red-400">{{ $par['reprobados'] }}</p>
                                         <p class="text-xs text-gray-400">Reprobados</p>
                                     </div>
                                     @if ($par['promedio'])
                                         <div>
                                             <p
-                                                class="text-lg font-bold {{ $par['promedio'] >= 7 ? 'text-green-600' : 'text-red-500' }}">
+                                                class="text-lg font-bold {{ $par['promedio'] >= 7 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
                                                 {{ number_format($par['promedio'], 2) }}
                                             </p>
                                             <p class="text-xs text-gray-400">Promedio</p>
@@ -486,13 +498,11 @@
                                     @foreach ($par['horarios'] as $h)
                                         <div
                                             class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg
-                                                        bg-white border border-gray-200 text-xs">
-                                            <span class="font-semibold text-gray-700">{{ $h->dia_semana }}</span>
+                                                        bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-600 text-xs">
+                                            <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $h->dia_semana }}</span>
                                             <span class="text-gray-400">
-                                                {{-- {{ substr($h->hora_inicio, 0, 5) }}  --}}
                                                 {{ \Carbon\Carbon::parse($h->hora_inicio)->format('H:i') }}
                                                 –
-                                                {{-- {{ substr($h->hora_fin, 0, 5) }} --}}
                                                 {{ \Carbon\Carbon::parse($h->hora_fin)->format('H:i') }}
                                             </span>
                                             @if ($h->aula)
@@ -500,11 +510,11 @@
                                             @endif
                                             @php
                                                 $mc = match ($h->modalidad_clase) {
-                                                    'Presencial' => 'bg-green-100 text-green-700',
-                                                    'Virtual' => 'bg-blue-100 text-blue-700',
-                                                    'Híbrida' => 'bg-purple-100 text-purple-700',
-                                                    'Semipresencial' => 'bg-orange-100 text-orange-700',
-                                                    default => 'bg-gray-100 text-gray-600',
+                                                    'Presencial' => 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
+                                                    'Virtual' => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
+                                                    'Híbrida' => 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400',
+                                                    'Semipresencial' => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
+                                                    default => 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300',
                                                 };
                                             @endphp
                                             <span
@@ -522,7 +532,7 @@
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm">
                                     <thead>
-                                        <tr class="border-b border-gray-100">
+                                        <tr class="border-b border-gray-100 dark:border-slate-700/60">
                                             <th
                                                 class="px-4 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
                                                 #</th>
@@ -549,13 +559,13 @@
                                                 Estado</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-50">
+                                    <tbody class="divide-y divide-gray-50 dark:divide-slate-700/40">
                                         @foreach ($par['estudiantes'] as $i => $est)
-                                            <tr class="hover:bg-gray-50 transition">
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/40 transition">
                                                 <td class="px-4 py-3 text-xs text-gray-400">{{ $i + 1 }}
                                                 </td>
                                                 <td class="px-4 py-3">
-                                                    <p class="font-semibold text-gray-800 text-xs">
+                                                    <p class="font-semibold text-gray-800 dark:text-gray-100 text-xs">
                                                         {{ $est['nombre'] }}</p>
                                                     <p class="text-xs text-gray-400">{{ $est['cedula'] }} ·
                                                         {{ $est['matricula_num'] }}</p>
@@ -563,43 +573,45 @@
                                                 <td class="px-4 py-3 text-center">
                                                     <span
                                                         class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
-                                                            {{ $est['tipo'] === 'Arrastre' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600' }}">
+                                                            {{ $est['tipo'] === 'Arrastre'
+                                                                ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400'
+                                                                : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300' }}">
                                                         {{ $est['tipo'] }}
                                                     </span>
                                                 </td>
-                                                <td class="px-4 py-3 text-center text-xs font-semibold text-gray-600">
+                                                <td class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
                                                     {{ $est['promedio_insumos'] !== null ? number_format($est['promedio_insumos'], 2) : '—' }}
                                                 </td>
-                                                <td class="px-4 py-3 text-center text-xs font-semibold text-gray-600">
+                                                <td class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
                                                     {{ $est['examen_parcial'] !== null ? number_format($est['examen_parcial'], 2) : '—' }}
                                                 </td>
-                                                <td class="px-4 py-3 text-center text-xs font-semibold text-gray-600">
+                                                <td class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300">
                                                     {{ $est['examen_final'] !== null ? number_format($est['examen_final'], 2) : '—' }}
                                                 </td>
                                                 <td class="px-4 py-3 text-center">
                                                     @if ($est['nota_final'] !== null)
                                                         <span
-                                                            class="text-sm font-bold {{ $est['nota_final'] >= 7 ? 'text-green-600' : 'text-red-600' }}">
+                                                            class="text-sm font-bold {{ $est['nota_final'] >= 7 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                                                             {{ number_format($est['nota_final'], 2) }}
                                                         </span>
                                                         @if ($est['nota_suspenso'] !== null)
-                                                            <p class="text-xs text-amber-600 font-semibold">
+                                                            <p class="text-xs text-amber-600 dark:text-amber-400 font-semibold">
                                                                 Sus: {{ number_format($est['nota_suspenso'], 2) }}
                                                             </p>
                                                         @endif
                                                     @else
-                                                        <span class="text-gray-300 text-xs">—</span>
+                                                        <span class="text-gray-300 dark:text-slate-600 text-xs">—</span>
                                                     @endif
                                                 </td>
                                                 <td class="px-4 py-3 text-center">
                                                     @php
                                                         $cfg = match ($est['estado_final']) {
-                                                            'Aprobado' => 'bg-green-100 text-green-700',
-                                                            'Reprobado' => 'bg-red-100 text-red-700',
-                                                            'Retirado' => 'bg-gray-100 text-gray-600',
-                                                            'Incompleto' => 'bg-amber-100 text-amber-700',
-                                                            'Suspenso_Pendiente' => 'bg-orange-100 text-orange-700',
-                                                            default => 'bg-gray-100 text-gray-400',
+                                                            'Aprobado' => 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
+                                                            'Reprobado' => 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
+                                                            'Retirado' => 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400',
+                                                            'Incompleto' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
+                                                            'Suspenso_Pendiente' => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
+                                                            default => 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500',
                                                         };
                                                         $lbl = $est['estado_final'] ?? 'Pendiente';
                                                     @endphp

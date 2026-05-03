@@ -30,15 +30,23 @@ class CheckPermission
 
         // Verificar si el usuario tiene al menos uno de los permisos requeridos
         if (!$user->hasAnyPermission($permissions)) {
-            // Si es una petición AJAX, devolver error JSON
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
-                    'error' => 'No tienes permisos para realizar esta acción.'
+                    'message' => 'No tienes permisos para realizar esta acción.',
                 ], 403);
             }
 
-            // Redirigir con mensaje de error
-            return redirect()->back()->with('error', 'No tienes permisos para acceder a esta sección.');
+            // Redirigir con datos para SweetAlert
+            $previous = url()->previous('');
+            $current  = $request->fullUrl();
+            $dest     = ($previous && $previous !== $current) ? $previous : route('administracion.administrativa.dashboard');
+
+            return redirect($dest)->with('swal', [
+                'icon'              => 'error',
+                'title'             => 'Acceso denegado',
+                'text'              => 'No tienes permisos para acceder a esta sección.',
+                'confirmButtonText' => 'Entendido',
+            ]);
         }
 
         return $next($request);

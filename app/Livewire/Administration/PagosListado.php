@@ -10,10 +10,11 @@ use App\Models\Pago;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Traits\WithAuthorization;
 
 class PagosListado extends Component
 {
-    use WithPagination, WithFileUploads;
+    use WithPagination, WithFileUploads, WithAuthorization;
 
     // Filtros
     public $busqueda = '';
@@ -87,6 +88,8 @@ class PagosListado extends Component
 
     public function guardarPago()
     {
+        if ($this->sinPermiso('gestionar_pagos')) return;
+
         $this->validate();
 
         //dd($this->validate());

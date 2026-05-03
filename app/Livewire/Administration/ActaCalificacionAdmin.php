@@ -11,7 +11,6 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Response;
 
 class ActaCalificacionAdmin extends Component
 {
@@ -47,6 +46,21 @@ class ActaCalificacionAdmin extends Component
         $carrera   = $matricula->carrera;
         $semestres = $carrera->semestres->sortBy('order');
 
+        // Pre-cargar todos los detalles del estudiante de una sola query (evita N+1)
+        $allMateriaIds = $semestres->flatMap(fn($s) => $s->materias)->pluck('id');
+
+        $detallesPorMateria = DetalleMatricula::with([
+            'calificaciones' => fn($q) => $q->orderByDesc('numero_intento'),
+            'paralelo',
+            'matricula.periodo',
+        ])
+            ->where('user_id', $userId)
+            ->whereIn('materia_id', $allMateriaIds)
+            ->latest()
+            ->get()
+            ->groupBy('materia_id')
+            ->map(fn($group) => $group->first());
+
         $semestresData      = [];
         $promediosSemestres = [];
 
@@ -56,15 +70,7 @@ class ActaCalificacionAdmin extends Component
             $semestretieneDatos = false;
 
             foreach ($semestre->materias->sortBy('name') as $materia) {
-                $detalle = DetalleMatricula::with([
-                    'calificaciones' => fn($q) => $q->orderByDesc('numero_intento'),
-                    'paralelo',
-                    'matricula.periodo',
-                ])
-                    ->where('user_id', $userId)
-                    ->where('materia_id', $materia->id)
-                    ->latest()
-                    ->first();
+                $detalle = $detallesPorMateria->get($materia->id);
 
                 $calificacion = $detalle?->calificaciones->first();
 
@@ -125,13 +131,18 @@ class ActaCalificacionAdmin extends Component
             ? round(array_sum($promediosSemestres) / count($promediosSemestres), 2)
             : null;
 
-        $titulacion = NotaTitulacion::with('practica')
+        $titulacion = NotaTitulacion::with('practica', 'comunitaria')
             ->where('user_id', $userId)
             ->where('carrera_id', $carrera->id)
             ->latest('numero_intento')
             ->first();
 
         $practica = PracticaPreprofesional::where('user_id', $userId)
+            ->where('carrera_id', $carrera->id)
+            ->latest()
+            ->first();
+
+        $comunitaria = \App\Models\Comunitaria::where('user_id', $userId)
             ->where('carrera_id', $carrera->id)
             ->latest()
             ->first();
@@ -148,6 +159,7 @@ class ActaCalificacionAdmin extends Component
             'promedio_malla' => $promedioMalla,
             'titulacion'     => $titulacion,
             'practica'       => $practica,
+            'comunitaria'    => $comunitaria,
             'intentos'       => $intentos,
             'malla_completa' => NotaTitulacion::mallaCurricular_Completada($userId, $carrera->id),
         ];

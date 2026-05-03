@@ -24,8 +24,16 @@
     {{-- <title>{{ config('app.name', 'Laravel') }}</title> --}}
 
     <link rel="canonical" href="{{ config('app.url', 'ISTCumandá') }}">
-    <title>{{ config('app.name', 'ISTCumandá') }}</title>
-    <link rel="shortcut icon" href="{{ asset('../imagenes/icono.webp') }}">
+    @php
+        $nombreCorto = \App\Services\SettingService::get('instituto.nombre_corto') ?: config('app.name', 'ISTCumandá');
+        $faviconPath = \App\Services\SettingService::get('instituto.favicon_path');
+    @endphp
+    <title>{{ $nombreCorto }}</title>
+    @if ($faviconPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($faviconPath))
+        <link rel="shortcut icon" href="{{ Storage::disk('public')->url($faviconPath) }}">
+    @else
+        <link rel="shortcut icon" href="{{ asset('../imagenes/icono.webp') }}">
+    @endif
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=abel:400|ubuntu:300,400,500,700" rel="stylesheet" />
@@ -45,7 +53,7 @@
 
 </head>
 
-<body class="font-sans antialiased">
+<body class="font-sans antialiased bg-gray-50 dark:bg-slate-950">
     @include('layouts.includes.sidebar')
 
     @include('layouts.includes.aside')
@@ -53,7 +61,7 @@
     <div
         class = "content flex flex-col justify-between ml-12 transform ease-in-out duration-500 pt-20 px-2 md:px-5 pb-4">
 
-        @include('layouts.includes.navigation')
+        {{--  @include('layouts.includes.navigation') --}}
 
         <div class="flex flex-wrap my-4 {{-- bg-gray-200 dark:bg-gray-800 rounded-lg shadow-md --}}">
             <main class="w-full {{-- h-auto --}} h-[calc(88vh)]">
@@ -159,26 +167,96 @@
             }
         }
 
+        // ── Helpers SweetAlert reutilizables ─────────────────────────────────
+        function isDarkMode() {
+            return document.documentElement.classList.contains('dark');
+        }
+
+        function swalTheme() {
+            return isDarkMode() ? {
+                background: '#111827',
+                color: '#f9fafb'
+            } : {
+                background: '#ffffff',
+                color: '#111827'
+            };
+        }
+
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.onmouseenter = Swal.stopTimer;
+                toast.onmouseleave = Swal.resumeTimer;
+            },
+        });
+
+        // ── session('success') → toast verde ─────────────────────────────
         @if (session('success'))
-            console.log("{{ session('success') }}");
             document.addEventListener('DOMContentLoaded', function() {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: "top-end",
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.onmouseenter = Swal.stopTimer;
-                        toast.onmouseleave = Swal.resumeTimer;
-                    }
-                });
                 Toast.fire({
                     icon: 'success',
-                    title: "{{ session('success') }}",
+                    title: @json(session('success'))
                 });
             });
         @endif
+
+        // ── session('error') → toast rojo (mensajes simples de error) ────
+        @if (session('error'))
+            document.addEventListener('DOMContentLoaded', function() {
+                Toast.fire({
+                    icon: 'error',
+                    title: @json(session('error'))
+                });
+            });
+        @endif
+
+        // ── session('swal') → modal centrado (acceso denegado, etc.) ─────
+        @if (session('swal'))
+            document.addEventListener('DOMContentLoaded', function() {
+                const data = @json(session('swal'));
+                Swal.fire({
+                    icon: data.icon ?? 'info',
+                    title: data.title ?? '',
+                    text: data.text ?? '',
+                    confirmButtonText: data.confirmButtonText ?? 'Aceptar',
+                    confirmButtonColor: '#65a30d',
+                    ...swalTheme(),
+                });
+            });
+        @endif
+
+        // ── Livewire → $this->dispatch('swal', [...]) ─────────────────────
+        document.addEventListener('livewire:init', function() {
+            Livewire.on('swal', function(params) {
+                // Livewire 3 pasa los args como array; el payload es params[0]
+                const data = Array.isArray(params) ? (params[0] ?? params) : params;
+
+                const isToast = data.toast === true;
+
+                if (isToast) {
+                    Toast.fire({
+                        icon: data.icon ?? 'info',
+                        title: data.title ?? '',
+                        text: data.text ?? '',
+                    });
+                } else {
+                    Swal.fire({
+                        icon: data.icon ?? 'info',
+                        title: data.title ?? '',
+                        text: data.text ?? '',
+                        timer: data.timer ?? undefined,
+                        showConfirmButton: data.timer ? false : true,
+                        confirmButtonText: data.confirmButtonText ?? 'Aceptar',
+                        confirmButtonColor: '#65a30d',
+                        ...swalTheme(),
+                    });
+                }
+            });
+        });
     </script>
 </body>
 

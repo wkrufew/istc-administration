@@ -15,6 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('code')->unique();
+            $table->enum('tipo', ['Tecnologica', 'Tecnicatura'])
+                ->default('Tecnologica')
+                ->comment('Tecnologica: título tecnólogo | Tecnicatura: título técnico');
             $table->text('description')->nullable();
             $table->decimal('costo_credito', 8, 2)->default(0); // Costo por crédito
             $table->decimal('costo_carrera', 8, 2)->default(0); // Costo por carrera

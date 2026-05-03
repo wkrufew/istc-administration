@@ -73,8 +73,8 @@
             <label class="block text-sm font-medium">Periodo</label>
             <select name="periodo_id" class="w-full border rounded-full px-2 py-1">
                 @foreach ($periodos as $pe)
-                    <option value="{{ $pe->id }}" @selected(old('periodo_id', $horario->periodo_id ?? '') == $pe->id)>{{-- {{ $pe->description }} - --}}
-                        {{ $pe->code }} - {{ $pe->is_current ? ' (Activo)' : ' (Inactivo)' }}</option>
+                    <option value="{{ $pe->id }}" @selected(old('periodo_id', $horario->periodo_id ?? '') == $pe->id)>
+                        {{ $pe->code }} — {{ $pe->description }}</option>
                 @endforeach
             </select>
         </div>
@@ -86,8 +86,7 @@
                     <option value="{{ $a->id }}" @selected(old('asignacion_docente_id', $horario->asignacion_docente_id ?? '') == $a->id)>
                         {{ $a->periodo->code ?? '' }} - {{ $a->materia->name ?? 'Materia' }} -
                         {{ $a->paralelo->code ?? '' }} -
-                        {{ $a->docente->name ?? '' }} -
-                        {{ $a->periodo->is_current ? ' (Activo)' : ' (Inactivo)' }}
+                        {{ $a->docente->name ?? '' }}
                     </option>
                 @endforeach
             </select>

@@ -5,7 +5,6 @@ namespace App\Livewire\Administration;
 use App\Models\Carrera;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Periodo;
-use App\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -17,6 +16,7 @@ class ReportesFinancieros extends Component
     // =========================================================================
     // FILTROS
     // =========================================================================
+    public ?int    $carreraId    = null;
     public ?int    $periodoId    = null;
     public string  $busqueda     = '';
     public string  $filtroEstado = '';
@@ -30,8 +30,25 @@ class ReportesFinancieros extends Component
 
     public function mount(): void
     {
-        $actual = Periodo::where('is_current', true)->first();
-        $this->periodoId = $actual?->id ?? Periodo::latest()->first()?->id;
+        // Sin pre-selección: el admin debe elegir carrera primero
+    }
+
+    public function updatedCarreraId(): void
+    {
+        $this->periodoId  = null;
+        $this->busqueda   = '';
+        $this->filtroEstado = '';
+        $this->filtroTipo   = '';
+        $this->expandedId   = null;
+
+        if ($this->carreraId) {
+            $carrera = Carrera::find($this->carreraId);
+            $this->periodoId = $carrera?->periodoActual()?->id
+                ?? Periodo::whereHas('carreras', fn($q) => $q->where('carreras.id', $this->carreraId))
+                    ->orderByDesc('fecha_inicio')->first()?->id;
+        }
+
+        $this->resetPage();
     }
 
     public function updatedBusqueda(): void
@@ -67,9 +84,18 @@ class ReportesFinancieros extends Component
     // COMPUTED — SELECTS
     // =========================================================================
     #[Computed]
+    public function carreras()
+    {
+        return Carrera::where('is_active', true)->orderBy('name')->get();
+    }
+
+    #[Computed]
     public function periodos()
     {
-        return Periodo::orderByDesc('fecha_inicio')->get();
+        if (! $this->carreraId) return collect();
+
+        return Periodo::whereHas('carreras', fn($q) => $q->where('carreras.id', $this->carreraId))
+            ->orderByDesc('fecha_inicio')->get();
     }
 
     // =========================================================================
@@ -78,11 +104,13 @@ class ReportesFinancieros extends Component
     #[Computed]
     public function stats(): array
     {
-        if (! $this->periodoId) return [];
+        if (! $this->periodoId || ! $this->carreraId) return [];
 
         $pid = $this->periodoId;
+        $cid = $this->carreraId;
 
-        $base = ObligacionesFinanciera::where('periodo_id', $pid);
+        $base = ObligacionesFinanciera::where('periodo_id', $pid)
+            ->whereHas('matricula', fn($q) => $q->where('carrera_id', $cid));
 
         $totalObligaciones = (clone $base)->count();
         $montoTotal        = (clone $base)->sum('monto_final');
@@ -134,12 +162,15 @@ class ReportesFinancieros extends Component
     #[Computed]
     public function obligaciones()
     {
+        if (! $this->carreraId) return (new ObligacionesFinanciera)->newQuery()->whereRaw('0=1')->paginate(15);
+
         return ObligacionesFinanciera::with([
             'estudiante',
             'matricula.carrera',
             'pagos' => fn($q) => $q->orderByDesc('fecha_pago'),
         ])
-            ->when($this->periodoId, fn($q) => $q->where('periodo_id', $this->periodoId))
+            ->whereHas('matricula', fn($q) => $q->where('carrera_id', $this->carreraId))
+            ->when($this->periodoId,    fn($q) => $q->where('periodo_id', $this->periodoId))
             ->when($this->filtroEstado, fn($q) => $q->where('estado', $this->filtroEstado))
             ->when($this->filtroTipo,   fn($q) => $q->where('tipo',   $this->filtroTipo))
             ->when(
@@ -163,19 +194,19 @@ class ReportesFinancieros extends Component
     #[Computed]
     public function estudiantesEnMora()
     {
-        if (! $this->periodoId) return collect();
+        if (! $this->periodoId || ! $this->carreraId) return collect();
 
         return ObligacionesFinanciera::with('user')
             ->where('periodo_id', $this->periodoId)
+            ->whereHas('matricula', fn($q) => $q->where('carrera_id', $this->carreraId))
             ->where('estado', 'Vencido')
             ->get()
             ->groupBy('user_id')
-            ->map(function ($obligaciones, $userId) {
+            ->map(function ($obligaciones) {
                 $user              = $obligaciones->first()->user;
                 $totalAdeudado     = $obligaciones->sum('monto_final');
                 $cantidadVencidas  = $obligaciones->count();
 
-                // Días de mora desde la obligación vencida más antigua
                 $masAntigua = $obligaciones
                     ->whereNotNull('fecha_vencimiento')
                     ->sortBy('fecha_vencimiento')
@@ -185,7 +216,6 @@ class ReportesFinancieros extends Component
                     ? now()->diffInDays($masAntigua->fecha_vencimiento)
                     : null;
 
-                // Tipos de obligaciones vencidas
                 $tipos = $obligaciones->pluck('tipo')->unique()->values();
 
                 return [

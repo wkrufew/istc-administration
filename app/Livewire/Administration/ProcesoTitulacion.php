@@ -3,6 +3,7 @@
 namespace App\Livewire\Administration;
 
 use App\Models\Carrera;
+use App\Models\Comunitaria;
 use App\Models\NotaTitulacion;
 use App\Models\PracticaPreprofesional;
 use App\Models\User;
@@ -10,10 +11,11 @@ use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\WithPagination;
+use App\Traits\WithAuthorization;
 
 class ProcesoTitulacion extends Component
 {
-    use WithPagination;
+    use WithPagination, WithAuthorization;
 
     // -------------------------------------------------------------------------
     // FILTROS DEL INDEX
@@ -193,6 +195,8 @@ class ProcesoTitulacion extends Component
     // =========================================================================
     public function guardarPractica()
     {
+        if ($this->sinPermiso('gestionar_titulacion')) return;
+
         $this->validate([
             'practicaEmpresa'         => 'required|string|max:255',
             'practicaTutorEmpresa'    => 'required|string|max:255',
@@ -208,6 +212,27 @@ class ProcesoTitulacion extends Component
             'practicaCargoEstudiante.required' => 'El cargo del estudiante es requerido.',
             'practicaFechaInicio.required'     => 'La fecha de inicio es requerida.',
         ]);
+
+        // Validación de horas mínimas y determinación de estado según nota
+        $carrera  = Carrera::find($this->carreraId);
+        $horasMin = $carrera ? $carrera->horasMinPreprofesional() : 240;
+        $nota     = $this->practicaNota !== '' ? (float) $this->practicaNota : null;
+        $horas    = (int) ($this->practicaTotalHoras ?: 0);
+
+        if ($nota !== null && $nota >= 7 && $horas < $horasMin) {
+            $this->addError('practicaTotalHoras', "Se requieren mínimo {$horasMin} horas para {$carrera->tipo_label} ({$horas} registradas).");
+            return;
+        }
+
+        $estadoCalculado = $this->practicaEstado;
+        if ($nota !== null) {
+            if ($nota >= 7 && $horas >= $horasMin) {
+                $estadoCalculado = 'Completada';
+            } elseif ($nota < 7) {
+                $estadoCalculado = 'Reprobada';
+            }
+        }
+        $this->practicaEstado = $estadoCalculado;
 
         try {
             DB::beginTransaction();
@@ -226,9 +251,9 @@ class ProcesoTitulacion extends Component
                 'actividades_realizadas' => $this->practicaActividades ?: null,
                 'fecha_inicio'        => $this->practicaFechaInicio,
                 'fecha_fin'           => $this->practicaFechaFin ?: null,
-                'total_horas'         => $this->practicaTotalHoras ?: 0,
-                'nota'                => $this->practicaNota !== '' ? $this->practicaNota : null,
-                'estado'              => $this->practicaEstado,
+                'total_horas'         => $horas,
+                'nota'                => $nota,
+                'estado'              => $estadoCalculado,
                 'observaciones'       => $this->practicaObservaciones ?: null,
             ];
 
@@ -239,12 +264,22 @@ class ProcesoTitulacion extends Component
                 $this->practicaId = $practica->id;
             }
 
-            // Si la práctica está completada, sincronizar nota en titulación si existe
-            if ($this->titulacionId && $this->practicaEstado === 'Completada' && $this->practicaNota !== '') {
-                NotaTitulacion::find($this->titulacionId)?->update([
-                    'practica_id'    => $this->practicaId,
-                    'nota_practicas' => $this->practicaNota,
-                ]);
+            // Si la práctica quedó completada, sincronizar nota en titulación si existe
+            if ($this->titulacionId && $estadoCalculado === 'Completada' && $nota !== null) {
+                $comunitaria = Comunitaria::where('user_id', $this->estudianteId)
+                    ->where('carrera_id', $this->carreraId)
+                    ->where('estado', 'Completada')
+                    ->latest()
+                    ->first();
+
+                $titulacion = NotaTitulacion::find($this->titulacionId);
+                if ($titulacion) {
+                    $titulacion->practica_id    = $this->practicaId;
+                    $titulacion->nota_practicas  = $nota;
+                    $titulacion->comunitaria_id  = $comunitaria?->id;
+                    $titulacion->save();
+                    $titulacion->recalcularNotaFinal();
+                }
             }
 
             DB::commit();
@@ -279,10 +314,16 @@ class ProcesoTitulacion extends Component
                 ? $this->practicaNota
                 : null;
 
+            $comunitaria = Comunitaria::where('user_id', $this->estudianteId)
+                ->where('carrera_id', $this->carreraId)
+                ->latest()
+                ->first();
+
             $datos = [
                 'user_id'               => $this->estudianteId,
                 'carrera_id'            => $this->carreraId,
                 'practica_id'           => $this->practicaId,
+                'comunitaria_id'        => $comunitaria?->id,
                 'promedio_malla'        => $this->promedioMalla,
                 'tipo_titulacion'       => $this->titulacionTipo,
                 'nota_titulacion'       => $this->titulacionNota !== '' ? $this->titulacionNota : null,

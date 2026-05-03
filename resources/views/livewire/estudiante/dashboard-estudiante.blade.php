@@ -60,9 +60,7 @@
                         class="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-medium">
                         <option value="">Seleccionar periodo</option>
                         @foreach ($periodos as $periodo)
-                            <option value="{{ $periodo->id }}">
-                                {{ $periodo->code }}{{ $periodo->is_current ? ' (Actual)' : '' }}
-                            </option>
+                            <option value="{{ $periodo->id }}">{{ $periodo->code }}</option>
                         @endforeach
                     </select>
                 </div>

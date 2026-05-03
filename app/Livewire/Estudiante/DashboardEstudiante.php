@@ -21,7 +21,10 @@ class DashboardEstudiante extends Component
     public function mount()
     {
         $this->idUser = Auth::id();
-        $this->periodoSeleccionado = Periodo::where('is_current', true)->first()?->id ?? '';
+        // Período activo para la carrera del estudiante
+        $ultimaMatricula  = Auth::user()->matriculas()->with('carrera')->latest()->first();
+        $periodoDeCarrera = $ultimaMatricula?->carrera?->periodoActual();
+        $this->periodoSeleccionado = $periodoDeCarrera?->id ?? Periodo::periodoActivoGlobal()?->id ?? '';
     }
 
     // =========================================================================

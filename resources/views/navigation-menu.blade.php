@@ -24,8 +24,38 @@
                 </div>
             </div>
 
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
 
+                {{-- Campana de avisos (docente) --}}
+                @php
+                    use App\Models\Aviso;
+                    use App\Models\Periodo;
+                    use App\Models\AsignacionDocente;
+                    $_periodoDoc = Periodo::periodoActivoGlobal();
+                    $_avisosDoc  = ($_periodoDoc && auth()->check())
+                        ? Aviso::whereHas('asignacionDocente', fn($q) =>
+                              $q->where('docente_id', auth()->id())
+                                ->where('periodo_id', $_periodoDoc->id)
+                          )->where('fecha_aviso', '>=', now()->startOfDay())->count()
+                        : 0;
+                @endphp
+                <a href="{{ route('administracion.docencia.avisos') }}"
+                   class="relative inline-flex items-center justify-center w-9 h-9 rounded-lg
+                          text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200
+                          {{ request()->routeIs('administracion.docencia.avisos') ? 'text-indigo-600 bg-indigo-50' : '' }}"
+                   title="Mis avisos">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    @if($_avisosDoc > 0)
+                    <span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-0.5
+                                 flex items-center justify-center rounded-full
+                                 bg-red-500 text-white text-[10px] font-bold leading-none">
+                        {{ $_avisosDoc > 9 ? '9+' : $_avisosDoc }}
+                    </span>
+                    @endif
+                </a>
 
                 <!-- Settings Dropdown -->
                 <div class="ms-3 relative">
@@ -105,6 +135,21 @@
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link href="{{ route('administracion.docencia.dashboard') }}" :active="request()->routeIs('administracion.docencia.dashboard')">
                 {{ __('Inicio') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('administracion.docencia.calificaciones.index') }}" :active="request()->routeIs('administracion.docencia.calificaciones.*')">
+                {{ __('Calificaciones') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('administracion.docencia.asistencias.index') }}" :active="request()->routeIs('administracion.docencia.asistencias.*')">
+                {{ __('Asistencias') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('administracion.docencia.avisos') }}" :active="request()->routeIs('administracion.docencia.avisos')">
+                {{ __('Avisos') }}
+                @if($_avisosDoc > 0)
+                <span class="ml-2 inline-flex items-center justify-center min-w-[1.2rem] h-5 px-1
+                             rounded-full bg-red-500 text-white text-xs font-bold">
+                    {{ $_avisosDoc > 9 ? '9+' : $_avisosDoc }}
+                </span>
+                @endif
             </x-responsive-nav-link>
         </div>
 

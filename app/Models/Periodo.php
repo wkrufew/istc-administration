@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class Periodo extends Model
 {
@@ -14,34 +13,50 @@ class Periodo extends Model
         'fecha_fin',
         'fecha_limite_matricula',
         'fecha_limite_pago',
-        'is_current'
     ];
 
     protected $casts = [
-        'fecha_inicio' => 'date',
-        'fecha_fin' => 'date',
+        'fecha_inicio'           => 'date',
+        'fecha_fin'              => 'date',
         'fecha_limite_matricula' => 'date',
-        'fecha_limite_pago' => 'date',
-        'is_current' => 'boolean',
+        'fecha_limite_pago'      => 'date',
     ];
 
-    protected static function booted()
-    {
-        static::creating(function ($periodo) {
-            // Al crear uno nuevo como current, desactiva los demás
-            if ($periodo->is_current) {
-                static::where('is_current', true)->update(['is_current' => false]);
-            }
-        });
+    // -------------------------------------------------------
+    // Relaciones
+    // -------------------------------------------------------
 
-        static::updating(function ($periodo) {
-            // Al editar y marcarlo como current, desactiva los demás
-            if ($periodo->is_current && $periodo->isDirty('is_current')) {
-                static::where('id', '!=', $periodo->id)
-                    ->where('is_current', true)
-                    ->update(['is_current' => false]);
-            }
-        });
+    /**
+     * Retorna cualquier período activo en alguna carrera (is_current = true en carrera_periodo).
+     * Útil como valor por defecto en dashboards y filtros genéricos.
+     */
+    public static function periodoActivoGlobal(): ?self
+    {
+        return static::whereExists(function ($query) {
+            $query->selectRaw(1)
+                  ->from('carrera_periodo')
+                  ->whereColumn('carrera_periodo.periodo_id', 'periodos.id')
+                  ->where('carrera_periodo.is_current', true);
+        })->first();
+    }
+
+    /**
+     * Carreras vinculadas a este período (con sus fechas y estado propios).
+     */
+    public function carreras()
+    {
+        return $this->belongsToMany(Carrera::class, 'carrera_periodo')
+                    ->using(CarreraPeriodo::class)
+                    ->withPivot([
+                        'id',
+                        'fecha_inicio',
+                        'fecha_fin',
+                        'fecha_limite_matricula',
+                        'fecha_limite_pago',
+                        'is_current',
+                        'is_active',
+                    ])
+                    ->withTimestamps();
     }
 
     /**
@@ -77,18 +92,16 @@ class Periodo extends Model
     }
 
     /**
-     * Scope para período actual
+     * Relación con materia-período-paralelo
      */
-    public function scopeActual($query)
-    {
-        return $query->where('is_current', true);
-    }
-
     public function materiasParalelos()
     {
         return $this->hasMany(MateriaPeriodoParalelo::class);
     }
 
+    /**
+     * Obligaciones financieras del período
+     */
     public function obligacionesFinancieras()
     {
         return $this->hasMany(ObligacionesFinanciera::class);

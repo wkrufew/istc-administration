@@ -8,10 +8,11 @@ use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
+use App\Traits\WithAuthorization;
 
 class ImportUsers extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithAuthorization;
 
     public $file;
     public $importedCount = 0;
@@ -30,6 +31,8 @@ class ImportUsers extends Component
 
     public function import()
     {
+        if ($this->sinPermiso('gestionar_estudiantes')) return;
+
         $this->validate();
 
         $this->errors = [];

@@ -15,12 +15,7 @@
                     <select wire:model.live="periodo_id"
                         class="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-medium">
                         @foreach ($periodos as $p)
-                            <option value="{{ $p->id }}">
-                                {{ $p->code ?? 'Período #' . $p->id }}
-                                @if ($p->is_current)
-                                    (Actual)
-                                @endif
-                            </option>
+                            <option value="{{ $p->id }}">{{ $p->code ?? 'Período #' . $p->id }}</option>
                         @endforeach
                     </select>
                 </div>

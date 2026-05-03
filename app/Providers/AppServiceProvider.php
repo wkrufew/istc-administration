@@ -13,7 +13,18 @@ use Laravel\Fortify\Http\Requests\LoginRequest;
 use App\Models\User;
 use App\Observers\PagoObserver;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Asistencia;
+use App\Models\Aviso;
+use App\Models\Calificacion;
+use App\Models\Matricula;
 use App\Models\Pago;
+use App\Models\Ticket;
+use App\Policies\AsistenciaPolicy;
+use App\Policies\AvisoPolicy;
+use App\Policies\CalificacionPolicy;
+use App\Policies\MatriculaPolicy;
+use App\Policies\TicketPolicy;
+use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +41,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── Registro explícito de Policies ────────────────────────────────────
+        Gate::policy(Ticket::class,      TicketPolicy::class);
+        Gate::policy(Aviso::class,       AvisoPolicy::class);
+        Gate::policy(Calificacion::class, CalificacionPolicy::class);
+        Gate::policy(Asistencia::class,  AsistenciaPolicy::class);
+        Gate::policy(Matricula::class,   MatriculaPolicy::class);
+
         Pago::observe(PagoObserver::class);
 
         Fortify::loginView(function () {

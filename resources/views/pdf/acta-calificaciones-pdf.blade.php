@@ -644,6 +644,7 @@
         $promedioMalla = $acta['promedio_malla'];
         $titulacion = $acta['titulacion'];
         $practica = $acta['practica'];
+        $comunitaria = $acta['comunitaria'] ?? null;
         $intentos = $acta['intentos'];
         $mallaCompleta = $acta['malla_completa'];
 
@@ -654,10 +655,19 @@
         $totalReprobadas = collect($semestres)->sum('reprobadas');
         $totalMaterias = collect($semestres)->sum('total_materias');
 
-        $logoPath = public_path('imagenes/icono.webp');
-        $logoData = file_exists($logoPath)
-            ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath))
+        $s           = \App\Services\SettingService::all();
+        $logoSetting = $s['instituto.logo_path'] ?? null;
+        $logoPath    = $logoSetting ? storage_path('app/public/' . $logoSetting) : public_path('imagenes/icono.webp');
+        $ext         = $logoPath ? strtolower(pathinfo($logoPath, PATHINFO_EXTENSION)) : 'png';
+        $mime        = in_array($ext, ['jpg','jpeg']) ? 'image/jpeg' : ($ext === 'webp' ? 'image/webp' : 'image/png');
+        $logoData    = file_exists($logoPath)
+            ? "data:{$mime};base64," . base64_encode(file_get_contents($logoPath))
             : null;
+        $instNombre    = $s['instituto.nombre_largo']   ?? 'Instituto Superior Tecnológico Cumandá';
+        $docRector     = $s['documentos.rector']        ?? 'Rector / Vicerrector';
+        $docSecretario = $s['documentos.secretario']    ?? 'Secretaría Académica';
+        $docCoord      = $s['documentos.coordinador']   ?? 'Coordinación Académica';
+        $piePagina     = $s['documentos.pie_pagina']    ?? 'Documento generado por el Sistema Académico. Válido solo con firma y sello institucional.';
 
         $fechaGeneracion = now()->format('d/m/Y H:i');
         $codigoDoc = 'AC-' . str_pad($estudiante->id, 4, '0', STR_PAD_LEFT) . '-' . now()->format('Ymd');
@@ -675,7 +685,7 @@
                     @endif
                 </td>
                 <td class="header-title-cell">
-                    <div class="inst-nombre">Instituto Superior Tecnológico Cumandá</div>
+                    <div class="inst-nombre">{{ $instNombre }}</div>
                     <div class="inst-subtitulo">Acreditado por el SENESCYT — RPC-SO-04-No.000037-2012</div>
                     <div class="doc-titulo">Acta Consolidada de Calificaciones</div>
                     <div class="doc-subtitulo">Registro Académico Oficial</div>
@@ -1020,7 +1030,7 @@
                             </tr>
                         </table>
 
-                        {{-- Datos de práctica --}}
+                        {{-- Datos de práctica preprofesional --}}
                         @if ($practica)
                             <div style="margin-top:8px; padding-top:6px; border-top:1px solid #e2e8f0">
                                 <div
@@ -1029,22 +1039,71 @@
                                 </div>
                                 <table style="width:100%">
                                     <tr>
-                                        <td style="width:50%; font-size:8px">
+                                        <td style="width:45%; font-size:8px">
                                             <span style="color:#718096">Empresa: </span>
                                             <strong>{{ $practica->empresa ?? '—' }}</strong>
                                         </td>
-                                        <td style="width:25%; font-size:8px; text-align:center">
+                                        <td style="width:15%; font-size:8px; text-align:center">
                                             <span style="color:#718096">Horas: </span>
-                                            <strong>{{ $practica->horas_completadas ?? '—' }}</strong>
+                                            <strong>{{ $practica->total_horas ?? '—' }}</strong>
+                                        </td>
+                                        <td style="width:15%; font-size:8px; text-align:center">
+                                            <span style="color:#718096">Nota: </span>
+                                            <strong>{{ $practica->nota ? number_format($practica->nota, 2) : '—' }}</strong>
                                         </td>
                                         <td style="width:25%; font-size:8px; text-align:right">
                                             <span
-                                                class="badge {{ $practica->estado === 'Aprobado' ? 'badge-aprobado' : 'badge-pendiente' }}">
+                                                class="badge {{ $practica->estado === 'Completada' ? 'badge-aprobado' : 'badge-pendiente' }}">
                                                 {{ $practica->estado ?? '—' }}
                                             </span>
                                         </td>
                                     </tr>
                                 </table>
+                            </div>
+                        @endif
+
+                        {{-- Datos de práctica comunitaria --}}
+                        @if (isset($comunitaria) && $comunitaria)
+                            <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0">
+                                <div
+                                    style="font-size:7px; font-weight:bold; color:#718096; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px">
+                                    Prácticas Comunitarias
+                                </div>
+                                <table style="width:100%">
+                                    <tr>
+                                        <td style="width:45%; font-size:8px">
+                                            <span style="color:#718096">Empresa: </span>
+                                            <strong>{{ $comunitaria->empresa ?? '—' }}</strong>
+                                        </td>
+                                        <td style="width:15%; font-size:8px; text-align:center">
+                                            <span style="color:#718096">Horas: </span>
+                                            <strong>{{ $comunitaria->total_horas ?? '—' }}</strong>
+                                        </td>
+                                        <td style="width:15%; font-size:8px; text-align:center">
+                                            <span style="color:#718096">Nota: </span>
+                                            <strong>{{ $comunitaria->nota ? number_format($comunitaria->nota, 2) : '—' }}</strong>
+                                        </td>
+                                        <td style="width:25%; font-size:8px; text-align:right">
+                                            <span
+                                                class="badge {{ $comunitaria->estado === 'Completada' ? 'badge-aprobado' : 'badge-pendiente' }}">
+                                                {{ $comunitaria->estado ?? '—' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        @endif
+
+                        {{-- Promedio de prácticas --}}
+                        @if (isset($titulacion) && $titulacion && $titulacion->nota_practicas !== null && isset($comunitaria) && $comunitaria?->nota !== null)
+                            @php
+                                $promedioPracticasPdf = round(((float)$titulacion->nota_practicas + (float)$comunitaria->nota) / 2, 2);
+                            @endphp
+                            <div style="margin-top:4px; text-align:right; font-size:8px">
+                                <span style="color:#718096">Promedio prácticas: </span>
+                                <strong style="{{ $promedioPracticasPdf >= 7 ? 'color:#276749' : 'color:#c53030' }}">
+                                    {{ number_format($promedioPracticasPdf, 2) }}
+                                </strong>
                             </div>
                         @endif
 
@@ -1153,22 +1212,22 @@
                 <td>
                     <div class="linea-firma">
                         <div class="firma-nombre">___________________________</div>
-                        <div class="firma-nombre" style="margin-top:2px">Secretaría Académica</div>
-                        <div class="firma-cargo">Instituto Superior Tecnológico Cumandá</div>
+                        <div class="firma-nombre" style="margin-top:2px">{{ $docSecretario }}</div>
+                        <div class="firma-cargo">Secretaría Académica</div>
                     </div>
                 </td>
                 <td>
                     <div class="linea-firma">
                         <div class="firma-nombre">___________________________</div>
-                        <div class="firma-nombre" style="margin-top:2px">Coordinación de Carrera</div>
-                        <div class="firma-cargo">{{ $carrera->name }}</div>
+                        <div class="firma-nombre" style="margin-top:2px">{{ $docCoord }}</div>
+                        <div class="firma-cargo">Coordinación de Carrera · {{ $carrera->name }}</div>
                     </div>
                 </td>
                 <td>
                     <div class="linea-firma">
                         <div class="firma-nombre">___________________________</div>
-                        <div class="firma-nombre" style="margin-top:2px">Rector / Vicerrector</div>
-                        <div class="firma-cargo">Instituto Superior Tecnológico Cumandá</div>
+                        <div class="firma-nombre" style="margin-top:2px">{{ $docRector }}</div>
+                        <div class="firma-cargo">Rector / Vicerrector</div>
                     </div>
                 </td>
             </tr>
@@ -1181,12 +1240,12 @@
     <table class="footer">
         <tr>
             <td>
-                Instituto Superior Tecnológico Cumandá &nbsp;|&nbsp;
+                {{ $instNombre }} &nbsp;|&nbsp;
                 Documento generado el {{ $fechaGeneracion }} &nbsp;|&nbsp;
                 Código: {{ $codigoDoc }}
             </td>
             <td class="footer-derecha">
-                Este documento tiene validez oficial con sello y firma institucional.
+                {{ $piePagina }}
             </td>
         </tr>
     </table>

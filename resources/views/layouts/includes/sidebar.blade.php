@@ -1,7 +1,7 @@
 {{-- <div class = "fixed w-full z-30 flex bg-[#7ea41e] dark:bg-gray-800 p-2 items-center justify-center h-16 px-10"> --}}
 <div
     class="fixed w-full z-30 flex 
-    bg-white/70 dark:bg-[#0F172A] 
+    bg-white/70 dark:bg-slate-900/70
     backdrop-blur-md
     border-b border-slate-200 dark:border-slate-800
     p-2 items-center justify-center h-16 px-10">
@@ -12,7 +12,11 @@
     <div
         class="logo ml-12 text-slate-900 dark:text-white 
     flex-none h-full flex items-center justify-center font-semibold tracking-wide">
-        ISTC
+        @php
+            $nombreCorto =
+                \App\Services\SettingService::get('instituto.nombre_corto') ?: config('app.name', 'ISTCumandá');
+        @endphp
+        {{ $nombreCorto }}
     </div>
     <!-- SPACER -->
     <div class = "grow h-full flex items-center justify-center"></div>

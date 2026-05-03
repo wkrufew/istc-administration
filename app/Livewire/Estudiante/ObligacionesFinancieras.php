@@ -11,10 +11,11 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Computed;
+use App\Traits\WithAuthorization;
 
 class ObligacionesFinancieras extends Component
 {
-    use WithPagination, WithFileUploads;
+    use WithPagination, WithFileUploads, WithAuthorization;
 
     public $idUser;
     // -------------------------------------------------------------------------
@@ -48,7 +49,9 @@ class ObligacionesFinancieras extends Component
     public function mount()
     {
         $this->idUser = Auth::id();
-        $this->filtroPeriodo = Periodo::where('is_current', true)->first()?->id ?? '';
+        $ultimaMatricula  = Auth::user()->matriculas()->with('carrera')->latest()->first();
+        $periodoDeCarrera = $ultimaMatricula?->carrera?->periodoActual();
+        $this->filtroPeriodo = $periodoDeCarrera?->id ?? '';
     }
 
     // =========================================================================
@@ -86,30 +89,36 @@ class ObligacionesFinancieras extends Component
     #[Computed]
     public function deudaPeriodoActual()
     {
-        $periodoId = $this->filtroPeriodo
-            ?: Periodo::where('is_current', true)->first()?->id;
+        $periodoId = $this->filtroPeriodo ?: (function () {
+            $ultimaMatricula = Auth::user()->matriculas()->with('carrera')->latest()->first();
+            return $ultimaMatricula?->carrera?->periodoActual()?->id;
+        })();
 
         if (! $periodoId) return 0;
 
         return ObligacionesFinanciera::where('user_id', $this->idUser)
             ->where('periodo_id', $periodoId)
             ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
+            ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
             ->get()
-            ->sum(fn($ob) => max(0, $ob->saldo));
+            ->sum(fn($ob) => max(0, $ob->monto_final - ($ob->pagado ?? 0)));
     }
 
     #[Computed]
     public function totalPagadoPeriodo()
     {
-        $periodoId = $this->filtroPeriodo
-            ?: Periodo::where('is_current', true)->first()?->id;
+        $periodoId = $this->filtroPeriodo ?: (function () {
+            $ultimaMatricula = Auth::user()->matriculas()->with('carrera')->latest()->first();
+            return $ultimaMatricula?->carrera?->periodoActual()?->id;
+        })();
 
         if (! $periodoId) return 0;
 
         return ObligacionesFinanciera::where('user_id', $this->idUser)
             ->where('periodo_id', $periodoId)
+            ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
             ->get()
-            ->sum(fn($ob) => $ob->total_pagado);
+            ->sum(fn($ob) => $ob->pagado ?? 0);
     }
 
     #[Computed]
@@ -123,8 +132,9 @@ class ObligacionesFinancieras extends Component
         if (! $matricula?->carrera) return 0;
 
         $totalPagadoHistorico = ObligacionesFinanciera::where('user_id', $this->idUser)
+            ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
             ->get()
-            ->sum(fn($ob) => $ob->total_pagado);
+            ->sum(fn($ob) => $ob->pagado ?? 0);
 
         return max(0, $matricula->carrera->costo_carrera - $totalPagadoHistorico);
     }
@@ -169,8 +179,9 @@ class ObligacionesFinancieras extends Component
 
     public function guardarPago()
     {
+        if ($this->sinPermiso('ver_obligaciones_financieras')) return;
+
         $estudiante    = Auth::user();
-        dd($estudiante);
         $this->validate([
             'montoPago'       => 'required|numeric|min:0.01|max:' . ($this->obligacionSeleccionada?->saldo ?? 0),
             'metodoPago'      => 'required|in:Efectivo,Tarjeta,Transferencia,Deposito,Payphone',
@@ -205,8 +216,8 @@ class ObligacionesFinancieras extends Component
                 'public'
             );
 
-            Pago::create([
-                'numero_comprobante' => $this->generarNumeroComprobante(),
+            $pago = Pago::create([
+                'numero_comprobante' => 'TEMP',
                 'codigo_referencia'  => $this->referencia ?: null,
                 'obligacion_id'      => $this->obligacionSeleccionada->id,
                 'monto'              => $this->montoPago,
@@ -218,6 +229,7 @@ class ObligacionesFinancieras extends Component
                     ?: 'Cuota ' . $numeroCuota . ' — ' . $this->obligacionSeleccionada->tipo,
                 'comprobante_path'   => $comprobantePath,
             ]);
+            $pago->update(['numero_comprobante' => $this->generarNumeroComprobante($pago->id)]);
 
             if ($this->obligacionSeleccionada->estado === 'Pendiente') {
                 $this->obligacionSeleccionada->update(['estado' => 'Parcial']);
@@ -260,10 +272,9 @@ class ObligacionesFinancieras extends Component
     // =========================================================================
     // HELPER
     // =========================================================================
-    private function generarNumeroComprobante(): string
+    private function generarNumeroComprobante(int $pagoId): string
     {
-        $ultimo = Pago::max('id') + 1;
-        return 'ISTC-CP-' . $this->obligacionSeleccionada->tipo . '-' . now()->year . '-' . str_pad($ultimo, 5, '0', STR_PAD_LEFT);
+        return 'ISTC-CP-' . $this->obligacionSeleccionada->tipo . '-' . now()->year . '-' . str_pad($pagoId, 5, '0', STR_PAD_LEFT);
     }
 
     // =========================================================================
