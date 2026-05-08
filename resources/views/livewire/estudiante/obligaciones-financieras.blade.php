@@ -338,8 +338,8 @@
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                                         Método de Pago <span class="text-red-500">*</span>
                                     </label>
-                                    <div class="grid grid-cols-3 gap-2">
-                                        @foreach (['Transferencia', 'Deposito', 'Efectivo', 'Tarjeta', 'Payphone'] as $metodo)
+                                    <div class="grid grid-cols-3 gap-2">{{-- , 'Tarjeta', 'Payphone' --}}
+                                        @foreach (['Transferencia', 'Deposito', 'Efectivo'] as $metodo)
                                             <label class="cursor-pointer">
                                                 <input type="radio" wire:model="metodoPago"
                                                     value="{{ $metodo }}" class="sr-only peer">
