@@ -36,7 +36,11 @@
                     <option value="">— Seleccionar período —</option>
                     @foreach ($periodos as $periodo)
                         <option value="{{ $periodo->id }}">
-                            {{ $periodo->code }} · {{ Str::limit($periodo->description, 35) }}
+                            {{ $periodo->code }}
+                            @if($periodo->description) · {{ Str::limit($periodo->description, 25) }} @endif
+                            @if($periodo->carreras->isNotEmpty())
+                                — {{ $periodo->carreras->pluck('code')->implode(', ') }}
+                            @endif
                         </option>
                     @endforeach
                 </select>
@@ -63,16 +67,14 @@
                         'code'  => $m->code,
                         'label' => $m->name . ' · ' . $m->code,
                     ])->values()->toArray();
-
-                    $selectedLabel = $materiaId
-                        ? ($materias->firstWhere('id', $materiaId)?->name . ' · ' . $materias->firstWhere('id', $materiaId)?->code)
-                        : '';
                 @endphp
 
                 <div wire:key="materia-combo-{{ $periodoId }}"
+                     wire:ignore
                      x-data="{
                          open: false,
-                         search: '{{ addslashes($selectedLabel) }}',
+                         search: '',
+                         selectedId: {{ $materiaId ?? 'null' }},
                          items: @js($materiasData),
                          get filtered() {
                              const s = this.search.toLowerCase().trim();
@@ -81,23 +83,35 @@
                                  i.name.toLowerCase().includes(s) || i.code.toLowerCase().includes(s)
                              );
                          },
+                         get selectedLabel() {
+                             if (!this.selectedId) return '';
+                             const item = this.items.find(i => i.id === this.selectedId);
+                             return item ? item.label : '';
+                         },
+                         init() {
+                             this.search = this.selectedLabel;
+                         },
                          select(item) {
-                             this.search = item.label;
-                             this.open   = false;
+                             this.selectedId = item.id;
+                             this.search     = item.label;
+                             this.open       = false;
                              $wire.seleccionarMateria(item.id);
                          },
                          clear() {
-                             this.search = '';
-                             this.open   = false;
+                             this.selectedId = null;
+                             this.search     = '';
+                             this.open       = true;
                              $wire.seleccionarMateria(null);
+                             $nextTick(() => $refs.searchInput.focus());
                          }
                      }"
-                     @click.outside="open = false"
+                     @click.outside="open = false; search = selectedLabel"
                      class="relative">
 
                     <div class="relative">
                         <input
                             type="text"
+                            x-ref="searchInput"
                             x-model="search"
                             @focus="open = true; search = ''"
                             @input="open = true"
@@ -186,12 +200,20 @@
 
         {{-- Alerta duplicado --}}
         @if ($yaExiste)
-            <div class="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20
+            <div class="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20
                 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-                <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                 </svg>
-                Este docente ya tiene esta asignación registrada.
+                <span>
+                    @if ($yaExiste->docente_id === $docente->id)
+                        Este docente ya tiene esta materia asignada en el período y paralelo seleccionados.
+                    @else
+                        Esta materia ya está asignada a
+                        <strong>{{ $yaExiste->docente?->name ?? 'otro docente' }}</strong>
+                        en el período y paralelo seleccionados.
+                    @endif
+                </span>
             </div>
         @endif
 
@@ -244,7 +266,12 @@
                         focus:ring-2 focus:ring-indigo-500 py-1.5 px-3">
                     <option value="">Todos</option>
                     @foreach ($periodos as $p)
-                        <option value="{{ $p->id }}">{{ $p->code }}</option>
+                        <option value="{{ $p->id }}">
+                            {{ $p->code }}
+                            @if($p->carreras->isNotEmpty())
+                                — {{ $p->carreras->pluck('name')->implode(', ') }}
+                            @endif
+                        </option>
                     @endforeach
                 </select>
             </div>

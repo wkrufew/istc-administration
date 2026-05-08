@@ -88,16 +88,20 @@ class AsignacionDocente extends Component
             return;
         }
 
-        // Verificar duplicado
-        $duplicado = AsignacionDocenteModel::where([
-            'docente_id'  => $this->docente->id,
-            'materia_id'  => $this->materiaId,
-            'paralelo_id' => $this->paraleloId,
-            'periodo_id'  => $this->periodoId,
-        ])->exists();
+        // Verificar si la materia/paralelo/período ya tiene cualquier docente asignado
+        $yaAsignado = AsignacionDocenteModel::with('docente')
+            ->where('materia_id',  $this->materiaId)
+            ->where('paralelo_id', $this->paraleloId)
+            ->where('periodo_id',  $this->periodoId)
+            ->first();
 
-        if ($duplicado) {
-            $this->addError('general', 'El docente ya tiene esta materia asignada en ese período y paralelo.');
+        if ($yaAsignado) {
+            if ($yaAsignado->docente_id === $this->docente->id) {
+                $this->addError('general', 'Este docente ya tiene esta materia asignada en el período y paralelo seleccionados.');
+            } else {
+                $nombre = $yaAsignado->docente?->name ?? 'otro docente';
+                $this->addError('general', "Esta materia ya está asignada al docente {$nombre} en el período y paralelo seleccionados.");
+            }
             return;
         }
 
@@ -142,7 +146,10 @@ class AsignacionDocente extends Component
               ->from('carrera_periodo')
               ->whereColumn('carrera_periodo.periodo_id', 'periodos.id')
               ->where('carrera_periodo.is_current', true)
-        )->orderByDesc('fecha_inicio')->get();
+        )
+        ->with(['carreras' => fn($q) => $q->wherePivot('is_current', true)->orderBy('name')])
+        ->orderByDesc('fecha_inicio')
+        ->get();
     }
 
     private function getMaterias()
@@ -189,16 +196,15 @@ class AsignacionDocente extends Component
         return $q->orderByDesc('created_at')->get();
     }
 
-    private function checkYaExiste(): bool
+    private function checkYaExiste(): ?AsignacionDocenteModel
     {
-        if (! $this->periodoId || ! $this->materiaId || ! $this->paraleloId) return false;
+        if (! $this->periodoId || ! $this->materiaId || ! $this->paraleloId) return null;
 
-        return AsignacionDocenteModel::where([
-            'docente_id'  => $this->docente->id,
-            'materia_id'  => $this->materiaId,
-            'paralelo_id' => $this->paraleloId,
-            'periodo_id'  => $this->periodoId,
-        ])->exists();
+        return AsignacionDocenteModel::with('docente')
+            ->where('materia_id',  $this->materiaId)
+            ->where('paralelo_id', $this->paraleloId)
+            ->where('periodo_id',  $this->periodoId)
+            ->first();
     }
 
     // =========================================================================
