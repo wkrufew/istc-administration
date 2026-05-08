@@ -17,6 +17,10 @@ use App\Traits\WithAuthorization;
 class AvisosEstudiante extends Component
 {
     use WithAuthorization;
+
+    public int  $limitePasados         = 10;
+    public bool $seccionPasadosAbierta = false;
+
     // ── Computed ──────────────────────────────────────────────────────────────
 
     #[Computed]
@@ -48,24 +52,49 @@ class AvisosEstudiante extends Component
     }
 
     #[Computed]
-    public function avisos()
+    public function avisos(): array
     {
         if ($this->asignacionIds->isEmpty()) {
-            return collect()->groupBy(fn() => 'proximo');
+            return ['hoy' => collect(), 'proximo' => collect(), 'pasado' => collect()];
         }
 
         $userId = Auth::id();
+        $ids    = $this->asignacionIds;
 
-        return Aviso::with([
-                'asignacionDocente.materia',
-                'asignacionDocente.paralelo',
-                'asignacionDocente.docente',
-            ])
-            ->whereIn('asignacion_docente_id', $this->asignacionIds)
+        $withRelations = ['asignacionDocente.materia', 'asignacionDocente.paralelo', 'asignacionDocente.docente'];
+
+        $futuros = Aviso::with($withRelations)
+            ->whereIn('asignacion_docente_id', $ids)
             ->withExists(['lecturas as leido' => fn($q) => $q->where('user_id', $userId)])
+            ->where('fecha_aviso', '>=', now()->startOfDay())
             ->orderBy('fecha_aviso', 'asc')
-            ->get()
-            ->groupBy('estado');
+            ->get();
+
+        $pasados = Aviso::with($withRelations)
+            ->whereIn('asignacion_docente_id', $ids)
+            ->withExists(['lecturas as leido' => fn($q) => $q->where('user_id', $userId)])
+            ->where('fecha_aviso', '<', now()->startOfDay())
+            ->orderBy('fecha_aviso', 'desc')
+            ->limit($this->limitePasados)
+            ->get();
+
+        return [
+            'hoy'     => $futuros->filter(fn($a) => $a->estado === 'hoy'),
+            'proximo' => $futuros->filter(fn($a) => $a->estado === 'proximo'),
+            'pasado'  => $pasados,
+        ];
+    }
+
+    #[Computed]
+    public function totalPasados(): int
+    {
+        if ($this->asignacionIds->isEmpty()) {
+            return 0;
+        }
+
+        return Aviso::whereIn('asignacion_docente_id', $this->asignacionIds)
+            ->where('fecha_aviso', '<', now()->startOfDay())
+            ->count();
     }
 
     #[Computed]
@@ -83,6 +112,18 @@ class AvisosEstudiante extends Component
     }
 
     // ── Acciones ──────────────────────────────────────────────────────────────
+
+    public function toggleSeccionPasados(): void
+    {
+        $this->seccionPasadosAbierta = !$this->seccionPasadosAbierta;
+    }
+
+    public function cargarMasPasados(): void
+    {
+        $this->limitePasados += 10;
+        $this->seccionPasadosAbierta = true;
+        unset($this->avisos);
+    }
 
     public function marcarLeido(int $avisoId): void
     {

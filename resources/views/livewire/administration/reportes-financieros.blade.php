@@ -154,6 +154,11 @@
                                         'text-amber-700 dark:text-amber-400',
                                         'bg-amber-500',
                                     ],
+                                    'INSCRIPCION' => [
+                                        'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/50',
+                                        'text-orange-700 dark:text-orange-400',
+                                        'bg-orange-500',
+                                    ],
                                     'MULTA' => [
                                         'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50',
                                         'text-red-700 dark:text-red-400',
@@ -256,6 +261,7 @@
                                 <option value="MATRICULA">Matrícula</option>
                                 <option value="COLEGIATURA">Colegiatura</option>
                                 <option value="ARRASTRE">Arrastre</option>
+                                <option value="INSCRIPCION">Inscripción</option>
                                 <option value="MULTA">Multa</option>
                                 <option value="OTROS">Otros</option>
                             </select>
@@ -309,6 +315,7 @@
                                             'MATRICULA' => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
                                             'COLEGIATURA' => 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400',
                                             'ARRASTRE' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
+                                            'INSCRIPCION' => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
                                             'MULTA' => 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400',
                                             default => 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400',
                                         };
@@ -376,7 +383,7 @@
                                                     </p>
                                                 @elseif ($ob->estado !== 'Pagado')
                                                     <p class="text-xs text-gray-400">
-                                                        en {{ $ob->fecha_vencimiento->diffForHumans(['parts' => 1]) }}
+                                                        <!-- en --> {{ $ob->fecha_vencimiento->diffForHumans(['parts' => 1]) }}
                                                     </p>
                                                 @endif
                                             @else
@@ -421,7 +428,7 @@
 
                                                     <p
                                                         class="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wide mb-3">
-                                                        Historial de pagos — {{ $ob->user?->name }}
+                                                        Historial de pagos — {{ $ob->estudiante?->name }}
                                                     </p>
 
                                                     @if ($ob->pagos->count() > 0)
@@ -658,6 +665,7 @@
                                                         'MATRICULA' => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
                                                         'COLEGIATURA' => 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400',
                                                         'ARRASTRE' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
+                                                        'INSCRIPCION' => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
                                                         'MULTA' => 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
                                                         default => 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400',
                                                     };

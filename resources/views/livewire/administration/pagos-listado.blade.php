@@ -310,9 +310,9 @@
                             class="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500">
                             <option value="Transferencia">Transferencia</option>
                             <option value="Efectivo">Efectivo</option>
-                            <option value="Tarjeta">Tarjeta</option>
                             <option value="Deposito">Depósito</option>
-                            <option value="Payphone">Payphone</option>
+                            <!-- <option value="Tarjeta">Tarjeta</option>
+                            <option value="Payphone">Payphone</option> -->
                         </select>
 
                         <input type="text" wire:model="numero_comprobante" placeholder="Número de comprobante"

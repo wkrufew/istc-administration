@@ -27,6 +27,7 @@ class UserProfile extends Component
     public $genero;
     public $estado_civil;
     public $nacionalidad;
+    public $etnia;
 
     // Datos familiares
     public $padre, $madre, $tutor;
@@ -76,6 +77,7 @@ class UserProfile extends Component
         /* $this->fecha_nacimiento = optional($this->user->fecha_nacimiento)->format('Y-m-d'); */
         $this->genero = $this->user->genero ?? null;
         $this->nacionalidad = $this->user->nacionalidad ?? null;
+        $this->etnia = $this->user->etnia ?? null;
         $this->estado_civil = $this->user->estado_civil ?? null;
 
         $this->padre = $this->user->padre;
@@ -123,7 +125,8 @@ class UserProfile extends Component
             'fecha_nacimiento' => ['nullable', 'date'],
             'genero' => ['nullable', 'string', 'max:20'],
             'estado_civil' => ['nullable', 'string', 'max:40'],
-            'nacionalidad' => ['nullable', 'string', 'max:20'],
+            'nacionalidad' => ['nullable', 'string', 'max:100'],
+            'etnia' => ['nullable', 'string', 'max:100'],
             /* 'matricula_numero' => 'nullable|string|max:50', */
             'padre' => 'nullable|string|max:255',
             'madre' => 'nullable|string|max:255',
@@ -215,6 +218,7 @@ class UserProfile extends Component
         $user->genero = $this->genero;
         $user->estado_civil = $this->estado_civil;
         $user->nacionalidad = $this->nacionalidad;
+        $user->etnia = $this->etnia;
         $user->telefono_emergencia = $this->telefono_emergencia;
         $user->contacto_emergencia = $this->contacto_emergencia;
         $user->padre = $this->padre;

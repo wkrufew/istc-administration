@@ -177,7 +177,7 @@ class ReportesFinancieros extends Component
                 $this->busqueda,
                 fn($q) =>
                 $q->whereHas(
-                    'user',
+                    'estudiante',
                     fn($u) =>
                     $u->where('name',    'like', '%' . $this->busqueda . '%')
                         ->orWhere('cedula', 'like', '%' . $this->busqueda . '%')
@@ -196,14 +196,14 @@ class ReportesFinancieros extends Component
     {
         if (! $this->periodoId || ! $this->carreraId) return collect();
 
-        return ObligacionesFinanciera::with('user')
+        return ObligacionesFinanciera::with('estudiante')
             ->where('periodo_id', $this->periodoId)
             ->whereHas('matricula', fn($q) => $q->where('carrera_id', $this->carreraId))
             ->where('estado', 'Vencido')
             ->get()
             ->groupBy('user_id')
             ->map(function ($obligaciones) {
-                $user              = $obligaciones->first()->user;
+                $user              = $obligaciones->first()->estudiante;
                 $totalAdeudado     = $obligaciones->sum('monto_final');
                 $cantidadVencidas  = $obligaciones->count();
 

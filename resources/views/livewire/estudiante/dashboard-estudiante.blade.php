@@ -307,18 +307,27 @@
                                     @foreach ($resumenFinanciero['obligaciones'] as $ob)
                                         @php
                                             $obColors = [
-                                                'MATRICULA' => 'bg-blue-100 text-blue-700',
+                                                'MATRICULA'   => 'bg-blue-100 text-blue-700',
                                                 'COLEGIATURA' => 'bg-purple-100 text-purple-700',
-                                                'ARRASTRE' => 'bg-yellow-100 text-yellow-700',
-                                                'MULTA' => 'bg-red-100 text-red-700',
-                                                'OTROS' => 'bg-gray-100 text-gray-600',
+                                                'ARRASTRE'    => 'bg-yellow-100 text-yellow-700',
+                                                'INSCRIPCION' => 'bg-orange-100 text-orange-700',
+                                                'MULTA'       => 'bg-red-100 text-red-700',
+                                                'OTROS'       => 'bg-gray-100 text-gray-600',
+                                            ];
+                                            $obLabels = [
+                                                'MATRICULA'   => 'Matrícula',
+                                                'COLEGIATURA' => 'Colegiatura',
+                                                'ARRASTRE'    => 'Arrastre',
+                                                'INSCRIPCION' => 'Inscripción',
+                                                'MULTA'       => 'Multa',
+                                                'OTROS'       => 'Otros',
                                             ];
                                         @endphp
                                         <div class="flex items-center justify-between text-xs">
                                             <div class="flex items-center gap-1.5">
                                                 <span
                                                     class="px-1.5 py-0.5 rounded text-xs font-semibold {{ $obColors[$ob->tipo] ?? 'bg-gray-100' }}">
-                                                    {{ $ob->tipo }}
+                                                    {{ $obLabels[$ob->tipo] ?? $ob->tipo }}
                                                 </span>
                                             </div>
                                             <div class="text-right">

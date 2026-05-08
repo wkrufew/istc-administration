@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Services\SettingService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -82,75 +81,43 @@ class WhatsappService
     }
 
     // =========================================================================
-    // CONFIRMACIÓN DE MATRÍCULA (estudiante ya existente)
-    // Template: matricula_confirmacion
-    // Parámetros: {{1}} nombre  {{2}} codigo  {{3}} carrera
-    //             {{4}} periodo {{5}} cedula  {{6}} monto  {{7}} fecha_limite
-    // =========================================================================
-    public function enviarConfirmacionMatricula(
-        string $telefono,
-        string $nombre,
-        string $codigoMatricula,
-        string $carrera,
-        string $periodo,
-        string $cedula,
-        string $monto,
-        string $fechaLimite
-    ): bool {
-        $componentes = [
-            [
-                'type'       => 'body',
-                'parameters' => [
-                    ['type' => 'text', 'text' => $nombre],
-                    ['type' => 'text', 'text' => $codigoMatricula],
-                    ['type' => 'text', 'text' => $carrera],
-                    ['type' => 'text', 'text' => $periodo],
-                    ['type' => 'text', 'text' => $cedula],
-                    ['type' => 'text', 'text' => $monto],
-                    ['type' => 'text', 'text' => $fechaLimite],
-                ],
-            ],
-        ];
-
-        return $this->enviarTemplate(
-            $telefono,
-            SettingService::get('whatsapp.template_confirmacion') ?: config('whatsapp.templates.matricula_confirmacion', 'matricula_confirmacion'),
-            'es',
-            $componentes
-        );
-    }
-
-    // =========================================================================
-    // BIENVENIDA + CREDENCIALES (primer acceso al sistema)
+    // BIENVENIDA + CREDENCIALES (primera matrícula)
     // Template: matricula_bienvenida
-    // Parámetros: {{1}} nombre  {{2}} correo  {{3}} cedula (password inicial)
-    //             {{4}} codigo  {{5}} carrera  {{6}} periodo
-    //             {{7}} monto   {{8}} fecha_limite
+    // {{1}} nombre         {{2}} nombreInstituto  {{3}} codigoMatricula
+    // {{4}} carrera        {{5}} periodo          {{6}} monto
+    // {{7}} fechaLimite    {{8}} correo           {{9}} urlPlataforma
     // =========================================================================
     public function enviarBienvenidaConCredenciales(
         string $telefono,
         string $nombre,
-        string $correo,
-        string $cedula,
+        string $nombreInstituto,
         string $codigoMatricula,
         string $carrera,
         string $periodo,
         string $monto,
-        string $fechaLimite
+        string $fechaLimite,
+        string $correo,
+        string $urlPlataforma,
     ): bool {
-        $componentes = [
-            [
-                'type'       => 'body',
-                'parameters' => [
-                    ['type' => 'text', 'text' => $nombre],
-                    ['type' => 'text', 'text' => $correo],
-                    ['type' => 'text', 'text' => $cedula],          // password inicial
-                    ['type' => 'text', 'text' => $codigoMatricula],
-                    ['type' => 'text', 'text' => $carrera],
-                    ['type' => 'text', 'text' => $periodo],
-                    ['type' => 'text', 'text' => $monto],
-                    ['type' => 'text', 'text' => $fechaLimite],
-                ],
+        $logoUrl     = $this->resolverLogoUrl();
+        $componentes = [];
+
+        if ($logoUrl) {
+            $componentes[] = $this->componenteImagenHeader($logoUrl);
+        }
+
+        $componentes[] = [
+            'type'       => 'body',
+            'parameters' => [
+                ['type' => 'text', 'text' => $nombre],
+                ['type' => 'text', 'text' => $nombreInstituto],
+                ['type' => 'text', 'text' => $codigoMatricula],
+                ['type' => 'text', 'text' => $carrera],
+                ['type' => 'text', 'text' => $periodo],
+                ['type' => 'text', 'text' => $monto],
+                ['type' => 'text', 'text' => $fechaLimite],
+                ['type' => 'text', 'text' => $correo],
+                ['type' => 'text', 'text' => $urlPlataforma ?: '—'],
             ],
         ];
 
@@ -163,37 +130,144 @@ class WhatsappService
     }
 
     // =========================================================================
-    // CONFIRMACIÓN DE PAGO DE MATRÍCULA
-    // Template: pago_matricula_confirmacion
-    // Parámetros: {{1}} nombre  {{2}} numero_comprobante  {{3}} monto
-    //             {{4}} metodo_pago  {{5}} fecha_pago  {{6}} codigo_matricula
+    // CONFIRMACIÓN DE MATRÍCULA (renovación — estudiante ya existente)
+    // Template: matricula_confirmacion
+    // {{1}} nombre         {{2}} nombreInstituto  {{3}} codigoMatricula
+    // {{4}} carrera        {{5}} periodo          {{6}} cedula
+    // {{7}} monto          {{8}} fechaLimite
+    // =========================================================================
+    public function enviarConfirmacionMatricula(
+        string $telefono,
+        string $nombre,
+        string $nombreInstituto,
+        string $codigoMatricula,
+        string $carrera,
+        string $periodo,
+        string $cedula,
+        string $monto,
+        string $fechaLimite
+    ): bool {
+        $logoUrl     = $this->resolverLogoUrl();
+        $componentes = [];
+
+        if ($logoUrl) {
+            $componentes[] = $this->componenteImagenHeader($logoUrl);
+        }
+
+        $componentes[] = [
+            'type'       => 'body',
+            'parameters' => [
+                ['type' => 'text', 'text' => $nombre],
+                ['type' => 'text', 'text' => $nombreInstituto],
+                ['type' => 'text', 'text' => $codigoMatricula],
+                ['type' => 'text', 'text' => $carrera],
+                ['type' => 'text', 'text' => $periodo],
+                ['type' => 'text', 'text' => $cedula],
+                ['type' => 'text', 'text' => $monto],
+                ['type' => 'text', 'text' => $fechaLimite],
+            ],
+        ];
+
+        return $this->enviarTemplate(
+            $telefono,
+            SettingService::get('whatsapp.template_confirmacion') ?: config('whatsapp.templates.matricula_confirmacion', 'matricula_confirmacion'),
+            'es',
+            $componentes
+        );
+    }
+
+    // =========================================================================
+    // CONFIRMACIÓN DE PAGO GENÉRICO (colegiatura, multa, arrastre, etc.)
+    // Template: pago_confirmacion
+    // {{1}} nombre         {{2}} nombreInstituto  {{3}} tipoPago
+    // {{4}} comprobante    {{5}} monto            {{6}} metodoPago
+    // {{7}} fechaPago      {{8}} codigoMatricula
     // =========================================================================
     public function enviarConfirmacionPago(
         string $telefono,
         string $nombre,
+        string $nombreInstituto,
+        string $tipoPago,
         string $numeroComprobante,
         string $monto,
         string $metodoPago,
         string $fechaPago,
         string $codigoMatricula,
     ): bool {
-        $componentes = [
-            [
-                'type'       => 'body',
-                'parameters' => [
-                    ['type' => 'text', 'text' => $nombre],
-                    ['type' => 'text', 'text' => $numeroComprobante],
-                    ['type' => 'text', 'text' => $monto],
-                    ['type' => 'text', 'text' => $metodoPago],
-                    ['type' => 'text', 'text' => $fechaPago],
-                    ['type' => 'text', 'text' => $codigoMatricula],
-                ],
+        $logoUrl     = $this->resolverLogoUrl();
+        $componentes = [];
+
+        if ($logoUrl) {
+            $componentes[] = $this->componenteImagenHeader($logoUrl);
+        }
+
+        $componentes[] = [
+            'type'       => 'body',
+            'parameters' => [
+                ['type' => 'text', 'text' => $nombre],
+                ['type' => 'text', 'text' => $nombreInstituto],
+                ['type' => 'text', 'text' => $tipoPago],
+                ['type' => 'text', 'text' => $numeroComprobante],
+                ['type' => 'text', 'text' => $monto],
+                ['type' => 'text', 'text' => $metodoPago],
+                ['type' => 'text', 'text' => $fechaPago],
+                ['type' => 'text', 'text' => $codigoMatricula],
             ],
         ];
 
         return $this->enviarTemplate(
             $telefono,
-            SettingService::get('whatsapp.template_pago') ?: 'pago_matricula_confirmacion',
+            SettingService::get('whatsapp.template_pago') ?: config('whatsapp.templates.pago_confirmacion', 'pago_confirmacion'),
+            'es',
+            $componentes
+        );
+    }
+
+    // =========================================================================
+    // PAGO DE PRIMERA MATRÍCULA (matrícula + inscripción auto-liquidada)
+    // Template: pago_primera_matricula
+    // {{1}} nombre                   {{2}} nombreInstituto
+    // {{3}} comprobanteMatricula      {{4}} montoMatricula
+    // {{5}} comprobanteInscripcion    {{6}} montoInscripcion
+    // {{7}} totalCobrado              {{8}} metodoPago   {{9}} fechaPago
+    // =========================================================================
+    public function enviarPagoPrimeraMatricula(
+        string $telefono,
+        string $nombre,
+        string $nombreInstituto,
+        string $comprobanteMatricula,
+        string $montoMatricula,
+        string $comprobanteInscripcion,
+        string $montoInscripcion,
+        string $totalCobrado,
+        string $metodoPago,
+        string $fechaPago,
+    ): bool {
+        $logoUrl     = $this->resolverLogoUrl();
+        $componentes = [];
+
+        if ($logoUrl) {
+            $componentes[] = $this->componenteImagenHeader($logoUrl);
+        }
+
+        $componentes[] = [
+            'type'       => 'body',
+            'parameters' => [
+                ['type' => 'text', 'text' => $nombre],
+                ['type' => 'text', 'text' => $nombreInstituto],
+                ['type' => 'text', 'text' => $comprobanteMatricula],
+                ['type' => 'text', 'text' => $montoMatricula],
+                ['type' => 'text', 'text' => $comprobanteInscripcion],
+                ['type' => 'text', 'text' => $montoInscripcion],
+                ['type' => 'text', 'text' => $totalCobrado],
+                ['type' => 'text', 'text' => $metodoPago],
+                ['type' => 'text', 'text' => $fechaPago],
+            ],
+        ];
+
+        return $this->enviarTemplate(
+            $telefono,
+            SettingService::get('whatsapp.template_pago_primera_matricula') ?: config('whatsapp.templates.pago_primera_matricula', 'pago_primera_matricula'),
             'es',
             $componentes
         );
@@ -202,7 +276,7 @@ class WhatsappService
     // =========================================================================
     // NUEVO TICKET (notifica al usuario que lo creó)
     // Template: ticket_nuevo
-    // Parámetros: {{1}} nombre  {{2}} numero  {{3}} titulo  {{4}} prioridad  {{5}} estado
+    // {{1}} nombre  {{2}} numero  {{3}} titulo  {{4}} prioridad  {{5}} estado
     // =========================================================================
     public function enviarNuevoTicket(
         string $telefono,
@@ -234,9 +308,9 @@ class WhatsappService
     }
 
     // =========================================================================
-    // RESPUESTA EN TICKET (notifica cuando hay una nueva respuesta)
+    // RESPUESTA EN TICKET
     // Template: ticket_respuesta
-    // Parámetros: {{1}} nombre  {{2}} numero  {{3}} titulo  {{4}} respondido_por
+    // {{1}} nombre  {{2}} numero  {{3}} titulo  {{4}} respondido_por
     // =========================================================================
     public function enviarRespuestaTicket(
         string $telefono,
@@ -266,27 +340,64 @@ class WhatsappService
     }
 
     // =========================================================================
-    // HELPER: limpiar teléfono → formato internacional sin +
-    // Ecuador: 09XXXXXXXX → 5939XXXXXXXX
+    // HELPERS PRIVADOS
     // =========================================================================
+
+    /**
+     * Devuelve la URL pública del logo si está configurada y no apunta a localhost.
+     * Meta no puede acceder a URLs locales; en ese caso se omite el header de imagen.
+     */
+    private function resolverLogoUrl(): ?string
+    {
+        $logoPath = SettingService::get('instituto.logo_path');
+        if (! $logoPath) {
+            return null;
+        }
+
+        $url  = url('storage/' . $logoPath);
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (in_array($host, ['localhost', '127.0.0.1', '::1'])) {
+            return null;
+        }
+
+        return $url;
+    }
+
+    /**
+     * Construye el componente de encabezado con imagen para los templates.
+     */
+    private function componenteImagenHeader(string $imageUrl): array
+    {
+        return [
+            'type'       => 'header',
+            'parameters' => [
+                [
+                    'type'  => 'image',
+                    'image' => ['link' => $imageUrl],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Normaliza teléfonos ecuatorianos al formato internacional sin "+".
+     * 09XXXXXXXX → 5939XXXXXXXX
+     */
     private function limpiarTelefono(string $telefono): string
     {
-        // Quitar todo excepto dígitos
         $limpio = preg_replace('/\D/', '', $telefono);
 
         if (empty($limpio)) return '';
 
-        // Si ya tiene código de país Ecuador (593)
         if (str_starts_with($limpio, '593')) {
             return $limpio;
         }
 
-        // Si empieza en 0 (formato local Ecuador: 09XXXXXXXX)
         if (str_starts_with($limpio, '0')) {
             return '593' . substr($limpio, 1);
         }
 
-        // Si empieza en 9 (sin el 0 inicial)
         if (str_starts_with($limpio, '9') && strlen($limpio) === 9) {
             return '593' . $limpio;
         }

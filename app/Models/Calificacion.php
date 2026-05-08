@@ -22,6 +22,7 @@ class Calificacion extends Model
         'estado_final',
         'es_arrastre',
         'numero_intento',
+        'es_borrador',
         'detalle_matricula_id',
         'docente_id'
     ];
@@ -37,6 +38,7 @@ class Calificacion extends Model
         'examen_final' => 'decimal:2',
         'nota_final' => 'decimal:2',
         'es_arrastre' => 'boolean',
+        'es_borrador' => 'boolean',
         'numero_intento' => 'integer',
     ];
 
@@ -79,7 +81,6 @@ class Calificacion extends Model
         return $this->hasMany(AuditoriaCalificacion::class);
     }
 
-    //VERIFICAR ESTOS DOS METODOS
     // Métodos auxiliares
     public function calcularPromedioInsumos()
     {
@@ -96,7 +97,7 @@ class Calificacion extends Model
         $parcial = $this->examen_parcial ?? 0;
         $final = $this->examen_final ?? 0;
 
-        // Fórmula ejemplo: 40% insumos + 30% parcial + 30% final
-        return ($promedio * 0.4) + ($parcial * 0.3) + ($final * 0.3);
+        // Fórmula ejemplo: 60% insumos + 20% parcial + 20% final
+        return ($promedio * 0.6) + ($parcial * 0.2) + ($final * 0.2);
     }
 }

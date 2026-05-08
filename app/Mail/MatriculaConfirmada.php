@@ -37,10 +37,12 @@ class MatriculaConfirmada extends Mailable
 
     public function content(): Content
     {
-        $obligMatricula  = $this->matricula->obligacionesFinancieras
+        $obligMatricula   = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'MATRICULA');
         $obligColegiatura = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'COLEGIATURA');
+        $obligInscripcion = $this->matricula->obligacionesFinancieras
+            ->firstWhere('tipo', 'INSCRIPCION');
         $logoPath = SettingService::get('instituto.logo_path');
 
         return new Content(
@@ -60,15 +62,20 @@ class MatriculaConfirmada extends Mailable
                     'web'          => SettingService::get('instituto.web', ''),
                     'direccion'    => SettingService::get('instituto.direccion', ''),
                     'logo_url'     => $logoPath ? url('storage/' . $logoPath) : null,
+                    'url_portal'   => url('/login'),
                 ],
-                'monto'            => $obligMatricula
+                'monto'              => $obligMatricula
                     ? number_format((float) $obligMatricula->monto_final, 2) : null,
-                'fechaLimite'      => $obligMatricula?->fecha_vencimiento
+                'fechaLimite'        => $obligMatricula?->fecha_vencimiento
                     ? Carbon::parse($obligMatricula->fecha_vencimiento)->format('d/m/Y') : null,
-                'montoArancel'     => $obligColegiatura
+                'montoArancel'       => $obligColegiatura
                     ? number_format((float) $obligColegiatura->monto_final, 2) : null,
-                'fechaArancel'     => $obligColegiatura?->fecha_vencimiento
+                'fechaArancel'       => $obligColegiatura?->fecha_vencimiento
                     ? Carbon::parse($obligColegiatura->fecha_vencimiento)->format('d/m/Y') : null,
+                'montoInscripcion'   => $obligInscripcion
+                    ? number_format((float) $obligInscripcion->monto_final, 2) : null,
+                'fechaInscripcion'   => $obligInscripcion?->fecha_vencimiento
+                    ? Carbon::parse($obligInscripcion->fecha_vencimiento)->format('d/m/Y') : null,
             ],
         );
     }

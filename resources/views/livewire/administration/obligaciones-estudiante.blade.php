@@ -22,26 +22,6 @@
         ">
 
         {{-- ======================================================================
-             TOAST NOTIFICATIONS
-             ====================================================================== --}}
-        <div x-data="{ toasts: [] }"
-            x-on:toast.window="toasts.push($event.detail[0]); setTimeout(() => toasts.shift(), 4000)"
-            class="fixed top-4 right-4 z-50 space-y-2" style="z-index:99999">
-            <template x-for="(t, i) in toasts" :key="i">
-                <div x-show="true" x-transition
-                    :class="{
-                        'bg-green-600': t.tipo === 'success',
-                        'bg-red-600': t.tipo === 'error',
-                        'bg-amber-500': t.tipo === 'warning',
-                        'bg-blue-600': t.tipo === 'info',
-                    }"
-                    class="text-white px-5 py-3 rounded-lg shadow-lg text-sm flex items-center space-x-2 min-w-64">
-                    <span x-text="t.mensaje"></span>
-                </div>
-            </template>
-        </div>
-
-        {{-- ======================================================================
              HEADER
              ====================================================================== --}}
         <div
@@ -285,8 +265,8 @@
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-center space-x-2">
 
-                                        {{-- Botón registrar pago --}}
-                                        @if ($ob->estado !== 'Pagado')
+                                        {{-- Botón registrar pago (INSCRIPCION se liquida automáticamente con MATRICULA) --}}
+                                        @if ($ob->estado !== 'Pagado' && $ob->tipo !== 'INSCRIPCION')
                                             <button wire:click="abrirModalPago({{ $ob->id }})"
                                                 class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
                                                        bg-blue-600 hover:bg-blue-700 text-white transition"
@@ -568,7 +548,45 @@
                                             ${{ number_format($obligacionSeleccionada->saldo, 2) }}</p>
                                     </div>
                                 </div>
+
+                                {{-- Desglose inscripción + total acumulado --}}
+                                @if ($obligInscripcionModal)
+                                    @php $totalACobrar = $obligacionSeleccionada->saldo + $obligInscripcionModal->monto_final; @endphp
+                                    <div class="mt-3 pt-3 border-t border-dashed border-amber-300 dark:border-amber-700 space-y-1.5 text-xs">
+                                        <div class="flex justify-between text-gray-600 dark:text-gray-400">
+                                            <span>Saldo matrícula</span>
+                                            <span class="font-medium">${{ number_format($obligacionSeleccionada->saldo, 2) }}</span>
+                                        </div>
+                                        <div class="flex justify-between text-amber-700 dark:text-amber-400">
+                                            <span>Inscripción (primera matrícula)</span>
+                                            <span class="font-medium">${{ number_format($obligInscripcionModal->monto_final, 2) }}</span>
+                                        </div>
+                                        <div class="flex justify-between font-bold text-sm text-gray-900 dark:text-gray-100 pt-1 border-t border-gray-200 dark:border-slate-600">
+                                            <span>Total a cobrar</span>
+                                            <span class="text-blue-700 dark:text-blue-400">${{ number_format($totalACobrar, 2) }}</span>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
+
+                            {{-- Inscripción auto-liquidada (solo si es MATRICULA con inscripción pendiente) --}}
+                            @if ($obligInscripcionModal)
+                                <div class="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3 text-sm">
+                                    <svg class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div>
+                                        <p class="font-semibold text-amber-800 dark:text-amber-300">
+                                            Incluye liquidación de Inscripción
+                                        </p>
+                                        <p class="text-amber-700 dark:text-amber-400 mt-0.5">
+                                            Al registrar este pago se liquidará automáticamente el valor de inscripción de
+                                            <span class="font-bold">${{ number_format($obligInscripcionModal->monto_final, 2) }}</span>.
+                                        </p>
+                                    </div>
+                                </div>
+                            @endif
 
                             @error('pago_general')
                                 <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/60 rounded p-2">
@@ -585,7 +603,7 @@
                                     <span
                                         class="absolute inset-y-0 left-3 flex items-center text-gray-500 dark:text-gray-400 font-medium">$</span>
                                     <input type="number" wire:model="montoPago" step="0.01" min="0.01"
-                                        max="{{ $obligacionSeleccionada->saldo }}"
+                                        max="{{ $obligacionSeleccionada->saldo + ($obligInscripcionModal?->monto_final ?? 0) }}"
                                         class="w-full pl-8 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                                 </div>
                                 @error('montoPago')
@@ -598,8 +616,8 @@
                                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                     Método de Pago <span class="text-red-500">*</span>
                                 </label>
-                                <div class="grid grid-cols-3 gap-2">
-                                    @foreach (['Transferencia', 'Deposito', 'Efectivo', 'Tarjeta', 'Payphone'] as $metodo)
+                                <div class="grid grid-cols-3 gap-2"><!-- 'Tarjeta', 'Payphone' -->
+                                    @foreach (['Transferencia', 'Deposito', 'Efectivo'] as $metodo)
                                         <label class="cursor-pointer">
                                             <input type="radio" wire:model="metodoPago"
                                                 value="{{ $metodo }}" class="sr-only peer">

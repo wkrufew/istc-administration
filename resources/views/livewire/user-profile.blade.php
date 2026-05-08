@@ -1,12 +1,5 @@
 <div>
-    {{-- @if ($this->esDocente)
-        Hola soy docente
-    @endif
-
-    @if ($this->esEstudiante)
-        Hola soy estudiante
-    @endif --}}
-
+    <x-slot name="header">Datos del Docente</x-slot>
     <div class="max-w-7xl mx-auto px-4 py-6">
 
         {{-- Header --}}
@@ -282,46 +275,60 @@
                             </div>
 
                             {{-- Estado civil --}}
-                            <div class="">
+                            <div>
                                 <label class="text-sm font-semibold text-gray-700">Estado civil</label>
-                                {{-- <input type="text" wire:model.defer="estado_civil"
-                                    class="w-full mt-1 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"> --}}
                                 <select wire:model.defer="estado_civil"
                                     class="w-full mt-1 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                                     <option value="">— Seleccionar —</option>
-                                    <option value="Soltero">Soltero (a)</option>
-                                    <option value="Casado">Casado (a)</option>
-                                    <option value="Divorciado">Divorciado (a)</option>
-                                    <option value="Viudo">Viudo (a)</option>
-                                    <option value="Union Libre">Union Libre (a)</option>
-
+                                    <option value="Soltero/a">Soltero/a</option>
+                                    <option value="Casado/a">Casado/a</option>
+                                    <option value="Unión libre">Unión libre</option>
+                                    <option value="Divorciado/a">Divorciado/a</option>
+                                    <option value="Viudo/a">Viudo/a</option>
                                 </select>
                                 @error('estado_civil')
                                     <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
-                            {{-- Nacionalidad o etnia --}}
-                            <div>
-                                <label class="text-sm font-semibold text-gray-700">Identificación étnica</label>
 
+                            {{-- Nacionalidad --}}
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Nacionalidad</label>
                                 <select wire:model.defer="nacionalidad"
                                     class="w-full mt-1 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-
                                     <option value="">— Seleccione —</option>
-
-                                    <option value="Mestizo">Mestizo</option>
-                                    <option value="Indigena">Indígena</option>
-                                    <option value="Afroecuatoriano">Afroecuatoriano</option>
-                                    <option value="Negro">Negro</option>
-                                    <option value="Mulato">Mulato</option>
-                                    <option value="Montubio">Montubio</option>
-                                    <option value="Blanco">Blanco</option>
-                                    <option value="Otro">Otro</option>
-                                    <option value="No sabe / No responde">No sabe / No responde</option>
-
+                                    <option value="Ecuatoriana">Ecuatoriana</option>
+                                    <option value="Colombiana">Colombiana</option>
+                                    <option value="Peruana">Peruana</option>
+                                    <option value="Venezolana">Venezolana</option>
+                                    <option value="Boliviana">Boliviana</option>
+                                    <option value="Chilena">Chilena</option>
+                                    <option value="Argentina">Argentina</option>
+                                    <option value="Cubana">Cubana</option>
+                                    <option value="Española">Española</option>
+                                    <option value="Estadounidense">Estadounidense</option>
+                                    <option value="Otra">Otra</option>
                                 </select>
-
                                 @error('nacionalidad')
+                                    <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            {{-- Etnia --}}
+                            <div>
+                                <label class="text-sm font-semibold text-gray-700">Etnia</label>
+                                <select wire:model.defer="etnia"
+                                    class="w-full mt-1 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="">— Seleccione —</option>
+                                    <option value="Mestizo/a">Mestizo/a</option>
+                                    <option value="Indígena">Indígena</option>
+                                    <option value="Afroecuatoriano/a">Afroecuatoriano/a</option>
+                                    <option value="Montubio/a">Montubio/a</option>
+                                    <option value="Blanco/a">Blanco/a</option>
+                                    <option value="Mulato/a">Mulato/a</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                                @error('etnia')
                                     <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                                 @enderror
                             </div>

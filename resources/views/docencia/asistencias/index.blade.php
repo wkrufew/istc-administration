@@ -1,38 +1,38 @@
 <x-app-layout>
-    <div class="py-6">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Header Card -->
-            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 mb-8">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1
-                            class="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                            {{-- Modulo de Asistencias --}}{{ __('Bienvenido(a) docente') }} {{ auth()->user()->name }}
-                        </h1>
-                        <p class="text-slate-600 mt-2">Gestión de Asistencias para estudiantes</p>
-                        {{-- <p class="text-slate-600 mt-2">Gestión de Asistencias para estudiantes</p> --}}
-                    </div>
-                    <div class="hidden md:block">
-                        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full p-3">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {{-- <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    {{ __('Bienvenido estimado docente') }} {{ auth()->user()->name }}
-                </div>
-            </div> --}}
-        </div>
+    <x-slot name="header">Asistencia</x-slot>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-            <div class="text-gray-900 dark:text-gray-100">
-                @livewire('docente.asistencia-estudiante')
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {{-- Intro --}}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div class="flex items-center gap-4">
+                <div class="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shrink-0">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800 leading-tight">
+                        Sistema de Asistencias
+                    </h1>
+                    <p class="text-sm text-slate-500 mt-0.5">
+                        Selecciona la materia o si deseas elegir una fecha anterior pulsa en Buscar otra fecha para gestionar las asistencias de estduiantes.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl shrink-0">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-sm font-medium text-emerald-700">
+                    {{ now()->format('d/m/Y') }}
+                </span>
             </div>
         </div>
+                @livewire('docente.asistencia-estudiante')
+
     </div>
 </x-app-layout>

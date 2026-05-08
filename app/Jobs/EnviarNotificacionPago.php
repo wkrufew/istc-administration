@@ -77,14 +77,28 @@ class EnviarNotificacionPago implements ShouldQueue
         $telefono = $estudiante->phone ?? null;
         if (! $telefono) return;
 
+        $nombreInstituto = SettingService::get('instituto.nombre_largo', config('app.name'));
+
+        $tiposLegibles = [
+            'MATRICULA'   => 'Matrícula',
+            'COLEGIATURA' => 'Colegiatura',
+            'INSCRIPCION' => 'Inscripción',
+            'ARRASTRE'    => 'Arrastre',
+            'MULTA'       => 'Multa',
+            'OTROS'       => 'Otros',
+        ];
+        $tipoPago = $tiposLegibles[$pago->obligacion?->tipo ?? ''] ?? ($pago->obligacion?->tipo ?? 'Pago');
+
         try {
             $whatsapp->enviarConfirmacionPago(
                 telefono:          $telefono,
                 nombre:            $estudiante->name,
+                nombreInstituto:   $nombreInstituto,
+                tipoPago:          $tipoPago,
                 numeroComprobante: $pago->numero_comprobante,
                 monto:             '$' . number_format((float) $pago->monto, 2),
                 metodoPago:        $pago->metodo_pago,
-                fechaPago:         Carbon::parse($pago->fecha_pago)->format('d/m/Y'),
+                fechaPago:         Carbon::parse($pago->fecha_pago)->format('d/m/Y H:i'),
                 codigoMatricula:   $matricula->code,
             );
         } catch (\Throwable $e) {

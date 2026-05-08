@@ -4,6 +4,7 @@ namespace App\Livewire\Administration;
 
 use Livewire\Attributes\Layout;
 use App\Jobs\EnviarNotificacionPago;
+use App\Jobs\EnviarNotificacionPagoPrimeraMatricula;
 use App\Models\User;
 use App\Models\Pago;
 use App\Models\Matricula;
@@ -53,6 +54,7 @@ class ObligacionesEstudiante extends Component
     // -------------------------------------------------------------------------
     public $showModalPago          = false;
     public $obligacionSeleccionada = null;
+    public $obligInscripcionModal  = null; // INSCRIPCION ligada a la matrícula (auto-liquidar)
 
     public $metodoPago      = 'Transferencia';
     public $referencia      = '';
@@ -232,7 +234,7 @@ class ObligacionesEstudiante extends Component
 
             $this->cerrarModalObligacion();
             unset($this->obligaciones);
-            $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Obligación registrada correctamente.']);
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Obligación registrada correctamente.', 'timer' => 2000]);
         } catch (\Exception $e) {
             DB::rollBack();
             $this->addError('obligacion_general', 'Error al crear la obligación: ' . $e->getMessage());
@@ -262,17 +264,29 @@ class ObligacionesEstudiante extends Component
         $obligacion = ObligacionesFinanciera::with('pagos', 'estudiante')->find($obligacionId);
 
         if (! $obligacion || $obligacion->estado === 'Pagado') {
-            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'Esta obligación ya está pagada.']);
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Esta obligación ya está pagada.']);
             return;
         }
 
         $this->obligacionSeleccionada = $obligacion;
-        $this->montoPago              = $obligacion->saldo;
         $this->metodoPago             = 'Transferencia';
         $this->referencia             = '';
         $this->comprobante            = null;
         $this->descripcionPago        = '';
-        $this->showModalPago          = true;
+
+        // Si es MATRICULA, cargar la INSCRIPCION pendiente de la misma matrícula
+        $this->obligInscripcionModal = null;
+        if ($obligacion->tipo === 'MATRICULA' && $obligacion->matricula_id) {
+            $this->obligInscripcionModal = ObligacionesFinanciera::where('matricula_id', $obligacion->matricula_id)
+                ->where('tipo', 'INSCRIPCION')
+                ->whereIn('estado', ['Pendiente', 'Parcial'])
+                ->first();
+        }
+
+        // Monto precargado: saldo de matrícula + inscripción si aplica
+        $this->montoPago = $obligacion->saldo + ($this->obligInscripcionModal?->monto_final ?? 0);
+
+        $this->showModalPago = true;
         $this->dispatch('modal-opened');
     }
 
@@ -282,6 +296,7 @@ class ObligacionesEstudiante extends Component
         $this->showModalPago = false;
         $this->reset([
             'obligacionSeleccionada',
+            'obligInscripcionModal',
             'metodoPago',
             'referencia',
             'comprobante',
@@ -294,8 +309,21 @@ class ObligacionesEstudiante extends Component
     {
         if ($this->sinPermiso('gestionar_obligaciones_financieras')) return;
 
+        // Re-consultar INSCRIPCION desde DB — no depender de la propiedad serializada por Livewire
+        $obligInscripcion = null;
+        if ($this->obligacionSeleccionada?->tipo === 'MATRICULA'
+            && $this->obligacionSeleccionada?->matricula_id) {
+            $obligInscripcion = ObligacionesFinanciera::where('matricula_id', $this->obligacionSeleccionada->matricula_id)
+                ->where('tipo', 'INSCRIPCION')
+                ->whereIn('estado', ['Pendiente', 'Parcial'])
+                ->first();
+        }
+
+        $maxPago = ($this->obligacionSeleccionada?->saldo ?? 0)
+                 + ($obligInscripcion?->monto_final ?? 0);
+
         $this->validate([
-            'montoPago'       => 'required|numeric|min:0.01|max:' . ($this->obligacionSeleccionada?->saldo ?? 0),
+            'montoPago'       => 'required|numeric|min:0.01|max:' . $maxPago,
             'metodoPago'      => 'required|in:Efectivo,Tarjeta,Transferencia,Deposito,Payphone',
             'referencia'      => 'nullable|string|max:100',
             'comprobante'     => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
@@ -307,24 +335,18 @@ class ObligacionesEstudiante extends Component
 
             $comprobantePath = null;
             if ($this->comprobante) {
-                /* $comprobantePath = $this->comprobante->store('comprobantes/obligaciones', 'public'); */
-                $estudiante    = $this->obligacionSeleccionada->estudiante;
-                $matricula     = $this->obligacionSeleccionada->matricula;
-
-                $nombreLimpio  = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $estudiante->name));
+                $estudiante   = $this->obligacionSeleccionada->estudiante;
+                $matricula    = $this->obligacionSeleccionada->matricula;
+                $nombreLimpio = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $estudiante->name));
 
                 $nombreArchivo = implode('_', [
-                    $this->obligacionSeleccionada->tipo,  // MULTA, COLEGIATURA, etc
-                    $matricula->code,                      // ISTC-0001
-                    $nombreLimpio,                         // Juan_Perez
-                    now()->format('Ymd_His'),              // 20260226_143022
+                    $this->obligacionSeleccionada->tipo,
+                    $matricula->code,
+                    $nombreLimpio,
+                    now()->format('Ymd_His'),
                 ]) . '.' . $this->comprobante->getClientOriginalExtension();
 
-                $comprobantePath = $this->comprobante->storeAs(
-                    'pagos/comprobantes',
-                    $nombreArchivo,
-                    'public'
-                );
+                $comprobantePath = $this->comprobante->storeAs('pagos/comprobantes', $nombreArchivo, 'public');
             }
 
             // Número de cuota automático
@@ -332,13 +354,18 @@ class ObligacionesEstudiante extends Component
                 ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
                 ->count() + 1;
 
+            // Si hay inscripción, el monto de MATRICULA es su saldo exacto (no el acumulado del campo)
+            $montoObligacion = $obligInscripcion
+                ? $this->obligacionSeleccionada->saldo
+                : $this->montoPago;
+
             $pago = Pago::create([
                 'numero_comprobante' => 'TEMP',
                 'codigo_referencia'  => $this->referencia ?: null,
                 'obligacion_id'      => $this->obligacionSeleccionada->id,
-                'monto'              => $this->montoPago,
+                'monto'              => $montoObligacion,
                 'metodo_pago'        => $this->metodoPago,
-                'estado'             => Pago::ESTADO_APROBADO, // Secretaria aprueba directo
+                'estado'             => Pago::ESTADO_APROBADO,
                 'numero_cuota'       => $numeroCuota,
                 'fecha_pago'         => now(),
                 'descripcion'        => $this->descripcionPago
@@ -350,22 +377,50 @@ class ObligacionesEstudiante extends Component
             // Actualizar estado de la obligación (Parcial o Pagado)
             $this->obligacionSeleccionada->actualizarEstado();
 
-            // Si era la obligación de matrícula y quedó pagada, habilitar la matrícula
+            // Si MATRICULA quedó Pagada: habilitar matrícula y auto-liquidar INSCRIPCION
             if ($this->obligacionSeleccionada->tipo === 'MATRICULA'
                 && $this->obligacionSeleccionada->estado === 'Pagado'
                 && $this->obligacionSeleccionada->matricula_id) {
+
                 Matricula::find($this->obligacionSeleccionada->matricula_id)
                     ?->update(['estado' => 'Habilitada']);
+
+                if ($obligInscripcion) {
+                    $numeroCuotaInsc = Pago::where('obligacion_id', $obligInscripcion->id)
+                        ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
+                        ->count() + 1;
+
+                    $pagoInsc = Pago::create([
+                        'numero_comprobante' => 'TEMP',
+                        'codigo_referencia'  => $this->referencia ?: null,
+                        'obligacion_id'      => $obligInscripcion->id,
+                        'monto'              => $obligInscripcion->monto_final,
+                        'metodo_pago'        => $this->metodoPago,
+                        'estado'             => Pago::ESTADO_APROBADO,
+                        'fecha_pago'         => now(),
+                        'numero_cuota'       => $numeroCuotaInsc,
+                        'comprobante_path'   => $comprobantePath,
+                        'descripcion'        => 'Inscripción liquidada con pago de matrícula',
+                    ]);
+                    $pagoInsc->update([
+                        'numero_comprobante' => 'ISTC-CP-INSCRIPCION-' . now()->year . '-' . str_pad($pagoInsc->id, 5, '0', STR_PAD_LEFT),
+                    ]);
+                    $obligInscripcion->update(['estado' => 'Pagado']);
+                }
             }
 
             DB::commit();
 
             $this->cerrarModalPago();
             unset($this->obligaciones);
-            $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Pago registrado correctamente.']);
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Pago registrado correctamente.', 'timer' => 2000]);
 
             try {
-                EnviarNotificacionPago::dispatch($pago->id);
+                if (isset($pagoInsc)) {
+                    EnviarNotificacionPagoPrimeraMatricula::dispatch($pago->id, $pagoInsc->id);
+                } else {
+                    EnviarNotificacionPago::dispatch($pago->id);
+                }
             } catch (\Throwable $e) {
                 Log::warning('ObligacionesEstudiante: no se pudo despachar notificación de pago', [
                     'pago_id' => $pago->id,
@@ -446,7 +501,7 @@ class ObligacionesEstudiante extends Component
 
             $this->cerrarVerificacion();
             unset($this->obligaciones);
-            $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Pago aprobado correctamente.']);
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Pago aprobado correctamente.', 'timer' => 2000]);
 
             try {
                 EnviarNotificacionPago::dispatch($pagoId);
@@ -458,7 +513,7 @@ class ObligacionesEstudiante extends Component
             }
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'Error: ' . $e->getMessage()]);
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error al aprobar el pago', 'text' => $e->getMessage()]);
         }
     }
 
@@ -490,10 +545,10 @@ class ObligacionesEstudiante extends Component
 
             $this->cerrarVerificacion();
             unset($this->obligaciones);
-            $this->dispatch('toast', ['tipo' => 'warning', 'mensaje' => 'Pago rechazado.']);
+            $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Pago rechazado.', 'timer' => 2000]);
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'Error: ' . $e->getMessage()]);
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error al rechazar el pago', 'text' => $e->getMessage()]);
         }
     }
 

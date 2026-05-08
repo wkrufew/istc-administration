@@ -1,181 +1,186 @@
-<div>
-    {{-- <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-            <section class="w-full">
-                <div class="flex flex-wrap justify-center space-x-10">
-                    <div class="md:w-1/4 sm:w-1/2 w-full">
-                        <div class="border-2 border-blue-700 bg-blue-600 rounded-lg shadow-lg m-4 p-2">
-                            <a href="" class="leading-10">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <p class="text-2xl leading-10 text-white font-semibold">4</p>
-                                        <p class="leading-10 text-sm text-blue-50 font-medium">Estudiantes
-                                            Inscritos</p>
-                                    </div>
-                                    <div class="">
-                                        <i>
-                                            <svg class="w-6 h-6 fill-white" xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 576 512">
-                                                <path
-                                                    d="M312 24l0 10.5c6.4 1.2 12.6 2.7 18.2 4.2c12.8 3.4 20.4 16.6 17 29.4s-16.6 20.4-29.4 17c-10.9-2.9-21.1-4.9-30.2-5c-7.3-.1-14.7 1.7-19.4 4.4c-2.1 1.3-3.1 2.4-3.5 3c-.3 .5-.7 1.2-.7 2.8c0 .3 0 .5 0 .6c.2 .2 .9 1.2 3.3 2.6c5.8 3.5 14.4 6.2 27.4 10.1l.9 .3s0 0 0 0c11.1 3.3 25.9 7.8 37.9 15.3c13.7 8.6 26.1 22.9 26.4 44.9c.3 22.5-11.4 38.9-26.7 48.5c-6.7 4.1-13.9 7-21.3 8.8l0 10.6c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-11.4c-9.5-2.3-18.2-5.3-25.6-7.8c-2.1-.7-4.1-1.4-6-2c-12.6-4.2-19.4-17.8-15.2-30.4s17.8-19.4 30.4-15.2c2.6 .9 5 1.7 7.3 2.5c13.6 4.6 23.4 7.9 33.9 8.3c8 .3 15.1-1.6 19.2-4.1c1.9-1.2 2.8-2.2 3.2-2.9c.4-.6 .9-1.8 .8-4.1l0-.2c0-1 0-2.1-4-4.6c-5.7-3.6-14.3-6.4-27.1-10.3l-1.9-.6c-10.8-3.2-25-7.5-36.4-14.4c-13.5-8.1-26.5-22-26.6-44.1c-.1-22.9 12.9-38.6 27.7-47.4c6.4-3.8 13.3-6.4 20.2-8.2L264 24c0-13.3 10.7-24 24-24s24 10.7 24 24zM568.2 336.3c13.1 17.8 9.3 42.8-8.5 55.9L433.1 485.5c-23.4 17.2-51.6 26.5-80.7 26.5L192 512 32 512c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l36.8 0 44.9-36c22.7-18.2 50.9-28 80-28l78.3 0 16 0 64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0-16 0c-8.8 0-16 7.2-16 16s7.2 16 16 16l120.6 0 119.7-88.2c17.8-13.1 42.8-9.3 55.9 8.5zM193.6 384c0 0 0 0 0 0l-.9 0c.3 0 .6 0 .9 0z" />
-                                            </svg>
-                                        </i>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="md:w-1/4 sm:w-1/2 w-full">
-                        <div class="border-2 border-green-700 bg-green-600 rounded-lg shadow-lg m-4 p-2">
-                            <a href="" class="leading-10">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <p class="text-2xl leading-10 text-white font-semibold">2</p>
-                                        <p class="leading-10 text-sm text-green-50 font-medium">Materias Impartidas
-                                        </p>
-                                    </div>
-                                    <div class="">
-                                        <i>
-                                            <svg class="w-6 h-6 fill-white" xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 576 512">
-                                                <path
-                                                    d="M312 24l0 10.5c6.4 1.2 12.6 2.7 18.2 4.2c12.8 3.4 20.4 16.6 17 29.4s-16.6 20.4-29.4 17c-10.9-2.9-21.1-4.9-30.2-5c-7.3-.1-14.7 1.7-19.4 4.4c-2.1 1.3-3.1 2.4-3.5 3c-.3 .5-.7 1.2-.7 2.8c0 .3 0 .5 0 .6c.2 .2 .9 1.2 3.3 2.6c5.8 3.5 14.4 6.2 27.4 10.1l.9 .3s0 0 0 0c11.1 3.3 25.9 7.8 37.9 15.3c13.7 8.6 26.1 22.9 26.4 44.9c.3 22.5-11.4 38.9-26.7 48.5c-6.7 4.1-13.9 7-21.3 8.8l0 10.6c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-11.4c-9.5-2.3-18.2-5.3-25.6-7.8c-2.1-.7-4.1-1.4-6-2c-12.6-4.2-19.4-17.8-15.2-30.4s17.8-19.4 30.4-15.2c2.6 .9 5 1.7 7.3 2.5c13.6 4.6 23.4 7.9 33.9 8.3c8 .3 15.1-1.6 19.2-4.1c1.9-1.2 2.8-2.2 3.2-2.9c.4-.6 .9-1.8 .8-4.1l0-.2c0-1 0-2.1-4-4.6c-5.7-3.6-14.3-6.4-27.1-10.3l-1.9-.6c-10.8-3.2-25-7.5-36.4-14.4c-13.5-8.1-26.5-22-26.6-44.1c-.1-22.9 12.9-38.6 27.7-47.4c6.4-3.8 13.3-6.4 20.2-8.2L264 24c0-13.3 10.7-24 24-24s24 10.7 24 24zM568.2 336.3c13.1 17.8 9.3 42.8-8.5 55.9L433.1 485.5c-23.4 17.2-51.6 26.5-80.7 26.5L192 512 32 512c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l36.8 0 44.9-36c22.7-18.2 50.9-28 80-28l78.3 0 16 0 64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0-16 0c-8.8 0-16 7.2-16 16s7.2 16 16 16l120.6 0 119.7-88.2c17.8-13.1 42.8-9.3 55.9 8.5zM193.6 384c0 0 0 0 0 0l-.9 0c.3 0 .6 0 .9 0z" />
-                                            </svg>
-                                        </i>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </div> --}}
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6{{-- min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 --}}">
-        <div class="max-w-7xl mx-auto space-y-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-            {{-- Título --}}
-            <div
-                class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 bg-white p-6 rounded-2xl shadow-lg">
-                <h1 class="text-2xl font-bold text-slate-800 flex items-center">
-                    <svg class="w-6 h-6 text-indigo-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {{-- Panel del Docente --}} Bienvenido(a) {{ auth()->user()->name }}
+    {{-- ── Bienvenida + Selector de período ──────────────────────────────────── --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5
+                bg-white rounded-2xl shadow-sm border border-slate-100 px-6 py-5">
+        <div class="flex items-center gap-4">
+            <div class="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600
+                        flex items-center justify-center shadow-md shrink-0">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Portal Docente</p>
+                <h1 class="text-xl font-bold text-slate-800 leading-tight">
+                    Bienvenido(a), {{ auth()->user()->name }}
                 </h1>
+            </div>
+        </div>
 
-                {{-- Selector de período --}}
-                <div class="mt-4 sm:mt-0">
-                    <label class="block text-sm font-semibold text-slate-600 mb-1">Período Académico</label>
-                    <div class="relative">
-                        <select wire:model.live="periodo_id"
-                            class="appearance-none w-56 bg-white border-2 border-slate-200 rounded-xl px-4 py-2 pr-10 text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-200">
-                            @foreach ($periodos as $periodo)
-                                <option value="{{ $periodo->id }}">
-                                    {{ $periodo->code }} - {{ $periodo->description }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
-                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Período Académico</label>
+            <div class="relative">
+                <select wire:model.live="periodo_id"
+                    class="appearance-none w-full sm:w-72 bg-white border-2 border-slate-200 rounded-xl px-4 py-2.5 pr-10
+                           text-slate-700 text-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100
+                           transition-all">
+                    @foreach ($periodos as $periodo)
+                        <option value="{{ $periodo->id }}">
+                            {{ $periodo->code }} — {{ $periodo->description }}
+                        </option>
+                    @endforeach
+                </select>
+                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
                 </div>
             </div>
-
-            {{-- Resumen general --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl shadow-lg p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-semibold">Materias Asignadas</h3>
-                            <p class="text-4xl font-bold mt-2">{{ $totalMaterias }}</p>
-                        </div>
-                        <svg class="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 14l9-5-9-5-9 5 9 5zm0 0v7" />
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl shadow-lg p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-semibold">Estudiantes Matriculados</h3>
-                            <p class="text-4xl font-bold mt-2">{{ $totalEstudiantes }}</p>
-                        </div>
-                        <svg class="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 20h5V4H2v16h5m10-4a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="bg-gradient-to-r from-sky-500 to-blue-500 text-white rounded-2xl shadow-lg p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-semibold">Periodo Seleccionado</h3>
-                            <p class="text-2xl font-bold mt-2">
-                                {{ optional($periodos->firstWhere('id', $periodo_id))->code ?? '-' }}
-                            </p>
-                        </div>
-                        <svg class="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8v4l3 3m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Tabla de detalle por materia --}}
-            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 mt-8 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                    <h2 class="text-lg font-semibold text-slate-800 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8v4l3 3m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Resumen por Materia
-                    </h2>
-                </div>
-
-                @if (count($detalleMaterias) > 0)
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm uppercase">
-                                <tr>
-                                    <th class="px-6 py-3 text-left">Código</th>
-                                    <th class="px-6 py-3 text-left">Materia</th>
-                                    <th class="px-6 py-3 text-left">Paralelo</th>
-                                    <th class="px-6 py-3 text-left">Estudiantes</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-200">
-                                @foreach ($detalleMaterias as $item)
-                                    <tr class="hover:bg-slate-50 transition-colors">
-                                        <td class="px-6 py-3 text-slate-700">{{ $item['codigo'] }}</td>
-                                        <td class="px-6 py-3 text-slate-700">{{ $item['materia'] }}</td>
-                                        <td class="px-6 py-3 text-slate-700">{{ $item['paralelo'] }}</td>
-                                        <td class="px-6 py-3 font-semibold text-indigo-600">{{ $item['estudiantes'] }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @else
-                    <div class="p-6 text-center text-slate-500">
-                        No hay materias asignadas en este período.
-                    </div>
-                @endif
-            </div>
-
         </div>
     </div>
+
+    {{-- ── Stat cards ─────────────────────────────────────────────────────────── --}}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+
+        {{-- Materias asignadas --}}
+        <div class="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600
+                    rounded-2xl shadow-lg p-6 text-white">
+            <div class="relative z-10">
+                <p class="text-xs font-semibold text-emerald-100 uppercase tracking-wider mb-3">
+                    Materias Asignadas
+                </p>
+                <p class="text-5xl font-extrabold leading-none">{{ $totalMaterias }}</p>
+                <p class="text-xs text-emerald-200 mt-2">en el período seleccionado</p>
+            </div>
+            <svg class="absolute -right-2 -bottom-2 w-24 h-24 text-white/10" fill="none"
+                 stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M12 14l9-5-9-5-9 5 9 5zm0 0v7"/>
+            </svg>
+        </div>
+
+        {{-- Estudiantes matriculados --}}
+        <div class="relative overflow-hidden bg-gradient-to-br from-teal-500 to-cyan-600
+                    rounded-2xl shadow-lg p-6 text-white">
+            <div class="relative z-10">
+                <p class="text-xs font-semibold text-teal-100 uppercase tracking-wider mb-3">
+                    Estudiantes Matriculados
+                </p>
+                <p class="text-5xl font-extrabold leading-none">{{ $totalEstudiantes }}</p>
+                <p class="text-xs text-teal-200 mt-2">estudiantes únicos activos</p>
+            </div>
+            <svg class="absolute -right-2 -bottom-2 w-24 h-24 text-white/10" fill="none"
+                 stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/>
+            </svg>
+        </div>
+
+        {{-- Período activo --}}
+        <div class="relative overflow-hidden bg-white border-2 border-emerald-100 rounded-2xl shadow-sm p-6">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        Período Activo
+                    </p>
+                    <p class="text-2xl font-extrabold text-slate-800 leading-tight truncate">
+                        {{ optional($periodos->firstWhere('id', $periodo_id))->code ?? '—' }}
+                    </p>
+                    <p class="text-xs text-slate-400 mt-1 truncate">
+                        {{ optional($periodos->firstWhere('id', $periodo_id))->description ?? '' }}
+                    </p>
+                </div>
+                <div class="h-11 w-11 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ── Tabla detalle por materia ───────────────────────────────────────────── --}}
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-2.5">
+            <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <h2 class="text-base font-semibold text-slate-800">Resumen por Materia</h2>
+            <span class="ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+                         bg-emerald-100 text-emerald-700">
+                {{ count($detalleMaterias) }} asignaciones
+            </span>
+        </div>
+
+        @if (count($detalleMaterias) > 0)
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
+                        <tr>
+                            <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">
+                                Código
+                            </th>
+                            <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">
+                                Materia
+                            </th>
+                            <th class="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">
+                                Paralelo
+                            </th>
+                            <th class="px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">
+                                Estudiantes
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach ($detalleMaterias as $item)
+                            <tr class="hover:bg-emerald-50/40 transition-colors">
+                                <td class="px-6 py-3.5">
+                                    <span class="inline-flex px-2.5 py-1 rounded-lg bg-slate-100
+                                                 text-slate-700 text-xs font-mono font-semibold">
+                                        {{ $item['codigo'] }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3.5 text-slate-800 font-medium">
+                                    {{ $item['materia'] }}
+                                </td>
+                                <td class="px-6 py-3.5">
+                                    <span class="inline-flex px-2.5 py-1 rounded-full bg-teal-50
+                                                 text-teal-700 text-xs font-semibold border border-teal-100">
+                                        {{ $item['paralelo'] }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3.5 text-center">
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5
+                                                 rounded-xl bg-emerald-100 text-emerald-800 text-sm font-bold">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/>
+                                        </svg>
+                                        {{ $item['estudiantes'] }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="py-16 text-center">
+                <div class="mx-auto h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <p class="text-slate-600 font-semibold">Sin materias asignadas</p>
+                <p class="text-slate-400 text-sm mt-1">No hay asignaciones registradas en este período.</p>
+            </div>
+        @endif
+    </div>
+
 </div>

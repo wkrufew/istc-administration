@@ -12,7 +12,7 @@
                 <div class="flex items-center gap-8">
                     <a href="{{ route('administracion.estudiantil.dashboard') }}"
                         class="flex items-center gap-2.5 group shrink-0">
-                        <div
+                        {{-- <div
                             class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700
                                     flex items-center justify-center shadow-md shadow-blue-500/30
                                     group-hover:scale-105 group-hover:shadow-blue-500/40 transition-all duration-200">
@@ -26,7 +26,19 @@
                         <div class="hidden sm:block">
                             <p class="text-sm font-bold text-slate-800 leading-none tracking-tight">ISTC</p>
                             <p class="text-xs text-slate-400 leading-none mt-0.5">Portal Estudiantil</p>
-                        </div>
+                        </div> --}}
+                        @php
+        $logoPath = \App\Services\SettingService::get('instituto.logo_path');
+        $logoSrc  = ($logoPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($logoPath))
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($logoPath)
+            : asset('../imagenes/icono.webp');
+    @endphp
+    
+    @if ($logoPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($logoPath))
+        <img class="object-cover overflow-hidden size-12" src="{{ $logoSrc }}" alt="">
+    @else
+        <img class="object-cover overflow-hidden size-12" src="{{ asset('../imagenes/icono.webp') }}">
+    @endif
                     </a>
 
                     {{-- Nav links desktop --}}

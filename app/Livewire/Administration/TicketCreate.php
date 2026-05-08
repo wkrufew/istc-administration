@@ -70,10 +70,7 @@ class TicketCreate extends Component
             'text'  => "Tu ticket {$ticket->numero} ha sido registrado.",
         ]);
 
-        $this->redirect(
-            route('administracion.administrativa.tickets.show', $ticket),
-            navigate: true
-        );
+        $this->redirect(route('administracion.administrativa.tickets.show', $ticket));
     }
 
     #[Layout('layouts.admin')]

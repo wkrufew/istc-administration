@@ -84,7 +84,7 @@ class AsistenciaEstudiante extends Component
             ->whereHas(
                 'periodo',
                 fn($q) =>
-                $q->whereHas('carreras', fn($c) => $c->wherePivot('is_current', true))
+                $q->whereHas('carreras', fn($c) => $c->where('carrera_periodo.is_current', true))
             )
             ->first();
 
@@ -113,7 +113,7 @@ class AsistenciaEstudiante extends Component
             ->whereHas(
                 'periodo',
                 fn($q) =>
-                $q->whereHas('carreras', fn($c) => $c->wherePivot('is_current', true))
+                $q->whereHas('carreras', fn($c) => $c->where('carrera_periodo.is_current', true))
             )
             ->orderBy('hora_inicio')
             ->get();

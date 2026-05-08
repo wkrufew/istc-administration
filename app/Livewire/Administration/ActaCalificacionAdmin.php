@@ -2,15 +2,18 @@
 
 namespace App\Livewire\Administration;
 
+use App\Models\CarreraPeriodo;
 use App\Models\DetalleMatricula;
 use App\Models\Matricula;
 use App\Models\NotaTitulacion;
 use App\Models\PracticaPreprofesional;
 use App\Models\User;
+use App\Services\SettingService;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class ActaCalificacionAdmin extends Component
 {
@@ -87,7 +90,7 @@ class ActaCalificacionAdmin extends Component
                     'materia_code'       => $materia->code,
                     'creditos'           => $materia->credits,
                     'tipo'               => $detalle?->tipo ?? 'Normal',
-                    'paralelo'           => $detalle?->paralelo?->name,
+                    'paralelo'           => $detalle?->paralelo?->code ?? $detalle?->paralelo?->name,
                     'periodo'            => $detalle?->matricula?->periodo?->code,
                     'tiene_calificacion' => $calificacion !== null,
                     'insumo1'            => $calificacion?->insumo1,
@@ -152,9 +155,14 @@ class ActaCalificacionAdmin extends Component
             ->orderBy('numero_intento')
             ->get();
 
+        $periodoPivot = CarreraPeriodo::where('carrera_id', $carrera->id)
+            ->where('periodo_id', $matricula->periodo_id)
+            ->first();
+
         return [
             'carrera'        => $carrera,
             'matricula'      => $matricula,
+            'periodo_pivot'  => $periodoPivot,
             'semestres'      => $semestresData,
             'promedio_malla' => $promedioMalla,
             'titulacion'     => $titulacion,
@@ -183,39 +191,54 @@ class ActaCalificacionAdmin extends Component
 
     public function exportarPdf(): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        // Reutiliza exactamente el mismo computed $this->acta del componente
         $acta       = $this->acta;
         $estudiante = $this->estudiante;
 
         if (empty($acta)) {
-            // Si no hay acta no hacemos nada
             return response()->streamDownload(fn() => print(''), 'sin_datos.pdf');
         }
+
+        $piePagina = SettingService::get(
+            'documentos.pie_pagina',
+            'Documento generado por el Sistema Académico del ISTC. Válido solo con firma y sello institucional.'
+        );
 
         $pdf = Pdf::loadView('pdf.acta-calificaciones-pdf', [
             'acta'       => $acta,
             'estudiante' => $estudiante,
         ])
-            ->setPaper('a4', 'landscape')   // horizontal para que quepan todas las columnas
-            ->setOptions([
-                'defaultFont'   => 'DejaVu Sans',
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
-                'dpi'                  => 150,
-                'defaultMediaType'     => 'print',
-                /* 'margin_top'           => 15,
-                'margin_right'         => 18,
-                'margin_bottom'        => 15,
-                'margin_left'          => 18, */
-            ]);
+            ->setPaper('a4', 'landscape')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('defaultFont', 'DejaVu Sans')
+            ->setOption('dpi', 96);
 
-        $nombreArchivo = 'acta_' . str_replace(' ', '_', strtolower($estudiante->name))
-            . '_' . now()->format('Ymd_His') . '.pdf';
+        $pdf->render();
+        $this->agregarFooterCanvas($pdf->getDomPDF()->getCanvas(), $piePagina);
+
+        $nombre = 'acta_'
+            . Str::slug($estudiante->name ?? 'estudiante') . '_'
+            . now()->format('Ymd')
+            . '.pdf';
 
         return response()->streamDownload(
             fn() => print($pdf->output()),
-            $nombreArchivo,
+            $nombre,
             ['Content-Type' => 'application/pdf']
         );
+    }
+
+    private function agregarFooterCanvas(\Dompdf\Canvas $canvas, string $piePagina): void
+    {
+        $font  = $canvas->get_dompdf()->getFontMetrics()->getFont('DejaVu Sans', 'normal');
+        $w     = $canvas->get_width();
+        $h     = $canvas->get_height();
+
+        $yLine = $h - 28;
+        $yTxt  = $h - 20;
+
+        $canvas->page_line(10, $yLine, $w - 10, $yLine, [0.08, 0.27, 0.10], 0.5);
+        $canvas->page_text(10, $yTxt, $piePagina, $font, 5.5, [0.58, 0.64, 0.71]);
+        $canvas->page_text($w - 68, $yTxt, 'Pág. {PAGE_NUM} / {PAGE_COUNT}', $font, 7, [0.08, 0.27, 0.10]);
     }
 }

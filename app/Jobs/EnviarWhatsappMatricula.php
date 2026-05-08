@@ -17,29 +17,19 @@ class EnviarWhatsappMatricula implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int  $tries   = 2;        // reintentos si falla
-    public int  $timeout = 30;       // segundos máximo
+    public int  $tries   = 2;
+    public int  $timeout = 30;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(
         private readonly int  $matriculaId,
         private readonly bool $esPrimerMatricula
-    ) {
-        //
-    }
+    ) {}
 
-    /**
-     * Execute the job.
-     */
     public function handle(WhatsappService $whatsapp): void
     {
-        if (SettingService::get('notificaciones.matricula_whatsapp') !== '1') {
-            return;
-        }
+        if (SettingService::get('whatsapp.activo', '0') !== '1') return;
+        if (SettingService::get('notificaciones.matricula_whatsapp', '0') !== '1') return;
 
-        // Cargar matrícula con todas las relaciones necesarias
         $matricula = Matricula::with([
             'estudiante',
             'carrera',
@@ -48,9 +38,7 @@ class EnviarWhatsappMatricula implements ShouldQueue
         ])->find($this->matriculaId);
 
         if (! $matricula) {
-            Log::warning('WhatsApp Job: matrícula no encontrada', [
-                'matricula_id' => $this->matriculaId,
-            ]);
+            Log::warning('WhatsApp Job: matrícula no encontrada', ['matricula_id' => $this->matriculaId]);
             return;
         }
 
@@ -65,57 +53,59 @@ class EnviarWhatsappMatricula implements ShouldQueue
             return;
         }
 
-        // Datos comunes
-        $nombre          = $estudiante->name ?? $estudiante->nombre_completo ?? '—';
+        // Datos del estudiante
+        $nombre          = $estudiante->name ?? '—';
         $cedula          = $estudiante->cedula ?? '—';
         $correo          = $estudiante->email ?? '—';
         $codigoMatricula = $matricula->code ?? '—';
         $carrera         = $matricula->carrera?->name ?? '—';
         $periodo         = $matricula->periodo?->code ?? '—';
 
-        // Monto de la obligación de matrícula
-        $obligacion      = $matricula->obligacionesFinancieras->first();
-        $monto           = $obligacion
-            ? '$' . number_format($obligacion->monto_final, 2)
-            : '—';
-        $fechaLimite     = $obligacion?->fecha_vencimiento
+        // Datos del instituto desde settings
+        $nombreInstituto = SettingService::get('instituto.nombre_largo', config('app.name'));
+        $urlPlataforma   = SettingService::get('instituto.web', '—');
+
+        // Datos de la obligación de matrícula
+        $obligacion  = $matricula->obligacionesFinancieras->first();
+        $monto       = $obligacion ? '$' . number_format($obligacion->monto_final, 2) : '—';
+        $fechaLimite = $obligacion?->fecha_vencimiento
             ? Carbon::parse($obligacion->fecha_vencimiento)->format('d/m/Y')
             : '—';
 
-        // ── Elegir template según si es primera matrícula ─────────────────────
         if ($this->esPrimerMatricula) {
             $whatsapp->enviarBienvenidaConCredenciales(
-                telefono: $telefono,
-                nombre: $nombre,
-                correo: $correo,
-                cedula: $cedula,
+                telefono:        $telefono,
+                nombre:          $nombre,
+                nombreInstituto: $nombreInstituto,
                 codigoMatricula: $codigoMatricula,
-                carrera: $carrera,
-                periodo: $periodo,
-                monto: $monto,
-                fechaLimite: $fechaLimite,
+                carrera:         $carrera,
+                periodo:         $periodo,
+                monto:           $monto,
+                fechaLimite:     $fechaLimite,
+                correo:          $correo,
+                urlPlataforma:   $urlPlataforma,
             );
         } else {
             $whatsapp->enviarConfirmacionMatricula(
-                telefono: $telefono,
-                nombre: $nombre,
+                telefono:        $telefono,
+                nombre:          $nombre,
+                nombreInstituto: $nombreInstituto,
                 codigoMatricula: $codigoMatricula,
-                carrera: $carrera,
-                periodo: $periodo,
-                cedula: $cedula,
-                monto: $monto,
-                fechaLimite: $fechaLimite,
+                carrera:         $carrera,
+                periodo:         $periodo,
+                cedula:          $cedula,
+                monto:           $monto,
+                fechaLimite:     $fechaLimite,
             );
         }
     }
 
-    // Si el job falla después de los reintentos, solo loguea — no afecta la matrícula
     public function failed(\Throwable $exception): void
     {
-        Log::error('WhatsApp Job falló definitivamente', [
-            'matricula_id'       => $this->matriculaId,
+        Log::error('WhatsApp Job matrícula falló definitivamente', [
+            'matricula_id'        => $this->matriculaId,
             'es_primer_matricula' => $this->esPrimerMatricula,
-            'error'              => $exception->getMessage(),
+            'error'               => $exception->getMessage(),
         ]);
     }
 }

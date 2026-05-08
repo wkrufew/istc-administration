@@ -78,6 +78,7 @@ class Matriculacion extends Component
     public $montoMatricula  = 0; // (costo_carrera * 10%) / duracion_semestres
     public $montoArancel    = 0; // costo_carrera / duracion_semestres
     public $montoCostoTotal = 0; // montoMatricula + costoArrastres
+    public $valorInscripcion = 0; // solo primera matrícula — leído de settings
 
     protected $listeners = [
         'matricularEstudiante' => 'iniciarMatricula',
@@ -445,7 +446,7 @@ class Matriculacion extends Component
 
             // Fallback para registros legacy sin costo guardado
             if ($costoAdicional <= 0) {
-                $porcentaje     = floatval($materiaArrastrada['porcentaje_penalizacion'] ?? 5) / 100;
+                $porcentaje     = floatval($materiaArrastrada['porcentaje_penalizacion'] ?? SettingService::get('matricula.porcentaje_arrastre', 5)) / 100;
                 $costoAdicional = round($materia->credits * $carrera->costo_credito * $porcentaje, 2);
                 $materiaArrastrada['costo_adicional'] = $costoAdicional;
             }
@@ -460,6 +461,12 @@ class Matriculacion extends Component
         // El total que aparece en el resumen = matrícula + arrastres
         $this->costoTotal  = $this->montoMatricula + $costoArrastres;
         $this->totalPagar  = max(0, $this->costoTotal - $this->descuento);
+
+        // Inscripción solo primera matrícula (Nueva, sin editar)
+        $this->valorInscripcion = 0;
+        if ($this->tipo === 'Nueva' && ! $this->matriculaId) {
+            $this->valorInscripcion = (float) SettingService::get('matricula.valor_inscripcion', '10.00');
+        }
     }
 
     // =========================================================================
@@ -479,6 +486,8 @@ class Matriculacion extends Component
             DB::beginTransaction();
 
             $esEdicion = (bool) $this->matriculaId;
+
+            $esPrimeraMatricula = ! $esEdicion && Matricula::where('user_id', $this->estudiante->id)->count() === 0;
 
             $carrera   = Carrera::find($this->carrera_id);
             $semestres = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
@@ -551,7 +560,6 @@ class Matriculacion extends Component
 
                 // --------------------------------------------------------------
                 // OBLIGACIÓN FINANCIERA: ARANCEL/COLEGIATURA del semestre
-                // No es inmediata; se gestiona desde el componente de pagos
                 // --------------------------------------------------------------
                 ObligacionesFinanciera::create([
                     'user_id'          => $this->estudiante->id,
@@ -565,6 +573,29 @@ class Matriculacion extends Component
                     'fecha_vencimiento' => now()->addDays(30),
                     'descripcion'      => 'Arancel semestral - Período ' . $matricula->periodo_id,
                 ]);
+
+                // --------------------------------------------------------------
+                // OBLIGACIÓN FINANCIERA: INSCRIPCIÓN (solo primera matrícula)
+                // Se liquida automáticamente al registrar el pago de matrícula
+                // --------------------------------------------------------------
+                if ($esPrimeraMatricula) {
+                    $montoInscripcion = (float) SettingService::get('matricula.valor_inscripcion', '10.00');
+                    if ($montoInscripcion > 0) {
+                        ObligacionesFinanciera::create([
+                            'user_id'           => $this->estudiante->id,
+                            'periodo_id'        => $this->periodo_id,
+                            'matricula_id'      => $matricula->id,
+                            'tipo'              => 'INSCRIPCION',
+                            'monto_original'    => $montoInscripcion,
+                            'descuento'         => 0,
+                            'monto_final'       => $montoInscripcion,
+                            'estado'            => 'Pendiente',
+                            'fecha_vencimiento' => now()->addDays(5),
+                            'descripcion'       => 'Valor de inscripción — Primera matrícula',
+                        ]);
+                    }
+                }
+
             }
 
             // ------------------------------------------------------------------
@@ -728,6 +759,7 @@ class Matriculacion extends Component
             'totalPagar',
             'montoMatricula',
             'montoArancel',
+            'valorInscripcion',
         ]);
     }
     /* =========================

@@ -20,14 +20,20 @@ return [
     */
     'templates' => [
         // Para estudiantes que ya existían en el sistema
-        'matricula_confirmacion' => env('WHATSAPP_TEMPLATE_CONFIRMACION', 'matricula_confirmacion'),
+        'matricula_confirmacion'   => env('WHATSAPP_TEMPLATE_CONFIRMACION',        'matricula_confirmacion'),
 
-        // Para primer ingreso al sistema (incluye credenciales)
-        'matricula_bienvenida'   => env('WHATSAPP_TEMPLATE_BIENVENIDA', 'matricula_bienvenida'),
+        // Para primer ingreso al sistema (incluye credenciales de ambas plataformas)
+        'matricula_bienvenida'     => env('WHATSAPP_TEMPLATE_BIENVENIDA',          'matricula_bienvenida'),
+
+        // Confirmación genérica de pago (colegiatura, multa, arrastre, etc.)
+        'pago_confirmacion'        => env('WHATSAPP_TEMPLATE_PAGO',                'pago_confirmacion'),
+
+        // Pago de primera matrícula: detalla matrícula + inscripción auto-liquidada
+        'pago_primera_matricula'   => env('WHATSAPP_TEMPLATE_PAGO_PRIMERA',        'pago_primera_matricula'),
 
         // Tickets de soporte
-        'ticket_nuevo'           => env('WHATSAPP_TEMPLATE_TICKET_NUEVO', 'ticket_nuevo'),
-        'ticket_respuesta'       => env('WHATSAPP_TEMPLATE_TICKET_RESPUESTA', 'ticket_respuesta'),
+        'ticket_nuevo'             => env('WHATSAPP_TEMPLATE_TICKET_NUEVO',        'ticket_nuevo'),
+        'ticket_respuesta'         => env('WHATSAPP_TEMPLATE_TICKET_RESPUESTA',    'ticket_respuesta'),
     ],
 
 ];

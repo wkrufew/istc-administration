@@ -24,7 +24,7 @@ class EditUser extends Component
     public $padre, $madre, $tutor;
 
     // Datos personales
-    public $nacionalidad, $genero, $estado_civil;
+    public $nacionalidad, $etnia, $genero, $estado_civil;
     public $telefono_emergencia, $contacto_emergencia;
     public $tipo_sangre, $observaciones_medicas;
 
@@ -69,6 +69,7 @@ class EditUser extends Component
         $this->madre = $this->user->madre;
         $this->tutor = $this->user->tutor;
         $this->nacionalidad = $this->user->nacionalidad;
+        $this->etnia = $this->user->etnia;
         $this->genero = $this->user->genero;
         $this->estado_civil = $this->user->estado_civil;
         $this->telefono_emergencia = $this->user->telefono_emergencia;
@@ -108,6 +109,7 @@ class EditUser extends Component
             'madre' => 'nullable|string|max:255',
             'tutor' => 'nullable|string|max:255',
             'nacionalidad' => 'nullable|string|max:100',
+            'etnia' => 'nullable|string|max:100',
             'genero' => 'nullable|in:Masculino,Femenino,Otro',
             'estado_civil' => 'nullable|string|max:50',
             'telefono_emergencia' => 'nullable|string|max:20',
@@ -167,7 +169,7 @@ class EditUser extends Component
             Storage::disk('public')->delete($this->profile_photo_actual);
             $this->user->update(['profile_photo_path' => null]);
             $this->profile_photo_actual = null;
-            session()->flash('message', 'Foto eliminada exitosamente.');
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Foto eliminada.', 'timer' => 2000]);
         }
     }
 
@@ -177,7 +179,7 @@ class EditUser extends Component
             Storage::disk('public')->delete($this->certificado_discapacidad_actual);
             $this->user->update(['certificado_discapacidad_path' => null]);
             $this->certificado_discapacidad_actual = null;
-            session()->flash('message', 'Certificado eliminado exitosamente.');
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Certificado eliminado.', 'timer' => 2000]);
         }
     }
 
@@ -199,6 +201,7 @@ class EditUser extends Component
             'madre' => $this->madre,
             'tutor' => $this->tutor,
             'nacionalidad' => $this->nacionalidad,
+            'etnia' => $this->etnia,
             'genero' => $this->genero,
             'estado_civil' => $this->estado_civil,
             'telefono_emergencia' => $this->telefono_emergencia,
@@ -236,22 +239,15 @@ class EditUser extends Component
 
         $this->user->update($data);
 
-        //dd($data);
-
-
-        // Actualizar rol
         $role = Role::find($this->role_id);
         $this->user->syncRoles([$role]);
 
-        session()->flash('message', 'Usuario actualizado exitosamente.');
-        $this->dispatch('alert', [
-            'message' => 'El usuario ' . $this->user->name .   'ha sido actualizado con éxito.',
-            'type' => 'success',
-            'title' => 'Actualización exitosa'
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => 'Usuario actualizado.',
+            'text'  => $this->user->name . ' ha sido guardado correctamente.',
+            'timer' => 2500,
         ]);
-
-        /* return redirect()->route('administracion.administrativa.estudiantes.index'); */
-        return redirect()->back();
     }
 
     public function render()

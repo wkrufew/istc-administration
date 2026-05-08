@@ -247,11 +247,17 @@
                     Swal.fire({
                         icon: data.icon ?? 'info',
                         title: data.title ?? '',
-                        text: data.text ?? '',
+                        ...(data.html ? { html: data.html } : { text: data.text ?? '' }),
                         timer: data.timer ?? undefined,
-                        showConfirmButton: data.timer ? false : true,
-                        confirmButtonText: data.confirmButtonText ?? 'Aceptar',
-                        confirmButtonColor: '#65a30d',
+                        showConfirmButton: data.showConfirmButton !== undefined
+                            ? data.showConfirmButton
+                            : (data.timer ? false : true),
+                        confirmButtonText: data.confirmButtonText ?? 'Entendido',
+                        confirmButtonColor: '#6366f1',
+                        customClass: {
+                            confirmButton: 'swal-btn-confirm',
+                            popup: 'swal-popup-custom',
+                        },
                         ...swalTheme(),
                     });
                 }

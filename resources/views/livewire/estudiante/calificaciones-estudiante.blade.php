@@ -168,6 +168,7 @@
                             @foreach ($filas as $f)
                                 @php
                                     $estado = $f['estado_final'];
+                                    $esBorrador = $f['es_borrador'] ?? false;
 
                                     $badge = match ($estado) {
                                         'Aprobado' => 'bg-green-100 text-green-800 ring-1 ring-green-200',
@@ -177,6 +178,10 @@
                                         'Incompleto' => 'bg-orange-100 text-orange-800 ring-1 ring-orange-200',
                                         default => 'bg-blue-100 text-blue-800 ring-1 ring-blue-200',
                                     };
+
+                                    $rowClass = $esBorrador
+                                        ? 'bg-amber-50 hover:bg-amber-100/60 transition'
+                                        : 'hover:bg-blue-50/40 transition';
 
                                     $notaFinal = $f['nota_final'];
                                     $notaMin = $f['nota_minima'] ?? 7;
@@ -189,7 +194,7 @@
                                                 : 'text-gray-700');
                                 @endphp
 
-                                <tr class="hover:bg-blue-50/40 transition {{ $badge }} {{-- {{ $f['estado_final'] == 'Aprobado' ? 'bg-blue-200/50' : 'bg-red-200/50' }} --}}">
+                                <tr class="{{ $rowClass }}">
                                     <td class="px-4 py-4">
                                         <div class="font-bold text-gray-900">
                                             {{ $f['materia'] }}
@@ -232,10 +237,17 @@
                                     </td>
 
                                     <td class="px-4 py-4">
-                                        <span
-                                            class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold {{ $badge }}">
-                                            {{ str_replace('_', ' ', $estado) }}
-                                        </span>
+                                        <div class="flex flex-col gap-1 items-start">
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold {{ $badge }}">
+                                                {{ str_replace('_', ' ', $estado) }}
+                                            </span>
+                                            @if ($esBorrador)
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 text-amber-800">
+                                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                                                    En revisión
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
 
                                     <td class="px-4 py-4 text-gray-700">
@@ -256,6 +268,7 @@
                     @foreach ($filas as $f)
                         @php
                             $estado = $f['estado_final'];
+                            $esBorrador = $f['es_borrador'] ?? false;
 
                             $badge = match ($estado) {
                                 'Aprobado' => 'bg-green-100 text-green-800',
@@ -267,7 +280,7 @@
                             };
                         @endphp
 
-                        <div class="bg-white border rounded-2xl shadow-sm p-4">
+                        <div class="border rounded-2xl shadow-sm p-4 {{ $esBorrador ? 'bg-amber-50 border-amber-200' : 'bg-white' }}">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <p class="font-extrabold text-gray-900">
@@ -279,9 +292,17 @@
                                     </p>
                                 </div>
 
-                                <span class="px-3 py-1 rounded-full text-xs font-bold {{ $badge }}">
-                                    {{ str_replace('_', ' ', $estado) }}
-                                </span>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold {{ $badge }}">
+                                        {{ str_replace('_', ' ', $estado) }}
+                                    </span>
+                                    @if ($esBorrador)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 text-amber-800">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                                            En revisión
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3 mt-4 text-sm">

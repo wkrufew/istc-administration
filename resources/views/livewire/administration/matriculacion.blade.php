@@ -898,6 +898,14 @@
                                                             ${{ number_format($montoMatricula, 2) }}
                                                         </span>
                                                     </div>
+                                                    @if ($valorInscripcion > 0)
+                                                        <div class="flex justify-between items-center">
+                                                            <span class="text-xs text-amber-300/80">Inscripción (1ª matrícula)</span>
+                                                            <span class="text-xs font-medium text-amber-300">
+                                                                ${{ number_format($valorInscripcion, 2) }}
+                                                            </span>
+                                                        </div>
+                                                    @endif
                                                     @if ($descuento > 0)
                                                         <div class="flex justify-between items-center">
                                                             <span class="text-xs text-lime-400/70">Descuento</span>
@@ -912,7 +920,7 @@
                                                     class="flex justify-between items-center bg-lime-500/[0.07] border border-lime-500/20 rounded-lg px-3 py-2">
                                                     <span class="text-xs font-semibold text-white/70">Total a Pagar</span>
                                                     <span class="text-base font-bold text-lime-400">
-                                                        ${{ number_format($totalPagar, 2) }}
+                                                        ${{ number_format($totalPagar + $valorInscripcion, 2) }}
                                                     </span>
                                                 </div>
                                             </div>
@@ -1844,6 +1852,12 @@
                                                             <span
                                                                 class="font-medium text-gray-900">${{ number_format($costoTotal, 2) }}</span>
                                                         </div>
+                                                        @if ($valorInscripcion > 0)
+                                                            <div class="flex justify-between items-center">
+                                                                <span class="text-sm text-amber-600">Inscripción (1ª matrícula):</span>
+                                                                <span class="font-medium text-amber-600">${{ number_format($valorInscripcion, 2) }}</span>
+                                                            </div>
+                                                        @endif
                                                         @if ($descuento > 0)
                                                             <div class="flex justify-between items-center text-green-600">
                                                                 <span class="text-sm">Descuento:</span>
@@ -1859,7 +1873,7 @@
                                                         <span class="text-lg font-semibold text-gray-900">Total a
                                                             Pagar:</span>
                                                         <span
-                                                            class="text-xl font-bold text-blue-600">${{ number_format($totalPagar, 2) }}</span>
+                                                            class="text-xl font-bold text-blue-600">${{ number_format($totalPagar + $valorInscripcion, 2) }}</span>
                                                     </div>
                                                 </div>
                                             </div>

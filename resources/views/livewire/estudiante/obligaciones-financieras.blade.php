@@ -96,8 +96,8 @@
                         <select wire:model.live="filtroTipo"
                             class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                             <option value="">Todos</option>
-                            @foreach (['MATRICULA', 'COLEGIATURA', 'ARRASTRE', 'MULTA', 'OTROS'] as $tipo)
-                                <option value="{{ $tipo }}">{{ ucfirst(strtolower($tipo)) }}</option>
+                            @foreach (['MATRICULA' => 'Matrícula', 'COLEGIATURA' => 'Colegiatura', 'ARRASTRE' => 'Arrastre', 'INSCRIPCION' => 'Inscripción', 'MULTA' => 'Multa', 'OTROS' => 'Otros'] as $val => $label)
+                                <option value="{{ $val }}">{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -120,11 +120,20 @@
                 @forelse ($obligaciones as $ob)
                     @php
                         $tipoColors = [
-                            'MATRICULA' => 'bg-blue-100 text-blue-800',
+                            'MATRICULA'   => 'bg-blue-100 text-blue-800',
                             'COLEGIATURA' => 'bg-purple-100 text-purple-800',
-                            'ARRASTRE' => 'bg-yellow-100 text-yellow-800',
-                            'MULTA' => 'bg-red-100 text-red-800',
-                            'OTROS' => 'bg-gray-100 text-gray-700',
+                            'ARRASTRE'    => 'bg-yellow-100 text-yellow-800',
+                            'INSCRIPCION' => 'bg-orange-100 text-orange-800',
+                            'MULTA'       => 'bg-red-100 text-red-800',
+                            'OTROS'       => 'bg-gray-100 text-gray-700',
+                        ];
+                        $tipoLabels = [
+                            'MATRICULA'   => 'Matrícula',
+                            'COLEGIATURA' => 'Colegiatura',
+                            'ARRASTRE'    => 'Arrastre',
+                            'INSCRIPCION' => 'Inscripción',
+                            'MULTA'       => 'Multa',
+                            'OTROS'       => 'Otros',
                         ];
                         $estadoColors = [
                             'Pendiente' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -144,7 +153,7 @@
                                 <div class="flex items-center flex-wrap gap-2">
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $tipoColors[$ob->tipo] ?? 'bg-gray-100 text-gray-700' }}">
-                                        {{ $ob->tipo }}
+                                        {{ $tipoLabels[$ob->tipo] ?? $ob->tipo }}
                                     </span>
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $estadoColors[$ob->estado] ?? '' }}">
@@ -196,7 +205,7 @@
 
                             {{-- Acciones --}}
                             <div class="flex sm:flex-col gap-2 sm:min-w-28">
-                                @if ($ob->estado !== 'Pagado')
+                                @if ($ob->estado !== 'Pagado' && $ob->tipo !== 'INSCRIPCION')
                                     <button wire:click="abrirModalPago({{ $ob->id }})"
                                         class="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2
                                            text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm">
@@ -256,12 +265,12 @@
 
             {{-- MODAL: REGISTRAR PAGO --}}
             @if ($showModalPago && $obligacionSeleccionada)
-                <div class="fixed inset-0 z-50 overflow-y-auto" style="z-index:99999">
-                    <div class="flex items-center justify-center min-h-screen px-4">
+                <div class="fixed inset-0 z-50 overflow-hidden" style="z-index:99999">
+                    <div class="flex items-center justify-center min-h-screen p-4">
                         <div class="fixed inset-0 bg-gray-900 bg-opacity-60" wire:click="cerrarModalPago"></div>
-                        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+                        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
 
-                            <div class="bg-gray-800 px-6 py-4 rounded-t-2xl flex justify-between items-center">
+                            <div class="flex-shrink-0 bg-gray-800 px-6 py-4 rounded-t-2xl flex justify-between items-center">
                                 <div>
                                     <h3 class="text-white font-semibold">Registrar Pago</h3>
                                     <p class="text-gray-400 text-xs mt-0.5">
@@ -278,7 +287,7 @@
                                 </button>
                             </div>
 
-                            <div class="p-6 space-y-5">
+                            <div class="flex-1 overflow-y-auto p-6 space-y-5">
 
                                 {{-- Resumen --}}
                                 <div class="bg-gray-50 rounded-xl p-4">
@@ -434,27 +443,27 @@
                                         revisará tu comprobante y lo aprobará en breve.</p>
                                 </div>
 
-                                {{-- Footer --}}
-                                <div class="flex justify-end space-x-3 pt-2 border-t border-gray-100">
-                                    <button wire:click="cerrarModalPago"
-                                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition">
-                                        Cancelar
-                                    </button>
-                                    <button wire:click="guardarPago" wire:loading.attr="disabled"
-                                        class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition disabled:opacity-50">
-                                        <span wire:loading.remove wire:target="guardarPago">Enviar Pago</span>
-                                        <span wire:loading wire:target="guardarPago" class="flex items-center">
-                                            <svg class="animate-spin w-4 h-4 mr-2" fill="none"
-                                                viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                    stroke="currentColor" stroke-width="4" />
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                            </svg>
-                                            Enviando...
-                                        </span>
-                                    </button>
-                                </div>
+                            </div>
+                            {{-- Footer --}}
+                            <div class="flex-shrink-0 flex justify-end space-x-3 px-6 py-4 border-t border-gray-100">
+                                <button wire:click="cerrarModalPago"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition">
+                                    Cancelar
+                                </button>
+                                <button wire:click="guardarPago" wire:loading.attr="disabled"
+                                    class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition disabled:opacity-50">
+                                    <span wire:loading.remove wire:target="guardarPago">Enviar Pago</span>
+                                    <span wire:loading wire:target="guardarPago" class="flex items-center">
+                                        <svg class="animate-spin w-4 h-4 mr-2" fill="none"
+                                            viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10"
+                                                stroke="currentColor" stroke-width="4" />
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Enviando...
+                                    </span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -464,12 +473,12 @@
 
             {{-- MODAL: HISTORIAL DE CUOTAS --}}
             @if ($showModalHistorial && $obligacionHistorial)
-                <div class="fixed inset-0 z-50 overflow-y-auto" style="z-index:99999">
-                    <div class="flex items-center justify-center min-h-screen px-4">
+                <div class="fixed inset-0 z-50 overflow-hidden" style="z-index:99999">
+                    <div class="flex items-center justify-center min-h-screen p-4">
                         <div class="fixed inset-0 bg-gray-900 bg-opacity-60" wire:click="cerrarHistorial"></div>
-                        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+                        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
 
-                            <div class="bg-gray-800 px-6 py-4 rounded-t-2xl flex justify-between items-center">
+                            <div class="flex-shrink-0 bg-gray-800 px-6 py-4 rounded-t-2xl flex justify-between items-center">
                                 <div>
                                     <h3 class="text-white font-semibold">Historial de Cuotas</h3>
                                     <p class="text-gray-400 text-xs mt-0.5">
@@ -486,7 +495,7 @@
                             </div>
 
                             {{-- Resumen con barra --}}
-                            <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                            <div class="flex-shrink-0 px-6 py-4 bg-gray-50 border-b border-gray-100">
                                 <div class="grid grid-cols-3 gap-4 text-center">
                                     <div>
                                         <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total</p>
@@ -518,7 +527,7 @@
                             </div>
 
                             {{-- Lista con scroll --}}
-                            <div class="overflow-y-auto max-h-96 px-6 py-4 space-y-3">
+                            <div class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
                                 @forelse ($obligacionHistorial->pagos as $pago)
                                     @php
                                         $estilos = [
@@ -603,7 +612,7 @@
                                 @endforelse
                             </div>
 
-                            <div class="px-6 py-4 border-t border-gray-100 flex justify-between items-center">
+                            <div class="flex-shrink-0 px-6 py-4 border-t border-gray-100 flex justify-between items-center">
                                 <p class="text-xs text-gray-400">{{ $obligacionHistorial->pagos->count() }} cuota(s)
                                     registrada(s)</p>
                                 <button wire:click="cerrarHistorial"

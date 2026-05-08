@@ -29,9 +29,11 @@ class SettingSeeder extends Seeder
             // ----------------------------------------------------------------
             ['group' => 'whatsapp', 'key' => 'whatsapp.phone_number_id',       'type' => 'text',     'label' => 'Phone Number ID',              'value' => '593983942105',               'is_encrypted' => false],
             ['group' => 'whatsapp', 'key' => 'whatsapp.access_token',          'type' => 'password', 'label' => 'Access Token',                 'value' => 'EAAxxxxxxxxxxxxxxx',          'is_encrypted' => true],
-            ['group' => 'whatsapp', 'key' => 'whatsapp.template_confirmacion', 'type' => 'text',     'label' => 'Template: confirmación',       'value' => 'matricula_confirmacion',      'is_encrypted' => false],
-            ['group' => 'whatsapp', 'key' => 'whatsapp.template_bienvenida',   'type' => 'text',     'label' => 'Template: bienvenida',         'value' => 'matricula_bienvenida',        'is_encrypted' => false],
-            ['group' => 'whatsapp', 'key' => 'whatsapp.activo',                'type' => 'boolean',  'label' => 'Envíos activos',               'value' => '0',                          'is_encrypted' => false],
+            ['group' => 'whatsapp', 'key' => 'whatsapp.template_confirmacion',          'type' => 'text',    'label' => 'Template: confirmación matrícula',     'value' => 'matricula_confirmacion',    'is_encrypted' => false],
+            ['group' => 'whatsapp', 'key' => 'whatsapp.template_bienvenida',             'type' => 'text',    'label' => 'Template: bienvenida (primera mat.)',  'value' => 'matricula_bienvenida',      'is_encrypted' => false],
+            ['group' => 'whatsapp', 'key' => 'whatsapp.template_pago',                   'type' => 'text',    'label' => 'Template: confirmación de pago',       'value' => 'pago_confirmacion',         'is_encrypted' => false],
+            ['group' => 'whatsapp', 'key' => 'whatsapp.template_pago_primera_matricula', 'type' => 'text',    'label' => 'Template: pago primera matrícula',     'value' => 'pago_primera_matricula',    'is_encrypted' => false],
+            ['group' => 'whatsapp', 'key' => 'whatsapp.activo',                          'type' => 'boolean', 'label' => 'Envíos activos',                       'value' => '0',                         'is_encrypted' => false],
 
             // ----------------------------------------------------------------
             // SMTP
@@ -54,6 +56,12 @@ class SettingSeeder extends Seeder
             ['group' => 'documentos', 'key' => 'documentos.coordinador', 'type' => 'text',     'label' => 'Coordinación Académica',     'value' => 'Ing. Carlos Ramírez Flores, Mg.',        'is_encrypted' => false],
             ['group' => 'documentos', 'key' => 'documentos.ciudad',      'type' => 'text',     'label' => 'Ciudad',                     'value' => 'Cumandá, Ecuador',                       'is_encrypted' => false],
             ['group' => 'documentos', 'key' => 'documentos.pie_pagina',  'type' => 'textarea', 'label' => 'Pie de página en PDFs',      'value' => 'Documento generado por el Sistema Académico del ISTC. Válido solo con firma y sello institucional.', 'is_encrypted' => false],
+
+            // ----------------------------------------------------------------
+            // MATRÍCULA
+            // ----------------------------------------------------------------
+            ['group' => 'matricula', 'key' => 'matricula.valor_inscripcion',    'type' => 'decimal', 'label' => 'Valor de inscripción (primera matrícula)',   'value' => '10.00', 'is_encrypted' => false],
+            ['group' => 'matricula', 'key' => 'matricula.porcentaje_arrastre',  'type' => 'decimal', 'label' => 'Porcentaje de penalización por arrastre (%)', 'value' => '10',    'is_encrypted' => false],
 
             // ----------------------------------------------------------------
             // NOTIFICACIONES

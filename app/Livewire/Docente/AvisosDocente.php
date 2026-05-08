@@ -18,6 +18,10 @@ class AvisosDocente extends Component
     // ── Filtro de materia ─────────────────────────────────────────────────────
     public ?int $asignacionId = null;
 
+    // ── Paginación pasados ────────────────────────────────────────────────────
+    public int  $limitePasados          = 10;
+    public bool $seccionPasadosAbierta  = false;
+
     // ── Formulario nuevo aviso ────────────────────────────────────────────────
     public bool $mostrarFormulario = false;
 
@@ -65,20 +69,45 @@ class AvisosDocente extends Component
             ->get();
     }
 
-    #[Computed]
-    public function avisos()
+    private function baseAvisosQuery()
     {
         $query = Aviso::with(['asignacionDocente.materia', 'asignacionDocente.paralelo'])
-            ->whereHas('asignacionDocente', fn($q) =>
-                $q->where('docente_id', Auth::id())
-            )
-            ->orderBy('fecha_aviso', 'asc');
+            ->whereHas('asignacionDocente', fn($q) => $q->where('docente_id', Auth::id()));
 
         if ($this->asignacionId) {
             $query->where('asignacion_docente_id', $this->asignacionId);
         }
 
-        return $query->get()->groupBy('estado');
+        return $query;
+    }
+
+    #[Computed]
+    public function avisos(): array
+    {
+        $futuros = $this->baseAvisosQuery()
+            ->where('fecha_aviso', '>=', now()->startOfDay())
+            ->orderBy('fecha_aviso', 'asc')
+            ->get();
+
+        $pasados = $this->baseAvisosQuery()
+            ->where('fecha_aviso', '<', now()->startOfDay())
+            ->orderBy('fecha_aviso', 'desc')
+            ->limit($this->limitePasados)
+            ->get();
+
+        return [
+            'hoy'     => $futuros->filter(fn($a) => $a->estado === 'hoy'),
+            'proximo' => $futuros->filter(fn($a) => $a->estado === 'proximo'),
+            'pasado'  => $pasados,
+        ];
+    }
+
+    #[Computed]
+    public function totalPasados(): int
+    {
+        return $this->baseAvisosQuery()
+            ->where('fecha_aviso', '<', now()->startOfDay())
+            ->count();
     }
 
     // ── Acciones ──────────────────────────────────────────────────────────────
@@ -94,10 +123,27 @@ class AvisosDocente extends Component
             return;
         }
 
+        // Sanear HTML antes de persistir
+        $descripcionLimpia = strip_tags(
+            $this->descripcion,
+            '<p><br><strong><b><em><i><u><ul><ol><li><a>'
+        );
+        // Evitar links javascript:
+        $descripcionLimpia = preg_replace(
+            '/href\s*=\s*["\']javascript:[^"\']*["\']/i',
+            'href="#"',
+            $descripcionLimpia
+        );
+
+        if (trim(strip_tags($descripcionLimpia)) === '') {
+            $this->addError('descripcion', 'La descripción es obligatoria.');
+            return;
+        }
+
         Aviso::create([
             'asignacion_docente_id' => $this->asignacionId,
             'titulo'                => $this->titulo,
-            'descripcion'           => $this->descripcion,
+            'descripcion'           => $descripcionLimpia,
             'tipo'                  => $this->tipo,
             'fecha_aviso'           => $this->fechaAviso,
         ]);
@@ -136,8 +182,22 @@ class AvisosDocente extends Component
         ]);
     }
 
+    public function toggleSeccionPasados(): void
+    {
+        $this->seccionPasadosAbierta = !$this->seccionPasadosAbierta;
+    }
+
+    public function cargarMasPasados(): void
+    {
+        $this->limitePasados += 10;
+        $this->seccionPasadosAbierta = true;
+        unset($this->avisos);
+    }
+
     public function updatedAsignacionId(): void
     {
+        $this->limitePasados          = 10;
+        $this->seccionPasadosAbierta  = false;
         unset($this->avisos);
     }
 

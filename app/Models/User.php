@@ -45,6 +45,7 @@ class User extends Authenticatable
         'madre',
         'tutor',
         'nacionalidad',
+        'etnia',
         'genero',
         'estado_civil',
         'telefono_emergencia',

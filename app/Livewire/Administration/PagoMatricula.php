@@ -3,6 +3,7 @@
 namespace App\Livewire\Administration;
 
 use App\Jobs\EnviarNotificacionPago;
+use App\Jobs\EnviarNotificacionPagoPrimeraMatricula;
 use App\Models\Matricula;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Pago;
@@ -29,11 +30,13 @@ class PagoMatricula extends Component
     public $descripcion  = '';
 
     // Solo lectura — se calculan al mount
-    public $montoMatricula  = 0;
-    public $montoArrastres  = 0;
+    public $montoMatricula   = 0;
+    public $montoArrastres   = 0;
     public $descuento        = 0;
     public $montoFinal       = 0;
     public $materiasArrastre = [];
+    public $montoInscripcion = 0;
+    public $obligInscripcion = null;
 
     // -------------------------------------------------------------------------
     // MOUNT
@@ -80,6 +83,13 @@ class PagoMatricula extends Component
             ->toArray();
 
         $this->montoArrastres = collect($this->materiasArrastre)->sum('costo_adicional');
+
+        // Obligación de inscripción — si existe, se auto-liquidará al pagar la matrícula
+        $this->obligInscripcion = $this->matricula->obligacionesFinancieras()
+            ->where('tipo', 'INSCRIPCION')
+            ->whereIn('estado', ['Pendiente', 'Parcial'])
+            ->first();
+        $this->montoInscripcion = $this->obligInscripcion?->monto_final ?? 0;
     }
 
     // =========================================================================
@@ -126,30 +136,48 @@ class PagoMatricula extends Component
 
             $pago->update(['numero_comprobante' => $this->generarNumeroComprobante($pago->id)]);
 
-            // Actualizar estado de la obligación a Parcial hasta que admin apruebe
             $this->obligacion->update(['estado' => 'Pagado']);
 
-            // 2. Actualizar matrícula a Habilitada
+            // Auto-liquidar INSCRIPCION
+            if ($this->obligInscripcion) {
+                $pagoInscripcion = Pago::create([
+                    'numero_comprobante' => 'TEMP',
+                    'codigo_referencia'  => $this->referencia ?: null,
+                    'obligacion_id'      => $this->obligInscripcion->id,
+                    'monto'              => $this->obligInscripcion->monto_final,
+                    'metodo_pago'        => $this->metodoPago,
+                    'estado'             => Pago::ESTADO_APROBADO,
+                    'fecha_pago'         => now(),
+                    'numero_cuota'       => 1,
+                    'comprobante_path'   => $comprobantePath,
+                    'descripcion'        => 'Inscripción liquidada con pago de matrícula ' . $this->matricula->code,
+                ]);
+                $pagoInscripcion->update([
+                    'numero_comprobante' => 'ISTC-CP-INSCRIPCION-' . now()->year . '-' . str_pad($pagoInscripcion->id, 5, '0', STR_PAD_LEFT),
+                ]);
+                $this->obligInscripcion->update(['estado' => 'Pagado']);
+            }
+
             $this->matricula->update(['estado' => 'Habilitada']);
 
             DB::commit();
 
-            $pagoId = $pago->id;
-
-            session()->flash('success', 'Pago de matrícula registrado correctamente.');
-
-            // Redirigir a obligaciones sin parámetros en la URL (recarga completa)
-            return redirect()->route('administracion.administrativa.obligaciones.index');
-
-            // Despachar notificación DESPUÉS del redirect para no bloquear la respuesta
             try {
-                EnviarNotificacionPago::dispatch($pagoId);
+                if (isset($pagoInscripcion)) {
+                    EnviarNotificacionPagoPrimeraMatricula::dispatch($pago->id, $pagoInscripcion->id);
+                } else {
+                    EnviarNotificacionPago::dispatch($pago->id);
+                }
             } catch (\Throwable $e) {
                 Log::warning('PagoMatricula: no se pudo despachar notificación', [
-                    'pago_id' => $pagoId,
+                    'pago_id' => $pago->id,
                     'error'   => $e->getMessage(),
                 ]);
             }
+
+            session()->flash('success', 'Pago de matrícula registrado correctamente.');
+
+            return redirect()->route('administracion.administrativa.obligaciones.index');
         } catch (\Exception $e) {
             DB::rollBack();
             $this->addError('general', 'Error al registrar el pago: ' . $e->getMessage());

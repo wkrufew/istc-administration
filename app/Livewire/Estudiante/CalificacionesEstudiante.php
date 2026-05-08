@@ -117,6 +117,7 @@ class CalificacionesEstudiante extends Component
                 'nota_suspenso' => $cal?->nota_suspenso,
 
                 'estado_final' => $estado,
+                'es_borrador' => $cal?->es_borrador ?? false,
 
                 'docente' => $cal?->docente?->name ?? '---',
                 'fecha_calificada' => $cal?->updated_at?->format('d/m/Y H:i') ?? null,

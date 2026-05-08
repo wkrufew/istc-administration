@@ -1,16 +1,4 @@
 <div>
-    {{-- TOAST --}}
-    <div x-data="{ toasts: [] }" x-on:toast.window="toasts.push($event.detail[0]); setTimeout(() => toasts.shift(), 4000)"
-        class="fixed top-4 right-4 z-50 space-y-2" style="z-index:99999">
-        <template x-for="(t, i) in toasts" :key="i">
-            <div x-show="true" x-transition
-                :class="{ 'bg-green-600': t.tipo==='success', 'bg-red-600': t.tipo==='error', 'bg-amber-500': t.tipo==='warning' }"
-                class="text-white px-5 py-3 rounded-lg shadow-lg text-sm min-w-72">
-                <span x-text="t.mensaje"></span>
-            </div>
-        </template>
-    </div>
-
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-2 space-y-6">
 
         {{-- HEADER --}}
@@ -31,6 +19,7 @@
         'smtp' => ['label' => 'Correo SMTP', 'icon' => 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75'],
         'documentos' => ['label' => 'Documentos', 'icon' => 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z'],
         'notificaciones' => ['label' => 'Notificaciones', 'icon' => 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0'],
+        'matricula'      => ['label' => 'Matrícula',      'icon' => 'M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z'],
     ] as $tabKey => $tabData)
                 <button wire:click="$set('tab', '{{ $tabKey }}')"
                     class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all
@@ -236,6 +225,7 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                             Template: Confirmación de matrícula
+                            <span class="font-normal text-gray-400">(renovación)</span>
                         </label>
                         <input type="text" wire:model="whatsapp_template_confirmacion"
                             class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-mono"
@@ -244,10 +234,29 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                             Template: Bienvenida
+                            <span class="font-normal text-gray-400">(primera matrícula + credenciales)</span>
                         </label>
                         <input type="text" wire:model="whatsapp_template_bienvenida"
                             class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-mono"
                             placeholder="matricula_bienvenida">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                            Template: Confirmación de pago
+                            <span class="font-normal text-gray-400">(colegiatura, multa, arrastre...)</span>
+                        </label>
+                        <input type="text" wire:model="whatsapp_template_pago"
+                            class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-mono"
+                            placeholder="pago_confirmacion">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                            Template: Pago primera matrícula
+                            <span class="font-normal text-gray-400">(matrícula + inscripción auto-liquidada)</span>
+                        </label>
+                        <input type="text" wire:model="whatsapp_template_pago_primera"
+                            class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-mono"
+                            placeholder="pago_primera_matricula">
                     </div>
                 </div>
 
@@ -588,6 +597,103 @@
                         class="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50">
                         <span wire:loading.remove wire:target="guardarNotificaciones">Guardar preferencias</span>
                         <span wire:loading wire:target="guardarNotificaciones">Guardando...</span>
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        {{-- ================================================================
+             TAB: MATRÍCULA
+             ================================================================ --}}
+        @if ($tab === 'matricula')
+            <div
+                class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-5">
+                <h3
+                    class="text-base font-bold text-gray-800 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700 pb-3">
+                    Parámetros de Matrícula
+                </h3>
+
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Configura los valores económicos que se aplican automáticamente al momento de crear matrículas.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+                    {{-- Valor de inscripción --}}
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-800/40 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Valor de Inscripción</p>
+                                <p class="text-xs text-amber-600 dark:text-amber-400">Solo se cobra en la primera matrícula del estudiante</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                                Monto en USD <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-3 flex items-center text-gray-500 text-sm">$</span>
+                                <input type="number" wire:model="matricula_valor_inscripcion"
+                                    step="0.01" min="0" max="9999.99"
+                                    class="w-full pl-7 rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm"
+                                    placeholder="10.00">
+                            </div>
+                            @error('matricula_valor_inscripcion')
+                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Porcentaje arrastre --}}
+                    <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-800/40 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-orange-800 dark:text-orange-300">Penalización por Arrastre</p>
+                                <p class="text-xs text-orange-600 dark:text-orange-400">Porcentaje adicional sobre el costo de materias arrastradas</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                                Porcentaje (%) <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="number" wire:model="matricula_porcentaje_arrastre"
+                                    step="0.01" min="0" max="100"
+                                    class="w-full pr-8 rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm"
+                                    placeholder="10">
+                                <span class="absolute inset-y-0 right-3 flex items-center text-gray-500 text-sm">%</span>
+                            </div>
+                            @error('matricula_porcentaje_arrastre')
+                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-3 text-xs text-blue-700 dark:text-blue-400">
+                    <strong>Nota:</strong> El valor de inscripción genera una obligación financiera separada de tipo
+                    <code class="bg-blue-100 dark:bg-blue-900/50 px-1 rounded">INSCRIPCION</code> al crear la primera matrícula de cada estudiante.
+                    El porcentaje de arrastre se aplica al costo por crédito de cada materia pendiente.
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button wire:click="guardarMatricula" wire:loading.attr="disabled"
+                        class="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 transition disabled:opacity-50">
+                        <span wire:loading.remove wire:target="guardarMatricula">Guardar parámetros</span>
+                        <span wire:loading wire:target="guardarMatricula">Guardando...</span>
                     </button>
                 </div>
             </div>

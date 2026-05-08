@@ -22,7 +22,7 @@ class CreateUser extends Component
     public $padre, $madre, $tutor;
 
     // Datos personales
-    public $nacionalidad, $genero, $estado_civil;
+    public $nacionalidad, $etnia, $genero, $estado_civil;
     public $telefono_emergencia, $contacto_emergencia;
     public $tipo_sangre, $observaciones_medicas;
 
@@ -56,6 +56,7 @@ class CreateUser extends Component
             'madre' => 'nullable|string|max:255',
             'tutor' => 'nullable|string|max:255',
             'nacionalidad' => 'nullable|string|max:100',
+            'etnia' => 'nullable|string|max:100',
             'genero' => 'nullable|in:Masculino,Femenino,Otro',
             'estado_civil' => 'nullable|string|max:50',
             'telefono_emergencia' => 'nullable|string|max:20',
@@ -142,6 +143,7 @@ class CreateUser extends Component
                 'madre' => $this->madre,
                 'tutor' => $this->tutor,
                 'nacionalidad' => $this->nacionalidad,
+                'etnia' => $this->etnia,
                 'genero' => $this->genero,
                 'estado_civil' => $this->estado_civil,
                 'telefono_emergencia' => $this->telefono_emergencia,

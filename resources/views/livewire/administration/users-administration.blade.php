@@ -220,7 +220,7 @@
                             {{-- Opciones --}}
                             <td class="px-4 py-3 text-center">
                                 <a href="{{ route('administracion.administrativa.users.edit', $user) }}"
-                                    title="Editar Usuario"
+                                    title="Asignacion Rol"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
                                            text-slate-400 border border-white/[0.06] bg-slate-800
                                            hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]
@@ -231,7 +231,7 @@
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                     </svg>
-                                    Editar
+                                    Asignacion
                                 </a>
                             </td>
 

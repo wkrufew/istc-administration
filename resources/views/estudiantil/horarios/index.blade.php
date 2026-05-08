@@ -1,8 +1,6 @@
 <x-estudiantil-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-200 leading-tight uppercase">
-            {{ __('HORARIOS DEL ESTUDIANTE') }}
-        </h2>
+            {{ __('Horario') }}
     </x-slot>
     <div class="py-6">
         {{-- @livewire('docente.dashboard') --}}

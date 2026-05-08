@@ -35,12 +35,12 @@
                  ENCABEZADO DEL ACTA
                  ================================================================ --}}
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div class="bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-5">
+                <div class="bg-gradient-to-r from-blue-950 to-blue-900 px-6 py-5">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                            <p class="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">
-                                Instituto Superior Tecnológico
-                            </p>
+                            {{-- <p class="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">
+                                Instituto Superior Tecnológico Cumandá
+                            </p> --}}
                             <h2 class="text-white text-xl font-bold">Acta de Calificaciones</h2>
                             <p class="text-gray-300 text-sm mt-1">{{ $carrera->name }}</p>
                         </div>
@@ -58,11 +58,11 @@
                             @else
                                 <span
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                                             bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-semibold">
+                                             bg-blue-600/20 border border-blue-100 text-blue-100 text-xs font-semibold">
                                     En Curso
                                 </span>
                             @endif
-                            <p class="text-gray-400 text-xs">{{ now()->format('d/m/Y') }}</p>
+                            <p class="text-gray-300 text-xs">{{ now()->format('d/m/Y') }}</p>
                         </div>
                     </div>
                 </div>

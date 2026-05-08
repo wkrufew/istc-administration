@@ -34,11 +34,13 @@ class AdminSettings extends Component
     // =========================================================================
     // GRUPO: WHATSAPP
     // =========================================================================
-    public string $whatsapp_phone_number_id        = '';
-    public string $whatsapp_access_token           = '';
-    public string $whatsapp_template_confirmacion  = '';
-    public string $whatsapp_template_bienvenida    = '';
-    public string $whatsapp_activo                 = '0';
+    public string $whatsapp_phone_number_id               = '';
+    public string $whatsapp_access_token                  = '';
+    public string $whatsapp_template_confirmacion         = '';
+    public string $whatsapp_template_bienvenida           = '';
+    public string $whatsapp_template_pago                 = '';
+    public string $whatsapp_template_pago_primera         = '';
+    public string $whatsapp_activo                        = '0';
 
     // =========================================================================
     // GRUPO: SMTP
@@ -62,6 +64,12 @@ class AdminSettings extends Component
     public string $doc_coordinador      = '';
     public string $doc_ciudad           = '';
     public string $doc_pie_pagina       = '';
+
+    // =========================================================================
+    // GRUPO: MATRÍCULA
+    // =========================================================================
+    public string $matricula_valor_inscripcion   = '10.00';
+    public string $matricula_porcentaje_arrastre = '10';
 
     // =========================================================================
     // GRUPO: NOTIFICACIONES
@@ -92,11 +100,13 @@ class AdminSettings extends Component
         $this->instituto_favicon_path  = $s['instituto.favicon_path']  ?? null;
 
         // WhatsApp
-        $this->whatsapp_phone_number_id       = $s['whatsapp.phone_number_id']       ?? '';
-        $this->whatsapp_access_token          = $s['whatsapp.access_token']          ?? '';
-        $this->whatsapp_template_confirmacion = $s['whatsapp.template_confirmacion'] ?? '';
-        $this->whatsapp_template_bienvenida   = $s['whatsapp.template_bienvenida']   ?? '';
-        $this->whatsapp_activo                = $s['whatsapp.activo']                ?? '0';
+        $this->whatsapp_phone_number_id               = $s['whatsapp.phone_number_id']                       ?? '';
+        $this->whatsapp_access_token                  = $s['whatsapp.access_token']                          ?? '';
+        $this->whatsapp_template_confirmacion         = $s['whatsapp.template_confirmacion']                 ?? '';
+        $this->whatsapp_template_bienvenida           = $s['whatsapp.template_bienvenida']                   ?? '';
+        $this->whatsapp_template_pago                 = $s['whatsapp.template_pago']                         ?? '';
+        $this->whatsapp_template_pago_primera         = $s['whatsapp.template_pago_primera_matricula']       ?? '';
+        $this->whatsapp_activo                        = $s['whatsapp.activo']                                ?? '0';
 
         // SMTP
         $this->smtp_driver       = $s['smtp.driver']       ?? 'smtp';
@@ -115,6 +125,10 @@ class AdminSettings extends Component
         $this->doc_coordinador = $s['documentos.coordinador'] ?? '';
         $this->doc_ciudad      = $s['documentos.ciudad']      ?? '';
         $this->doc_pie_pagina  = $s['documentos.pie_pagina']  ?? '';
+
+        // Matrícula
+        $this->matricula_valor_inscripcion   = $s['matricula.valor_inscripcion']   ?? '10.00';
+        $this->matricula_porcentaje_arrastre = $s['matricula.porcentaje_arrastre'] ?? '10';
 
         // Notificaciones
         $this->notif_matricula_whatsapp  = $s['notificaciones.matricula_whatsapp']  ?? '0';
@@ -186,7 +200,7 @@ class AdminSettings extends Component
             'favicon_path'  => $this->instituto_favicon_path,
         ]);
 
-        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Información del instituto guardada.']);
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Información del instituto guardada.', 'timer' => 2000]);
     }
 
     // =========================================================================
@@ -199,17 +213,21 @@ class AdminSettings extends Component
             'whatsapp_access_token'          => 'nullable|string|max:500',
             'whatsapp_template_confirmacion' => 'nullable|string|max:100',
             'whatsapp_template_bienvenida'   => 'nullable|string|max:100',
+            'whatsapp_template_pago'         => 'nullable|string|max:100',
+            'whatsapp_template_pago_primera' => 'nullable|string|max:100',
         ]);
 
         $this->upsertGroup('whatsapp', [
-            'phone_number_id'       => $this->whatsapp_phone_number_id,
-            'access_token'          => $this->whatsapp_access_token,
-            'template_confirmacion' => $this->whatsapp_template_confirmacion,
-            'template_bienvenida'   => $this->whatsapp_template_bienvenida,
-            'activo'                => $this->whatsapp_activo,
+            'phone_number_id'               => $this->whatsapp_phone_number_id,
+            'access_token'                  => $this->whatsapp_access_token,
+            'template_confirmacion'         => $this->whatsapp_template_confirmacion,
+            'template_bienvenida'           => $this->whatsapp_template_bienvenida,
+            'template_pago'                 => $this->whatsapp_template_pago,
+            'template_pago_primera_matricula' => $this->whatsapp_template_pago_primera,
+            'activo'                        => $this->whatsapp_activo,
         ], encryptedKeys: ['access_token']);
 
-        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Configuración de WhatsApp guardada.']);
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Configuración de WhatsApp guardada.', 'timer' => 2000]);
     }
 
     // =========================================================================
@@ -246,7 +264,7 @@ class AdminSettings extends Component
             'username'   => $this->smtp_username,
         ]);
 
-        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Configuración SMTP guardada.']);
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Configuración SMTP guardada.', 'timer' => 2000]);
     }
 
     // =========================================================================
@@ -334,9 +352,11 @@ class AdminSettings extends Component
 
             Log::info('SMTP prueba — enviado correctamente', $contexto);
 
-            $this->dispatch('toast', [
-                'tipo'    => 'success',
-                'mensaje' => "Correo enviado a {$this->emailPrueba}. Revisa tu bandeja de entrada.",
+            $this->dispatch('swal', [
+                'icon'  => 'success',
+                'title' => 'Correo enviado correctamente',
+                'text'  => "Mensaje enviado a {$this->emailPrueba}. Revisa tu bandeja de entrada.",
+                'timer' => 3000,
             ]);
 
         } catch (\Exception $e) {
@@ -377,7 +397,30 @@ class AdminSettings extends Component
             'pie_pagina'  => $this->doc_pie_pagina,
         ]);
 
-        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Datos de documentos guardados.']);
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Datos de documentos guardados.', 'timer' => 2000]);
+    }
+
+    // =========================================================================
+    // GUARDAR MATRÍCULA
+    // =========================================================================
+    public function guardarMatricula(): void
+    {
+        $this->validate([
+            'matricula_valor_inscripcion'   => 'required|numeric|min:0|max:9999.99',
+            'matricula_porcentaje_arrastre' => 'required|numeric|min:0|max:100',
+        ], [
+            'matricula_valor_inscripcion.required'   => 'El valor de inscripción es obligatorio.',
+            'matricula_valor_inscripcion.numeric'    => 'Debe ser un número.',
+            'matricula_porcentaje_arrastre.required' => 'El porcentaje de arrastre es obligatorio.',
+            'matricula_porcentaje_arrastre.max'      => 'El porcentaje no puede superar 100.',
+        ]);
+
+        $this->upsertGroup('matricula', [
+            'valor_inscripcion'   => $this->matricula_valor_inscripcion,
+            'porcentaje_arrastre' => $this->matricula_porcentaje_arrastre,
+        ]);
+
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Configuración de matrícula guardada.', 'timer' => 2000]);
     }
 
     // =========================================================================
@@ -394,7 +437,7 @@ class AdminSettings extends Component
             'titulacion_email'    => $this->notif_titulacion_email,
         ]);
 
-        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Preferencias de notificaciones guardadas.']);
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Preferencias de notificaciones guardadas.', 'timer' => 2000]);
     }
 
     // =========================================================================
@@ -410,6 +453,9 @@ class AdminSettings extends Component
             $setting->group        = $group;
             $setting->key          = $key;
             $setting->is_encrypted = $encrypted;
+            // Preserve existing label/type; only set defaults for brand-new rows
+            $setting->label        = $setting->label ?: $subKey;
+            $setting->type         = $setting->type  ?: 'text';
 
             $setting->value = $value;
 
