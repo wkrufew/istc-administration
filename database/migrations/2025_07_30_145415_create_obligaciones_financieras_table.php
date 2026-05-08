@@ -22,7 +22,8 @@ return new class extends Migration
                 'COLEGIATURA',
                 'ARRASTRE',
                 'MULTA',
-                'OTROS'
+                'OTROS',
+                'INSCRIPCION'
             ]);
 
             // 🔹 Monto base
@@ -44,6 +45,7 @@ return new class extends Migration
             $table->date('fecha_vencimiento')->nullable();
             $table->text('descripcion')->nullable();
 
+            $table->index(['user_id', 'estado'], 'idx_oblig_user_estado');
             $table->timestamps();
         });
     }

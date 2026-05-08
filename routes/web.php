@@ -165,6 +165,9 @@ Route::middleware([
         Route::get('tickets/create', TicketCreate::class)->name('tickets.create');
         Route::get('tickets/{ticket}', TicketShow::class)->name('tickets.show');
 
+        // Auditoría del sistema
+        Route::get('auditoria', \App\Livewire\Administration\AuditoriaAdmin::class)->name('auditoria.index');
+
         // Configuración del sistema
         Route::get('settings', \App\Livewire\Administration\AdminSettings::class)->name('settings');
 

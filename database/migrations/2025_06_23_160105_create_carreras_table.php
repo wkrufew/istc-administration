@@ -24,6 +24,7 @@ return new class extends Migration
             $table->integer('duracion_semestres')->default(6);
             $table->enum('modalidad', ['Presencial', 'Virtual', 'Híbrida', 'Semipresencial'])->default('Presencial');
             $table->boolean('is_active')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
     }

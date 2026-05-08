@@ -23,6 +23,7 @@ return new class extends Migration
             $table->unsignedBigInteger('carrera_id');
             $table->foreign('carrera_id')->references('id')->on('carreras')->onDelete('cascade');
 
+            $table->softDeletes();
             $table->timestamps();
         });
     }

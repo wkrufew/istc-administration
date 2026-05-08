@@ -30,6 +30,9 @@ return new class extends Migration
             $table->foreign('paralelo_id')->references('id')->on('paralelos')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
+            $table->index(['user_id', 'materia_id'], 'idx_detalle_user_materia');
+            $table->index(['matricula_id', 'estado'], 'idx_detalle_matricula_estado');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

@@ -146,14 +146,35 @@ flex flex-row items-center space-x-2"
             </a>
         </div>
 
-        {{-- Configuración del Sistema --}}
-        <div class="hover:ml-3 w-full 
+        {{-- Auditoría del Sistema --}}
+        <div class="hover:ml-3 w-full
 text-slate-700 dark:text-slate-200
 hover:text-slate-900 dark:hover:text-white
 bg-slate-100/70 dark:bg-[#111827]
 hover:bg-slate-200/80 dark:hover:bg-slate-800
 p-2 pl-4 rounded-xl
-transform ease-in-out duration-300 
+transform ease-in-out duration-300
+flex flex-row items-center space-x-2">
+            <a href="{{ route('administracion.administrativa.auditoria.index') }}" class="flex items-center space-x-2">
+                <svg class="dark:fill-white fill-slate-900 size-5" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 512 512">
+                    <path
+                        d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120l0 136c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.5 33.3-6.5s4.5-25.9-6.5-33.3L280 243.2 280 120c0-13.3-10.7-24-24-24s-24 10.7-24 24z" />
+                </svg>
+                <div>
+                    Auditoría
+                </div>
+            </a>
+        </div>
+
+        {{-- Configuración del Sistema --}}
+        <div class="hover:ml-3 w-full
+text-slate-700 dark:text-slate-200
+hover:text-slate-900 dark:hover:text-white
+bg-slate-100/70 dark:bg-[#111827]
+hover:bg-slate-200/80 dark:hover:bg-slate-800
+p-2 pl-4 rounded-xl
+transform ease-in-out duration-300
 flex flex-row items-center space-x-2"
             {{-- class =  "hover:ml-4 w-full text-white hover:text-[#7ea41e] dark:hover:text-[#7ea41e] bg-[#1E293B] p-2 pl-4 rounded-full transform ease-in-out duration-300 flex flex-row items-center space-x-2" --}}>
             <a href="{{ route('administracion.administrativa.settings') }}" class="flex items-center space-x-2">

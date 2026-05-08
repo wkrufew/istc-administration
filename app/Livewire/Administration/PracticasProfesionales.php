@@ -110,7 +110,7 @@ class PracticasProfesionales extends Component
     {
         if (strlen($this->busquedaEstudiante) < 3) return collect();
 
-        // Solo estudiantes con malla completa
+        // Solo estudiantes con al menos el 80% de la malla aprobada
         return User::role('estudiante')
             ->where(
                 fn($q) =>
@@ -122,7 +122,7 @@ class PracticasProfesionales extends Component
             ->filter(function ($user) {
                 $matricula = $user->matriculas->first();
                 if (! $matricula) return false;
-                return NotaTitulacion::mallaCurricular_Completada($user->id, $matricula->carrera_id);
+                return NotaTitulacion::mallaAlcanza80Porciento($user->id, $matricula->carrera_id);
             })
             ->take(6);
     }

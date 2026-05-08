@@ -40,14 +40,20 @@ class PagoConfirmado extends Mailable
     {
         $logoPath = SettingService::get('instituto.logo_path');
 
-        // Buscar pago de INSCRIPCION auto-liquidado junto con este pago (misma matrícula)
+        // Solo mostrar inscripción si el pago actual es de MATRICULA y la inscripción
+        // fue liquidada en la misma sesión (±10 min), no para pagos de colegiatura/arrastre/etc.
         $pagoInscripcion = null;
-        if ($this->matricula?->id) {
+        if ($this->matricula?->id && $this->pago->obligacion?->tipo === 'MATRICULA') {
+            $base = $this->pago->fecha_pago ?? now();
             $pagoInscripcion = Pago::whereHas('obligacion', fn ($q) =>
                 $q->where('matricula_id', $this->matricula->id)
                   ->where('tipo', 'INSCRIPCION')
             )
             ->where('estado', Pago::ESTADO_APROBADO)
+            ->whereBetween('fecha_pago', [
+                $base->copy()->subMinutes(10),
+                $base->copy()->addMinutes(10),
+            ])
             ->latest('fecha_pago')
             ->first();
         }

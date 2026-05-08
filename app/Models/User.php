@@ -138,11 +138,18 @@ class User extends Authenticatable
     }
 
     /**
-     * Pagos realizados por el estudiante
+     * Pagos realizados por el estudiante (vía obligaciones financieras)
      */
     public function pagos()
     {
-        return $this->hasMany(Pago::class, 'user_id');
+        return $this->hasManyThrough(
+            Pago::class,
+            ObligacionesFinanciera::class,
+            'user_id',       // FK en obligaciones_financieras
+            'obligacion_id', // FK en pagos
+            'id',
+            'id'
+        );
     }
 
     /**

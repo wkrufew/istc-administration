@@ -193,6 +193,36 @@ class NotaTitulacion extends Model
     }
 
     /**
+     * Verifica si el estudiante aprobó al menos el 80% de la malla curricular.
+     * Se usa para habilitar prácticas preprofesionales y comunitarias.
+     */
+    public static function mallaAlcanza80Porciento(int $userId, int $carreraId): bool
+    {
+        $carrera = Carrera::with('semestres.materias')->find($carreraId);
+        if (! $carrera) return false;
+
+        $total    = 0;
+        $aprobadas = 0;
+
+        foreach ($carrera->semestres as $semestre) {
+            foreach ($semestre->materias as $materia) {
+                $total++;
+
+                $estaAprobada = \App\Models\Calificacion::whereHas('detalleMatricula', function ($q) use ($userId, $materia) {
+                    $q->where('user_id', $userId)
+                      ->where('materia_id', $materia->id);
+                })
+                ->where('estado_final', 'Aprobado')
+                ->exists();
+
+                if ($estaAprobada) $aprobadas++;
+            }
+        }
+
+        return $total > 0 && ($aprobadas / $total) >= 0.80;
+    }
+
+    /**
      * Verifica si el estudiante completó todos los semestres de la carrera
      * para habilitar el proceso de titulación
      */

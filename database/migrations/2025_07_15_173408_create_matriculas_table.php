@@ -53,6 +53,8 @@ return new class extends Migration
             $table->foreign('carrera_id')->references('id')->on('carreras')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
+            $table->index(['user_id', 'periodo_id'], 'idx_matriculas_user_periodo');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

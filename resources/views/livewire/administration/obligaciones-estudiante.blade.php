@@ -49,6 +49,31 @@
             </div>
         </div>
 
+        {{-- Alerta: pagos pendientes de verificación --}}
+        @if ($this->totalPendientesVerificacion > 0 && ! $filtroPendientesVerif)
+            <div class="mb-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700/60 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-amber-800 dark:text-amber-300 text-sm">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>
+                        <span class="font-bold">{{ $this->totalPendientesVerificacion }}</span>
+                        pago{{ $this->totalPendientesVerificacion > 1 ? 's' : '' }} pendiente{{ $this->totalPendientesVerificacion > 1 ? 's' : '' }} de verificación.
+                    </span>
+                </div>
+                <button wire:click="toggleFiltroPendientes"
+                    class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg
+                           bg-amber-500 hover:bg-amber-600 text-white transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+                    </svg>
+                    Filtrar pendientes
+                </button>
+            </div>
+        @endif
+
         {{-- Alerta: viene de una matrícula recién creada --}}
         @if ($filtroMatricula)
             <div class="mb-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700/60 rounded-lg p-4 flex items-center justify-between">
@@ -72,7 +97,7 @@
              ====================================================================== --}}
         <div
             class="bg-gray-100 dark:bg-slate-900 border border-gray-300 dark:border-slate-700/60 rounded-xl p-4 mb-6 shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div class="relative">
                     <label
                         class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Estudiante</label>
@@ -146,6 +171,27 @@
                             <option value="{{ $estado }}">{{ $estado }}</option>
                         @endforeach
                     </select>
+                </div>
+
+                {{-- Chip: filtrar solo obligaciones con pagos pendientes de verificación --}}
+                <div class="flex items-end">
+                    <button wire:click="toggleFiltroPendientes"
+                        class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border-2 transition
+                            {{ $filtroPendientesVerif
+                                ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
+                                : 'bg-white dark:bg-slate-800 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20' }}">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Por verificar
+                        @if ($this->totalPendientesVerificacion > 0)
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold
+                                {{ $filtroPendientesVerif ? 'bg-white/30 text-white' : 'bg-amber-500 text-white' }}">
+                                {{ $this->totalPendientesVerificacion }}
+                            </span>
+                        @endif
+                    </button>
                 </div>
             </div>
         </div>
@@ -263,7 +309,11 @@
 
                                 {{-- Acciones --}}
                                 <td class="px-4 py-3">
-                                    <div class="flex items-center justify-center space-x-2">
+                                    @php
+                                        $pagosPendientes = $ob->pagos->where('estado', 'Pendiente');
+                                        $pagoParaVerificar = $pagosPendientes->last();
+                                    @endphp
+                                    <div class="flex items-center justify-center flex-wrap gap-1.5">
 
                                         {{-- Botón registrar pago (INSCRIPCION se liquida automáticamente con MATRICULA) --}}
                                         @if ($ob->estado !== 'Pagado' && $ob->tipo !== 'INSCRIPCION')
@@ -278,6 +328,27 @@
                                                         d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                                                 </svg>
                                                 Pagar
+                                            </button>
+                                        @endif
+
+                                        {{-- Botón verificar pago pendiente (acceso directo sin abrir historial) --}}
+                                        @if ($pagoParaVerificar)
+                                            <button wire:click="abrirVerificacion({{ $pagoParaVerificar->id }})"
+                                                class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
+                                                       bg-amber-500 hover:bg-amber-600 text-white transition"
+                                                title="Verificar comprobante pendiente">
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Verificar
+                                                @if ($pagosPendientes->count() > 1)
+                                                    <span class="ml-1 bg-white/30 rounded-full px-1.5 text-xs font-bold">
+                                                        {{ $pagosPendientes->count() }}
+                                                    </span>
+                                                @endif
                                             </button>
                                         @endif
 

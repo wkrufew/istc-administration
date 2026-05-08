@@ -25,10 +25,11 @@ class ObligacionesEstudiante extends Component
     // -------------------------------------------------------------------------
     // FILTROS
     // -------------------------------------------------------------------------
-    public $filtroEstudiante       = '';
-    public $filtroTipo             = '';
-    public $filtroEstado           = '';
-    public $filtroMatricula        = null;
+    public $filtroEstudiante              = '';
+    public $filtroTipo                   = '';
+    public $filtroEstado                 = '';
+    public $filtroMatricula              = null;
+    public bool $filtroPendientesVerif   = false;
 
     // Buscador predictivo del filtro de estudiante
     public $filtroBusquedaTexto    = '';
@@ -95,6 +96,14 @@ class ObligacionesEstudiante extends Component
     // COMPUTED
     // =========================================================================
     #[Computed]
+    public function totalPendientesVerificacion(): int
+    {
+        return Pago::where('estado', Pago::ESTADO_PENDIENTE)
+            ->when($this->filtroEstudiante, fn($q) => $q->whereHas('obligacion', fn($ob) => $ob->where('user_id', $this->filtroEstudiante)))
+            ->count();
+    }
+
+    #[Computed]
     public function obligaciones()
     {
         return ObligacionesFinanciera::with([
@@ -103,10 +112,11 @@ class ObligacionesEstudiante extends Component
             'matricula.carrera',
             'pagos',
         ])
-            ->when($this->filtroEstudiante, fn($q) => $q->where('user_id', $this->filtroEstudiante))
-            ->when($this->filtroTipo,       fn($q) => $q->where('tipo', $this->filtroTipo))
-            ->when($this->filtroEstado,     fn($q) => $q->where('estado', $this->filtroEstado))
-            ->when($this->filtroMatricula,  fn($q) => $q->where('matricula_id', $this->filtroMatricula))
+            ->when($this->filtroEstudiante,       fn($q) => $q->where('user_id', $this->filtroEstudiante))
+            ->when($this->filtroTipo,             fn($q) => $q->where('tipo', $this->filtroTipo))
+            ->when($this->filtroEstado,           fn($q) => $q->where('estado', $this->filtroEstado))
+            ->when($this->filtroMatricula,        fn($q) => $q->where('matricula_id', $this->filtroMatricula))
+            ->when($this->filtroPendientesVerif,  fn($q) => $q->whereHas('pagos', fn($p) => $p->where('estado', Pago::ESTADO_PENDIENTE)))
             ->orderByRaw("FIELD(estado, 'Pendiente', 'Parcial', 'Vencido', 'Pagado')")
             ->orderBy('fecha_vencimiento')
             ->paginate(15);
@@ -372,10 +382,12 @@ class ObligacionesEstudiante extends Component
                     ?: 'Cuota ' . $numeroCuota . ' — ' . $this->obligacionSeleccionada->tipo,
                 'comprobante_path'   => $comprobantePath,
             ]);
+            // PagoObserver::created() detecta APROBADO y llama actualizarEstado() — un solo registro de auditoría.
+            // El update solo cambia el comprobante, no el estado, por lo que el observer no vuelve a disparar.
             $pago->update(['numero_comprobante' => $this->generarNumeroComprobante($pago->id)]);
 
-            // Actualizar estado de la obligación (Parcial o Pagado)
-            $this->obligacionSeleccionada->actualizarEstado();
+            // Refrescar desde DB para leer el estado que calculó el observer
+            $this->obligacionSeleccionada->refresh();
 
             // Si MATRICULA quedó Pagada: habilitar matrícula y auto-liquidar INSCRIPCION
             if ($this->obligacionSeleccionada->tipo === 'MATRICULA'
@@ -402,10 +414,10 @@ class ObligacionesEstudiante extends Component
                         'comprobante_path'   => $comprobantePath,
                         'descripcion'        => 'Inscripción liquidada con pago de matrícula',
                     ]);
+                    // PagoObserver::created() detecta APROBADO y llama actualizarEstado() en INSCRIPCION — un registro.
                     $pagoInsc->update([
                         'numero_comprobante' => 'ISTC-CP-INSCRIPCION-' . now()->year . '-' . str_pad($pagoInsc->id, 5, '0', STR_PAD_LEFT),
                     ]);
-                    $obligInscripcion->update(['estado' => 'Pagado']);
                 }
             }
 
@@ -461,6 +473,10 @@ class ObligacionesEstudiante extends Component
     // =========================================================================
     public function abrirVerificacion($pagoId)
     {
+        // Cerrar historial si estaba abierto — evita que su backdrop intercepte clics del modal de verificación
+        $this->showModalHistorial  = false;
+        $this->obligacionHistorial = null;
+
         $this->pagoSeleccionado        = Pago::with('obligacion.estudiante')->find($pagoId);
         $this->observacionVerificacion = '';
         $this->showModalVerificacion   = true;
@@ -487,10 +503,10 @@ class ObligacionesEstudiante extends Component
                 'descripcion' => ($this->pagoSeleccionado->descripcion ?? '')
                     . ($this->observacionVerificacion ? ' | Obs: ' . $this->observacionVerificacion : ''),
             ]);
+            // PagoObserver::updated() detecta wasChanged('estado') y llama actualizarEstado() — no duplicar
 
-            $this->pagoSeleccionado->obligacion->actualizarEstado();
-
-            $obligacion = $this->pagoSeleccionado->obligacion;
+            // Recargar la obligación desde DB para leer el estado recalculado
+            $obligacion = $this->pagoSeleccionado->obligacion()->first();
             if ($obligacion->tipo === 'MATRICULA' && $obligacion->estado === 'Pagado') {
                 Matricula::find($obligacion->matricula_id)?->update(['estado' => 'Habilitada']);
             }
@@ -538,8 +554,7 @@ class ObligacionesEstudiante extends Component
                 'descripcion' => ($this->pagoSeleccionado->descripcion ?? '')
                     . ' | Rechazado: ' . $this->observacionVerificacion,
             ]);
-
-            $this->pagoSeleccionado->obligacion->actualizarEstado();
+            // PagoObserver::updated() detecta wasChanged('estado') y llama actualizarEstado() — no duplicar
 
             DB::commit();
 
@@ -586,6 +601,13 @@ class ObligacionesEstudiante extends Component
         $this->filtroBusquedaTexto    = '';
         $this->showDropdownFiltro     = false;
         unset($this->resultadosFiltro);
+        $this->resetPage();
+    }
+
+    public function toggleFiltroPendientes()
+    {
+        $this->filtroPendientesVerif = ! $this->filtroPendientesVerif;
+        unset($this->obligaciones);
         $this->resetPage();
     }
 

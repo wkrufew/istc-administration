@@ -25,11 +25,11 @@ return new class extends Migration
 
             $table->timestamps();
 
-            // Índice único con nombre personalizado
             $table->unique(
                 ['docente_id', 'materia_id', 'periodo_id', 'paralelo_id'],
                 'unique_asignacion_docente'
             );
+            $table->index(['periodo_id', 'paralelo_id'], 'idx_asig_periodo_paralelo');
         });
     }
 

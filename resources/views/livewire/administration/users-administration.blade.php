@@ -48,7 +48,7 @@
                            bg-slate-800 border border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200"
-                    placeholder="Buscar por nombre o correo…">
+                    placeholder="Buscar por nombres, cedula o correo…">
             </div>
 
             <div class="flex space-x-4">
@@ -87,6 +87,64 @@
         </div>
     </div>
 
+
+    {{-- ═══════════════════════════════════════
+         BLOQUE 1.5 — FILTROS
+    ═══════════════════════════════════════ --}}
+    <div class="bg-slate-900/60 border border-white/[0.06] rounded-xl px-5 py-3.5 flex flex-wrap items-center gap-3">
+
+        {{-- Filtro Rol --}}
+        <div class="flex items-center gap-2">
+            <span class="text-[0.65rem] font-medium tracking-widest uppercase text-slate-500">Rol</span>
+            <select wire:model.live="filtroRol"
+                    class="text-xs text-white/70 bg-slate-800 border border-white/[0.08] rounded-lg px-3 py-1.5
+                           focus:outline-none focus:border-lime-500/40 focus:ring-1 focus:ring-lime-500/20 transition-all">
+                <option value="">Todos</option>
+                @foreach($roles as $rol)
+                    <option value="{{ $rol->name }}">{{ $rol->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- Separador --}}
+        <div class="w-px h-5 bg-white/[0.07]"></div>
+
+        {{-- Filtro Estado --}}
+        <div class="flex items-center gap-2">
+            <span class="text-[0.65rem] font-medium tracking-widest uppercase text-slate-500">Estado</span>
+            <div class="flex items-center gap-1">
+                <button wire:click="$set('filtroEstado', '')"
+                        class="px-3 py-1 rounded-full text-[0.65rem] font-medium transition-all
+                               {{ $filtroEstado === '' ? 'bg-slate-600 text-white border border-slate-500' : 'text-slate-400 border border-white/[0.06] hover:border-white/20' }}">
+                    Todos
+                </button>
+                <button wire:click="$set('filtroEstado', '1')"
+                        class="px-3 py-1 rounded-full text-[0.65rem] font-medium transition-all
+                               {{ $filtroEstado === '1' ? 'bg-lime-600/80 text-white border border-lime-500/50' : 'text-slate-400 border border-white/[0.06] hover:border-lime-500/30 hover:text-lime-400' }}">
+                    Activos
+                </button>
+                <button wire:click="$set('filtroEstado', '0')"
+                        class="px-3 py-1 rounded-full text-[0.65rem] font-medium transition-all
+                               {{ $filtroEstado === '0' ? 'bg-red-600/70 text-white border border-red-500/50' : 'text-slate-400 border border-white/[0.06] hover:border-red-500/30 hover:text-red-400' }}">
+                    Inactivos
+                </button>
+            </div>
+        </div>
+
+        {{-- Limpiar filtros --}}
+        @if($filtroRol !== '' || $filtroEstado !== '')
+        <div class="flex items-center gap-2 ml-auto">
+            <button wire:click="limpiarFiltros"
+                    class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.65rem] font-medium
+                           text-slate-400 border border-white/[0.06] hover:text-white hover:border-white/20 transition-all">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Limpiar filtros
+            </button>
+        </div>
+        @endif
+    </div>
 
     {{-- ═══════════════════════════════════════
          BLOQUE 2 — TABLA (slate-900)
@@ -158,7 +216,12 @@
                                             {{ substr($user->name, 0, 1) }}
                                         </span>
                                     </div>
-                                    <span class="text-sm text-white/75 font-medium">{{ $user->name }}</span>
+                                    <div>
+                                        <span class="text-sm text-white/75 font-medium leading-tight">{{ $user->name }}</span>
+                                        @if($user->cedula)
+                                        <p class="text-[0.65rem] text-slate-500 font-mono mt-0.5">{{ $user->cedula }}</p>
+                                        @endif
+                                    </div>
                                 </div>
                             </td>
 

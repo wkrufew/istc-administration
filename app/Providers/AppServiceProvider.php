@@ -11,13 +11,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Fortify\Http\Requests\LoginRequest;
 use App\Models\User;
+use App\Observers\AuditObserver;
 use App\Observers\PagoObserver;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Asistencia;
 use App\Models\Aviso;
 use App\Models\Calificacion;
+use App\Models\Carrera;
+use App\Models\Materia;
 use App\Models\Matricula;
+use App\Models\ObligacionesFinanciera;
 use App\Models\Pago;
+use App\Models\Semestre;
 use App\Models\Ticket;
 use App\Policies\AsistenciaPolicy;
 use App\Policies\AvisoPolicy;
@@ -49,6 +54,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Matricula::class,   MatriculaPolicy::class);
 
         Pago::observe(PagoObserver::class);
+
+        // Auditoría general — registra cambios en modelos críticos
+        $auditables = [Matricula::class, Carrera::class, Semestre::class, Materia::class, ObligacionesFinanciera::class, Pago::class];
+        foreach ($auditables as $model) {
+            $model::observe(AuditObserver::class);
+        }
 
         Fortify::loginView(function () {
             return view('auth.login');

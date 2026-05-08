@@ -2,11 +2,14 @@
 
 namespace App\Livewire\Administration;
 
+use App\Mail\BienvenidaAccesoInterno;
 use App\Models\User;
+use App\Services\SettingService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 use App\Traits\WithAuthorization;
 
@@ -67,11 +70,11 @@ class CreateUser extends Component
             'discapacidad_descripcion' => 'required_if:discapacidad,true|nullable|string',
             'certificado_discapacidad' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'is_facturador' => 'boolean',
-            'fact_nombre' => 'required_if:is_facturador,true|nullable|string|max:255',
-            'fact_documento' => 'required_if:is_facturador,true|nullable|string|max:50',
-            'fact_correo' => 'required_if:is_facturador,true|nullable|email',
-            'fact_direccion' => 'required_if:is_facturador,true|nullable|string',
-            'fact_telefono' => 'required_if:is_facturador,true|nullable|string|max:20',
+            'fact_nombre' => 'nullable|string|max:255',
+            'fact_documento' => 'nullable|string|max:50',
+            'fact_correo' => 'nullable|email',
+            'fact_direccion' => 'nullable|string',
+            'fact_telefono' => 'nullable|string|max:20',
             'profile_photo' => 'nullable|image|max:2048',
             'role_id' => 'required|exists:roles,id',
         ];
@@ -127,7 +130,13 @@ class CreateUser extends Component
             $certificadoPath = $this->certificado_discapacidad->store('users-data/certificados-discapacidad', 'public');
         }
 
-        DB::transaction(function () use ($profilePhotoPath, $certificadoPath) {
+        // Capturar antes de Hash::make() dentro de la transacción
+        $plainPassword = $this->password;
+
+        $user = null;
+        $role = null;
+
+        DB::transaction(function () use ($profilePhotoPath, $certificadoPath, &$user, &$role) {
             $user = User::create([
                 'name' => $this->first_name . ' ' . $this->last_name,
                 'first_name' => $this->first_name,
@@ -163,8 +172,34 @@ class CreateUser extends Component
                 'is_active' => $this->is_active,
             ]);
 
-            $user->assignRole(Role::find($this->role_id));
+            $role = Role::find($this->role_id);
+            $user->assignRole($role);
         });
+
+        // Enviar correo de bienvenida fuera de la transacción para que un fallo de SMTP
+        // no revierta la creación del usuario
+        if ($user && $role && SettingService::get('smtp.activo', '0') === '1') {
+            $tipoAcceso = null;
+
+            if ($role->hasPermissionTo('acceso_administrativo')) {
+                $tipoAcceso = 'administrativo';
+            } elseif ($role->hasPermissionTo('acceso_docencia')) {
+                $tipoAcceso = 'docente';
+            }
+
+            if ($tipoAcceso && $user->email) {
+                try {
+                    SettingService::buildMailer()
+                        ->to($user->email)
+                        ->send(new BienvenidaAccesoInterno($user, $plainPassword, $tipoAcceso, $role->name));
+                } catch (\Throwable $e) {
+                    Log::warning('BienvenidaAccesoInterno: email falló', [
+                        'user_id' => $user->id,
+                        'error'   => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
 
         session()->flash('message', 'Usuario creado exitosamente.');
 

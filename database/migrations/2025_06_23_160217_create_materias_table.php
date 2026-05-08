@@ -26,6 +26,7 @@ return new class extends Migration
             $table->unsignedBigInteger('semestre_id');
             $table->foreign('semestre_id')->references('id')->on('semestres')->onDelete('cascade');
 
+            $table->softDeletes();
             $table->timestamps();
         });
     }

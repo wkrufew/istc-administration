@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Matricula extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'fecha_matricula',
         'code',
@@ -62,11 +65,18 @@ class Matricula extends Model
     }
 
     /**
-     * Pagos de la matrícula
+     * Pagos de la matrícula (vía obligaciones financieras)
      */
     public function pagos()
     {
-        return $this->hasMany(Pago::class);
+        return $this->hasManyThrough(
+            Pago::class,
+            ObligacionesFinanciera::class,
+            'matricula_id',  // FK en obligaciones_financieras
+            'obligacion_id', // FK en pagos
+            'id',
+            'id'
+        );
     }
 
     public function obligacionesFinancieras()
