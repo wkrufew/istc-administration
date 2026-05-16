@@ -20,7 +20,7 @@ class SettingSeeder extends Seeder
             ['group' => 'instituto', 'key' => 'instituto.direccion',     'type' => 'text',     'label' => 'Dirección',               'value' => 'Av. Principal s/n, Cumandá, Chimborazo',           'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.telefono',      'type' => 'text',     'label' => 'Teléfono',                'value' => '+593 999 000 111',                                  'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.email',         'type' => 'email',    'label' => 'Email institucional',     'value' => 'institutosuperiortecnologicocu@gmail.com',          'is_encrypted' => false],
-            ['group' => 'instituto', 'key' => 'instituto.web',           'type' => 'text',     'label' => 'Sitio web',               'value' => 'https://www.istcumanda.edu.ec',                     'is_encrypted' => false],
+            ['group' => 'instituto', 'key' => 'instituto.web',           'type' => 'text',     'label' => 'Sitio web',               'value' => 'https://elearning.istcumanda.edu.ec',                     'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.logo_path',     'type' => 'image',    'label' => 'Logo principal',          'value' => null,                                                'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.favicon_path',  'type' => 'image',    'label' => 'Favicon',                 'value' => null,                                                'is_encrypted' => false],
 
@@ -39,13 +39,13 @@ class SettingSeeder extends Seeder
             // SMTP
             // ----------------------------------------------------------------
             ['group' => 'smtp', 'key' => 'smtp.driver',       'type' => 'text',     'label' => 'Driver',            'value' => 'smtp',                              'is_encrypted' => false],
-            ['group' => 'smtp', 'key' => 'smtp.host',         'type' => 'text',     'label' => 'Host',              'value' => 'smtp.gmail.com',                    'is_encrypted' => false],
-            ['group' => 'smtp', 'key' => 'smtp.port',         'type' => 'text',     'label' => 'Puerto',            'value' => '587',                               'is_encrypted' => false],
-            ['group' => 'smtp', 'key' => 'smtp.username',     'type' => 'email',    'label' => 'Usuario',           'value' => 'institutosuperiortecnologicocu@gmail.com', 'is_encrypted' => false],
-            ['group' => 'smtp', 'key' => 'smtp.password',     'type' => 'password', 'label' => 'Contraseña',        'value' => 'app-password-aqui',                 'is_encrypted' => true],
-            ['group' => 'smtp', 'key' => 'smtp.encryption',   'type' => 'text',     'label' => 'Encriptación',      'value' => 'tls',                               'is_encrypted' => false],
+            ['group' => 'smtp', 'key' => 'smtp.host',         'type' => 'text',     'label' => 'Host',              'value' => 'smtp-relay.brevo.com',                    'is_encrypted' => false],
+            ['group' => 'smtp', 'key' => 'smtp.port',         'type' => 'text',     'label' => 'Puerto',            'value' => '465',                               'is_encrypted' => false],
+            ['group' => 'smtp', 'key' => 'smtp.username',     'type' => 'email',    'label' => 'Usuario',           'value' => '7b25fb001@smtp-brevo.com', 'is_encrypted' => false],
+            ['group' => 'smtp', 'key' => 'smtp.password',     'type' => 'password', 'label' => 'Contraseña',        'value' => env('MAIL_PASSWORD', ''),                 'is_encrypted' => true],
+            ['group' => 'smtp', 'key' => 'smtp.encryption',   'type' => 'text',     'label' => 'Encriptación',      'value' => 'ssl',                               'is_encrypted' => false],
             ['group' => 'smtp', 'key' => 'smtp.from_name',    'type' => 'text',     'label' => 'Nombre remitente',  'value' => 'Instituto Superior Tecnológico Cumandá', 'is_encrypted' => false],
-            ['group' => 'smtp', 'key' => 'smtp.from_address', 'type' => 'email',    'label' => 'Email remitente',   'value' => 'institutosuperiortecnologicocu@gmail.com', 'is_encrypted' => false],
+            ['group' => 'smtp', 'key' => 'smtp.from_address', 'type' => 'email',    'label' => 'Email remitente',   'value' => 'noreply@istcumanda.edu.ec', 'is_encrypted' => false],
             ['group' => 'smtp', 'key' => 'smtp.activo',       'type' => 'boolean',  'label' => 'Envíos activos',    'value' => '0',                               'is_encrypted' => false],
 
             // ----------------------------------------------------------------

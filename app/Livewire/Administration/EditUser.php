@@ -252,7 +252,8 @@ class EditUser extends Component
 
     public function render()
     {
-        $roles = Role::whereIn('name', ['Administrador', 'Secretaria', 'Docente', 'Estudiante', 'Admision'])->get();
+        //$roles = Role::whereIn('name', ['Administrador', 'Secretaria', 'Docente', 'Estudiante', 'Admision'])->get();
+        $roles = Role::where('name', '!=', 'Super Admin')->orderBy('name')->get();
 
         return view('livewire.administration.edit-user', [
             'roles' => $roles

@@ -172,7 +172,7 @@ class CreateUser extends Component
                 'is_active' => $this->is_active,
             ]);
 
-            $role = Role::find($this->role_id);
+            $role = Role::findOrFail($this->role_id);
             $user->assignRole($role);
         });
 
@@ -208,7 +208,7 @@ class CreateUser extends Component
 
     public function render()
     {
-        $roles = Role::whereIn('name', ['Administrador', 'Secretaria', 'Docente', 'Estudiante', 'Admision'])->get();
+        $roles = Role::where('name', '!=', 'Super Admin')->orderBy('name')->get();
 
         return view('livewire.administration.create-user', [
             'roles' => $roles

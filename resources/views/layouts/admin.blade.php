@@ -64,6 +64,7 @@
         {{--  @include('layouts.includes.navigation') --}}
 
         <div class="flex flex-wrap my-4 {{-- bg-gray-200 dark:bg-gray-800 rounded-lg shadow-md --}}">
+            {{ Storage::disk('public')->url($faviconPath) }}
             <main class="w-full {{-- h-auto --}} h-[calc(88vh)]">
                 {{ $slot }}
             </main>
@@ -91,7 +92,7 @@
 
         function openNav() {
             if (sidebar.classList.contains('-translate-x-48')) {
-                // max sidebar 
+                // max sidebar
                 sidebar.classList.remove("-translate-x-48")
                 sidebar.classList.add("translate-x-none")
                 maxSidebar.classList.remove("hidden")
