@@ -241,7 +241,12 @@ Route::middleware([
     return view('errors.403')->with('message', 'No tienes permisos para acceder a esta sección.');
 })->name('access.denied'); */
 
-/* Route::get('/optimize-clear', function () {
+Route::get('/optimize-clear', function () {
     $exitCode = Artisan::call('optimize:clear');
     return 'Depurada cache';
-}); */
+});
+
+Route::get('storage-link', function () {
+    $exitCode = Artisan::call('storage:link');
+    return 'Simbolic Link establecido';
+});
