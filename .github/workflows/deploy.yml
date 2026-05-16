@@ -1,4 +1,4 @@
-name: Deploy Laravel VPS
+﻿name: Deploy Laravel VPS
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Deploy al VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -16,23 +15,16 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: developer
           key: ${{ secrets.VPS_SSH_KEY }}
-script: |
+          script: |
             cd /var/www/istc/ohana/prod
-
             git pull origin prod
-
             composer install --no-dev --optimize-autoloader
-
             npm install
             npm run build
-
             php8.3 artisan migrate --force
-
             php8.3 artisan cache:clear
             php8.3 artisan config:cache
             php8.3 artisan route:cache
             php8.3 artisan view:cache
-
             chmod -R 775 storage bootstrap/cache
-
             sudo systemctl reload php8.3-fpm
