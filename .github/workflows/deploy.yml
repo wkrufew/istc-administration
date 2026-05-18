@@ -29,5 +29,6 @@ jobs:
             php8.3 artisan config:cache
             php8.3 artisan route:cache
             php8.3 artisan view:cache
+            php8.3 artisan optimize:clear
             chmod -R 775 storage bootstrap/cache
             sudo systemctl reload php8.3-fpm
