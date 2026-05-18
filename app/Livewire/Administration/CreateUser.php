@@ -9,6 +9,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 use App\Traits\WithAuthorization;
@@ -42,6 +43,17 @@ class CreateUser extends Component
     public $profile_photo;
     public $role_id;
     public $is_active = true;
+
+    // Consulta cédula — entry modal
+    public bool   $apiActiva        = false;
+    public bool   $showEntryModal   = false;
+    public string $cedulaModalInput = '';
+    public array  $cedulaModalData  = [];
+
+    public function mount(): void
+    {
+        $this->apiActiva = !empty(SettingService::get('cedula_api.token', ''));
+    }
 
     protected function rules()
     {
@@ -114,6 +126,130 @@ class CreateUser extends Component
         }
     }
 
+    public function abrirEntryModal(): void
+    {
+        $this->showEntryModal = true;
+        $this->dispatch('entry-modal-opened');
+    }
+
+    public function cerrarEntryModal(): void
+    {
+        $this->showEntryModal   = false;
+        $this->cedulaModalInput = '';
+        $this->cedulaModalData  = [];
+        $this->resetErrorBag('cedulaModal');
+        $this->dispatch('entry-modal-closed');
+    }
+
+    public function consultarEnModal(): void
+    {
+        $this->resetErrorBag('cedulaModal');
+
+        if (!trim($this->cedulaModalInput)) {
+            $this->addError('cedulaModal', 'Ingrese el número de cédula.');
+            return;
+        }
+
+        $token = SettingService::get('cedula_api.token', '');
+        $url   = SettingService::get('cedula_api.url', '');
+
+        if (!$token || !$url) {
+            $this->addError('cedulaModal', 'API no configurada. Ve a Ajustes → API Cédula.');
+            return;
+        }
+
+        try {
+            $response = Http::withToken($token)
+                ->timeout(10)
+                ->get(rtrim($url, '/') . '/' . trim($this->cedulaModalInput));
+
+            if ($response->successful() && !empty($response->json('identificacion'))) {
+                $this->cedulaModalData = $response->json();
+            } else {
+                $this->cedulaModalData = [];
+                $this->addError('cedulaModal', 'Cédula no encontrada o no registrada en el sistema.');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('consultarEnModal — error', ['cedula' => $this->cedulaModalInput, 'error' => $e->getMessage()]);
+            $this->addError('cedulaModal', 'No se pudo conectar con el servicio. Intente nuevamente.');
+        }
+    }
+
+    public function aplicarDesdeModal(): void
+    {
+        if (empty($this->cedulaModalData)) return;
+
+        $d = $this->cedulaModalData;
+
+        // Cédula del modal → campo del formulario
+        $this->cedula = trim($this->cedulaModalInput);
+
+        // Nombres: formato Ecuador → [apellido_pat apellido_mat nombre1 nombre2...]
+        $palabras = preg_split('/\s+/', trim($d['nombres'] ?? ''));
+        $total    = count($palabras);
+
+        if ($total >= 4) {
+            $this->last_name  = ucwords(strtolower($palabras[0] . ' ' . $palabras[1]));
+            $this->first_name = ucwords(strtolower(implode(' ', array_slice($palabras, 2))));
+        } elseif ($total === 3) {
+            $this->last_name  = ucwords(strtolower($palabras[0] . ' ' . $palabras[1]));
+            $this->first_name = ucwords(strtolower($palabras[2]));
+        } elseif ($total === 2) {
+            $this->last_name  = ucwords(strtolower($palabras[0]));
+            $this->first_name = ucwords(strtolower($palabras[1]));
+        } else {
+            $this->first_name = ucwords(strtolower($d['nombres'] ?? ''));
+        }
+
+        // Género
+        $generoApi    = strtoupper($d['genero'] ?? $d['sexo'] ?? '');
+        $this->genero = match(true) {
+            in_array($generoApi, ['HOMBRE', 'MASCULINO', 'M']) => 'Masculino',
+            in_array($generoApi, ['MUJER', 'FEMENINO', 'F'])   => 'Femenino',
+            default                                             => null,
+        };
+
+        // Estado civil
+        $ec = strtoupper($d['estadoCivil'] ?? '');
+        $this->estado_civil = match(true) {
+            str_contains($ec, 'SOLTERO') || str_contains($ec, 'SOLTERA') => 'Soltero/a',
+            str_contains($ec, 'CASADO')  || str_contains($ec, 'CASADA')  => 'Casado/a',
+            str_contains($ec, 'DIVOR')                                    => 'Divorciado/a',
+            str_contains($ec, 'VIUDO')   || str_contains($ec, 'VIUDA')   => 'Viudo/a',
+            str_contains($ec, 'UNION')   || str_contains($ec, 'LIBRE')   => 'Unión libre',
+            default                                                        => null,
+        };
+
+        // Fecha de nacimiento
+        $this->fecha_nacimiento = !empty($d['fechaNacimiento']) ? $d['fechaNacimiento'] : null;
+
+        // Nacionalidad
+        $nacApi = ucfirst(strtolower($d['nacionalidad'] ?? ''));
+        $nacMap = [
+            'Ecuatoriana' => 'Ecuatoriana', 'Colombiana'    => 'Colombiana',
+            'Peruana'     => 'Peruana',     'Venezolana'    => 'Venezolana',
+            'Boliviana'   => 'Boliviana',   'Chilena'       => 'Chilena',
+            'Argentina'   => 'Argentina',   'Cubana'        => 'Cubana',
+            'Española'    => 'Española',    'Estadounidense'=> 'Estadounidense',
+        ];
+        $this->nacionalidad = $nacMap[$nacApi] ?? null;
+
+        // Padres
+        $this->padre = !empty($d['nombrePadre']) ? ucwords(strtolower($d['nombrePadre'])) : null;
+        $this->madre = !empty($d['nombreMadre']) ? ucwords(strtolower($d['nombreMadre'])) : null;
+
+        // Cerrar modal y limpiar
+        $this->showEntryModal   = false;
+        $this->cedulaModalInput = '';
+        $this->cedulaModalData  = [];
+        $this->dispatch('entry-modal-closed');
+
+        // Alerta centrada (no toast)
+        $this->dispatch('swal-aplicado', [
+            'nombre' => ucwords(strtolower($d['nombres'] ?? '')),
+        ]);
+    }
+
     public function save()
     {
         if ($this->sinPermiso('gestionar_usuarios')) return;
@@ -178,12 +314,24 @@ class CreateUser extends Component
 
         // Enviar correo de bienvenida fuera de la transacción para que un fallo de SMTP
         // no revierta la creación del usuario
-        if ($user && $role && SettingService::get('smtp.activo', '0') === '1') {
+        $smtpActivo = SettingService::get('smtp.activo', '0');
+        Log::info('CreateUser — smtp.activo', ['valor' => $smtpActivo, 'role' => $role?->name]);
+
+        if ($user && $role && $smtpActivo === '1') {
             $tipoAcceso = null;
 
-            if ($role->hasPermissionTo('acceso_administrativo')) {
+            $tieneAdmin   = $role->hasPermissionTo('acceso_administrativo');
+            $tieneDocente = $role->hasPermissionTo('acceso_docencia');
+
+            Log::info('CreateUser — permisos del rol', [
+                'role'                  => $role->name,
+                'acceso_administrativo' => $tieneAdmin,
+                'acceso_docencia'       => $tieneDocente,
+            ]);
+
+            if ($tieneAdmin) {
                 $tipoAcceso = 'administrativo';
-            } elseif ($role->hasPermissionTo('acceso_docencia')) {
+            } elseif ($tieneDocente) {
                 $tipoAcceso = 'docente';
             }
 
@@ -192,13 +340,26 @@ class CreateUser extends Component
                     SettingService::buildMailer()
                         ->to($user->email)
                         ->send(new BienvenidaAccesoInterno($user, $plainPassword, $tipoAcceso, $role->name));
+                    Log::info('CreateUser — correo enviado', ['user_id' => $user->id, 'tipo' => $tipoAcceso]);
                 } catch (\Throwable $e) {
                     Log::warning('BienvenidaAccesoInterno: email falló', [
                         'user_id' => $user->id,
                         'error'   => $e->getMessage(),
                     ]);
                 }
+            } else {
+                Log::warning('CreateUser — correo no enviado', [
+                    'tipoAcceso' => $tipoAcceso,
+                    'email'      => $user->email,
+                    'role'       => $role->name,
+                ]);
             }
+        } else {
+            Log::info('CreateUser — correo omitido', [
+                'smtp_activo' => $smtpActivo,
+                'user_id'     => $user?->id,
+                'role'        => $role?->name,
+            ]);
         }
 
         session()->flash('message', 'Usuario creado exitosamente.');

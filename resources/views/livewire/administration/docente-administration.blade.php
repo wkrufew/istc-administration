@@ -235,7 +235,7 @@
                                 <div class="flex items-center justify-center gap-1.5">
 
                                     <a title="Editar datos"
-                                        href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}"
+                                        href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}?from=docentes"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.7rem] font-medium
                                                text-slate-400 border border-white/[0.06] bg-slate-800
                                                hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]
@@ -504,7 +504,7 @@
                                     <div class="flex justify-center gap-3">
 
                                         <a title="Editar datos"
-                                            href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}"
+                                            href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}?from=docentes"
                                             class="p-2 rounded-lg bg-blue-500/10 text-blue-600 
                                               hover:bg-blue-500 hover:text-white 
                                               transition shadow-sm">

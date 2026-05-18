@@ -64,7 +64,6 @@
         {{--  @include('layouts.includes.navigation') --}}
 
         <div class="flex flex-wrap my-4 {{-- bg-gray-200 dark:bg-gray-800 rounded-lg shadow-md --}}">
-            {{ Storage::disk('public')->url($faviconPath) }}
             <main class="w-full {{-- h-auto --}} h-[calc(88vh)]">
                 {{ $slot }}
             </main>

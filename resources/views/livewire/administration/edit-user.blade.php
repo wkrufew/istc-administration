@@ -1,3 +1,12 @@
+@php
+    $backRoute = match($from) {
+        'users'      => route('administracion.administrativa.users.index'),
+        'docentes'   => route('administracion.administrativa.docentes.index'),
+        'eliminados' => route('administracion.administrativa.users.eliminados'),
+        default      => route('administracion.administrativa.estudiantes.index'),
+    };
+@endphp
+
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
 
     {{-- ══ HEADER ═══════════════════════════════════════════════════════════ --}}
@@ -16,7 +25,7 @@
                     <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Actualiza los datos personales, académicos y de acceso.</p>
                 </div>
             </div>
-            <a href="{{ route('administracion.administrativa.estudiantes.index') }}"
+            <a href="{{ $backRoute }}"
                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
                       text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700
                       hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
@@ -567,34 +576,45 @@
 
                 <div class="flex items-center gap-3 flex-wrap">
 
-                    {{-- Reenviar Credenciales (solo admin/docente) --}}
-                    <button type="button" x-data
-                        @click="Swal.fire({
-                            title: '¿Reenviar credenciales?',
-                            html: 'La contraseña será restablecida al número de cédula del usuario y se enviará un correo con las nuevas credenciales.<br><br><strong>Esta acción es inmediata.</strong>',
-                            icon: 'question',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d97706',
-                            cancelButtonColor: '#64748b',
-                            confirmButtonText: 'Sí, reenviar',
-                            cancelButtonText: 'Cancelar',
-                        }).then(r => r.isConfirmed && $wire.reenviarCredenciales())"
-                        wire:loading.attr="disabled"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
-                               text-amber-700 dark:text-amber-400
-                               bg-amber-50 dark:bg-amber-900/20
-                               border border-amber-200 dark:border-amber-700/40
-                               hover:bg-amber-100 dark:hover:bg-amber-900/40
-                               transition-colors disabled:opacity-60">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                        </svg>
-                        <span wire:loading.remove wire:target="reenviarCredenciales">Reenviar Credenciales</span>
-                        <span wire:loading wire:target="reenviarCredenciales">Enviando...</span>
-                    </button>
+                    {{-- Reenviar Credenciales — admin/docente siempre, estudiante solo con matrícula habilitada --}}
+                    @php
+                        $rolUsuario    = $user->roles->first();
+                        $tieneAdmin    = $rolUsuario?->hasPermissionTo('acceso_administrativo');
+                        $tieneDocente  = $rolUsuario?->hasPermissionTo('acceso_docencia');
+                        $tieneEstud    = $rolUsuario?->hasPermissionTo('acceso_estudiantil') &&
+                                         $user->matriculas()->where('estado', 'Habilitada')->exists();
+                        $puedeReenviar = $tieneAdmin || $tieneDocente || $tieneEstud;
+                    @endphp
 
-                    <a href="{{ route('administracion.administrativa.estudiantes.index') }}"
+                    @if($puedeReenviar)
+                        <button type="button" x-data
+                            @click="Swal.fire({
+                                title: '¿Reenviar credenciales?',
+                                html: 'La contraseña será restablecida al número de cédula del usuario y se enviará un correo con las nuevas credenciales.<br><br><strong>Esta acción es inmediata.</strong>',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d97706',
+                                cancelButtonColor: '#64748b',
+                                confirmButtonText: 'Sí, reenviar',
+                                cancelButtonText: 'Cancelar',
+                            }).then(r => r.isConfirmed && $wire.reenviarCredenciales())"
+                            wire:loading.attr="disabled"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                                   text-amber-700 dark:text-amber-400
+                                   bg-amber-50 dark:bg-amber-900/20
+                                   border border-amber-200 dark:border-amber-700/40
+                                   hover:bg-amber-100 dark:hover:bg-amber-900/40
+                                   transition-colors disabled:opacity-60">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <span wire:loading.remove wire:target="reenviarCredenciales">Reenviar Credenciales</span>
+                            <span wire:loading wire:target="reenviarCredenciales">Enviando...</span>
+                        </button>
+                    @endif
+
+                    <a href="{{ $backRoute }}"
                        class="px-5 py-2.5 rounded-xl text-sm font-semibold
                               text-slate-600 dark:text-slate-300
                               bg-slate-100 dark:bg-slate-700

@@ -164,7 +164,7 @@
 
                             {{-- Opciones --}}
                             <td class="px-4 py-3 text-center">
-                                <a href="{{ route('administracion.administrativa.estudiantes.edit', $estudiante) }}"
+                                <a href="{{ route('administracion.administrativa.estudiantes.edit', $estudiante) }}?from=estudiantes"
                                     title="Editar Usuario"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
                                            text-slate-400 border border-white/[0.06] bg-slate-800

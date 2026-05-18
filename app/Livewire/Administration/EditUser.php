@@ -46,9 +46,11 @@ class EditUser extends Component
     public $profile_photo_actual;
     public $role_id;
     public $is_active = true;
+    public string $from = 'estudiantes';
 
     public function mount($estudiante)
     {
+        $this->from = request()->query('from', 'estudiantes');
 
         //dd($estudiante);
         $this->userId = $estudiante->id;
@@ -272,13 +274,28 @@ class EditUser extends Component
             $tipoAcceso = 'administrativo';
         } elseif ($role->hasPermissionTo('acceso_docencia')) {
             $tipoAcceso = 'docente';
+        } elseif ($role->hasPermissionTo('acceso_estudiantil')) {
+            $tieneMatricula = $this->user->matriculas()
+                ->where('estado', 'Habilitada')
+                ->exists();
+            if ($tieneMatricula) {
+                $tipoAcceso = 'estudiante';
+            } else {
+                $this->dispatch('swal', [
+                    'icon'  => 'warning',
+                    'title' => 'Sin matrícula habilitada.',
+                    'text'  => 'El estudiante no tiene ninguna matrícula activa. Habilita una matrícula antes de reenviar credenciales.',
+                    'timer' => 4000,
+                ]);
+                return;
+            }
         }
 
         if (!$tipoAcceso) {
             $this->dispatch('swal', [
                 'icon'  => 'warning',
                 'title' => 'No aplicable.',
-                'text'  => 'El reenvío de credenciales solo aplica a usuarios con acceso administrativo o docente.',
+                'text'  => 'El reenvío de credenciales solo aplica a usuarios administrativos, docentes o estudiantes con matrícula habilitada.',
                 'timer' => 3500,
             ]);
             return;
@@ -297,11 +314,15 @@ class EditUser extends Component
         $plainPassword = $this->user->cedula;
         $this->user->update(['password' => Hash::make($plainPassword)]);
 
-        if (SettingService::get('smtp.activo', '0') === '1' && $this->user->email) {
+        $smtpActivo = SettingService::get('smtp.activo', '0');
+        Log::info('ReenvioCredenciales — smtp.activo', ['valor' => $smtpActivo, 'user_id' => $this->user->id]);
+
+        if ($smtpActivo === '1' && $this->user->email) {
             try {
                 SettingService::buildMailer()
                     ->to($this->user->email)
                     ->send(new ReenvioCredencialesAcceso($this->user, $plainPassword, $tipoAcceso, $role->name));
+                Log::info('ReenvioCredenciales — correo enviado', ['user_id' => $this->user->id]);
             } catch (\Throwable $e) {
                 Log::warning('ReenvioCredencialesAcceso: email falló', [
                     'user_id' => $this->user->id,
@@ -315,6 +336,11 @@ class EditUser extends Component
                 ]);
                 return;
             }
+        } else {
+            Log::warning('ReenvioCredenciales — correo omitido', [
+                'smtp_activo' => $smtpActivo,
+                'email'       => $this->user->email,
+            ]);
         }
 
         $this->dispatch('swal', [

@@ -72,6 +72,12 @@ class AdminSettings extends Component
     public string $matricula_porcentaje_arrastre = '10';
 
     // =========================================================================
+    // GRUPO: API CÉDULA
+    // =========================================================================
+    public string $cedula_api_url   = '';
+    public string $cedula_api_token = '';
+
+    // =========================================================================
     // GRUPO: NOTIFICACIONES
     // =========================================================================
     public string $notif_matricula_whatsapp  = '0';
@@ -129,6 +135,10 @@ class AdminSettings extends Component
         // Matrícula
         $this->matricula_valor_inscripcion   = $s['matricula.valor_inscripcion']   ?? '10.00';
         $this->matricula_porcentaje_arrastre = $s['matricula.porcentaje_arrastre'] ?? '10';
+
+        // API Cédula
+        $this->cedula_api_url   = $s['cedula_api.url']   ?? '';
+        $this->cedula_api_token = $s['cedula_api.token'] ?? '';
 
         // Notificaciones
         $this->notif_matricula_whatsapp  = $s['notificaciones.matricula_whatsapp']  ?? '0';
@@ -374,6 +384,26 @@ class AdminSettings extends Component
                 'confirmButtonText' => 'Entendido',
             ]);
         }
+    }
+
+    // =========================================================================
+    // GUARDAR API CÉDULA
+    // =========================================================================
+    public function guardarCedulaApi(): void
+    {
+        $this->validate([
+            'cedula_api_url'   => 'nullable|url|max:500',
+            'cedula_api_token' => 'nullable|string|max:2000',
+        ], [
+            'cedula_api_url.url' => 'Ingrese una URL válida (debe comenzar con http:// o https://).',
+        ]);
+
+        $this->upsertGroup('cedula_api', [
+            'url'   => $this->cedula_api_url,
+            'token' => $this->cedula_api_token,
+        ], encryptedKeys: ['token']);
+
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Configuración de API Cédula guardada.', 'timer' => 2000]);
     }
 
     // =========================================================================

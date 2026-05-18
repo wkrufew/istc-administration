@@ -23,6 +23,50 @@
 </head>
 <body style="margin:0;padding:0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;background-color:#f0f4f8;color-scheme:light;">
 
+@php
+    switch ($tipoAcceso) {
+        case 'docente':
+            $headerBg       = '#84219f';
+            $headerGrad     = 'linear-gradient(135deg,#84219f 0%,#9d4edd 100%)';
+            $headerSubtitle = 'Tu contraseña docente ha sido restablecida';
+            $accentColor    = '#84219f';
+            $accentLight    = '#faf5ff';
+            $accentBorder   = '#e9d5ff';
+            $accentText     = '#6b21a8';
+            $accentDark     = '#581c87';
+            $badgeBg        = '#f3e8ff';
+            $badgeColor     = '#7c3aed';
+            $tipoLabel      = 'Docente';
+            break;
+        case 'estudiante':
+            $headerBg       = '#32620e';
+            $headerGrad     = 'linear-gradient(135deg,#32620e 0%,#7ea41e 100%)';
+            $headerSubtitle = 'Tu contraseña estudiantil ha sido restablecida';
+            $accentColor    = '#32620e';
+            $accentLight    = '#f0fdf4';
+            $accentBorder   = '#bbf7d0';
+            $accentText     = '#166534';
+            $accentDark     = '#14532d';
+            $badgeBg        = '#dcfce7';
+            $badgeColor     = '#15803d';
+            $tipoLabel      = 'Estudiante';
+            break;
+        default: // administrativo
+            $headerBg       = '#0369a1';
+            $headerGrad     = 'linear-gradient(135deg,#0369a1 0%,#0284c7 100%)';
+            $headerSubtitle = 'Tu contraseña administrativa ha sido restablecida';
+            $accentColor    = '#0369a1';
+            $accentLight    = '#f0f9ff';
+            $accentBorder   = '#bae6fd';
+            $accentText     = '#0369a1';
+            $accentDark     = '#075985';
+            $badgeBg        = '#e0f2fe';
+            $badgeColor     = '#0369a1';
+            $tipoLabel      = 'Administrativo';
+            break;
+    }
+@endphp
+
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
        style="background-color:#f0f4f8;padding:32px 16px;">
     <tr>
@@ -34,8 +78,8 @@
 
                 {{-- ══ HEADER ══════════════════════════════════════════════ --}}
                 <tr>
-                    <td @if($tipoAcceso === 'docente') bgcolor="#92400e" @else bgcolor="#7c2d12" @endif
-                        style="@if($tipoAcceso === 'docente') background-color:#92400e;background:linear-gradient(135deg,#92400e 0%,#d97706 100%); @else background-color:#7c2d12;background:linear-gradient(135deg,#7c2d12 0%,#b45309 100%); @endif padding:36px 40px;text-align:center;">
+                    <td bgcolor="{{ $headerBg }}"
+                        style="background-color:{{ $headerBg }};background:{{ $headerGrad }};padding:36px 40px;text-align:center;">
 
                         @if($instituto['logo_url'])
                             <img src="{{ $instituto['logo_url'] }}"
@@ -58,26 +102,22 @@
                             Actualización de Credenciales
                         </h1>
                         <p style="margin:8px 0 0;color:rgba(255,255,255,0.80);font-size:14px;">
-                            @if($tipoAcceso === 'docente')
-                                Tu contraseña docente ha sido restablecida
-                            @else
-                                Tu contraseña administrativa ha sido restablecida
-                            @endif
+                            {{ $headerSubtitle }}
                         </p>
                     </td>
                 </tr>
 
                 {{-- ══ AVISO DESTACADO ═════════════════════════════════════ --}}
                 <tr>
-                    <td bgcolor="#fff7ed" style="background-color:#fff7ed;padding:16px 40px 0;">
+                    <td bgcolor="#fffbeb" style="background-color:#fffbeb;padding:16px 40px 0;">
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                               style="border:1px solid #fed7aa;border-radius:10px;overflow:hidden;">
+                               style="border:1px solid #fde68a;border-radius:10px;overflow:hidden;">
                             <tr>
-                                <td bgcolor="#fff7ed" style="background-color:#fff7ed;padding:14px 18px;">
-                                    <p style="margin:0;color:#9a3412;font-size:13px;font-weight:700;">
+                                <td bgcolor="#fffbeb" style="background-color:#fffbeb;padding:14px 18px;">
+                                    <p style="margin:0;color:#92400e;font-size:13px;font-weight:700;">
                                         ⚠ Acción requerida — Cambia tu contraseña
                                     </p>
-                                    <p style="margin:6px 0 0;color:#c2410c;font-size:13px;line-height:1.6;">
+                                    <p style="margin:6px 0 0;color:#78350f;font-size:13px;line-height:1.6;">
                                         Un administrador ha restablecido tu contraseña de acceso al sistema.
                                         Tu nueva contraseña temporal es tu <strong>número de cédula</strong>.
                                         Por favor cámbiala al ingresar.
@@ -104,10 +144,10 @@
 
                         {{-- ── CREDENCIALES ──────────────────────────────── --}}
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                               style="border:1px solid #fed7aa;border-radius:12px;margin-bottom:24px;overflow:hidden;">
+                               style="border:1px solid {{ $accentBorder }};border-radius:12px;margin-bottom:24px;overflow:hidden;">
                             <tr>
-                                <td bgcolor="#d97706"
-                                    style="background-color:#d97706;padding:13px 20px;">
+                                <td bgcolor="{{ $accentColor }}"
+                                    style="background-color:{{ $accentColor }};padding:13px 20px;">
                                     <p style="margin:0;color:#ffffff;font-size:12px;font-weight:700;
                                                letter-spacing:0.10em;text-transform:uppercase;">
                                         Nuevas Credenciales de Acceso
@@ -115,30 +155,30 @@
                                 </td>
                             </tr>
                             <tr>
-                                <td bgcolor="#fff7ed" style="background-color:#fff7ed;padding:20px;">
+                                <td bgcolor="{{ $accentLight }}" style="background-color:{{ $accentLight }};padding:20px;">
                                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                         <tr>
-                                            <td bgcolor="#fff7ed"
-                                                style="background-color:#fff7ed;padding:10px 0;border-bottom:1px solid #fed7aa;
-                                                       font-size:13px;color:#92400e;width:42%;font-weight:600;">
+                                            <td bgcolor="{{ $accentLight }}"
+                                                style="background-color:{{ $accentLight }};padding:10px 0;border-bottom:1px solid {{ $accentBorder }};
+                                                       font-size:13px;color:{{ $accentText }};width:42%;font-weight:600;">
                                                 Correo electrónico
                                             </td>
-                                            <td bgcolor="#fff7ed"
-                                                style="background-color:#fff7ed;padding:10px 0;border-bottom:1px solid #fed7aa;
-                                                       font-size:13px;font-weight:700;color:#7c2d12;
+                                            <td bgcolor="{{ $accentLight }}"
+                                                style="background-color:{{ $accentLight }};padding:10px 0;border-bottom:1px solid {{ $accentBorder }};
+                                                       font-size:13px;font-weight:700;color:{{ $accentDark }};
                                                        text-align:right;font-family:monospace;">
                                                 {{ $usuario->email }}
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td bgcolor="#ffedd5"
-                                                style="background-color:#ffedd5;padding:10px 0;
-                                                       font-size:13px;color:#92400e;font-weight:600;">
+                                            <td bgcolor="{{ $accentBorder }}"
+                                                style="background-color:{{ $accentBorder }};padding:10px 0;
+                                                       font-size:13px;color:{{ $accentText }};font-weight:600;">
                                                 Nueva contraseña temporal
                                             </td>
-                                            <td bgcolor="#ffedd5"
-                                                style="background-color:#ffedd5;padding:10px 0;
-                                                       font-size:14px;font-weight:800;color:#7c2d12;
+                                            <td bgcolor="{{ $accentBorder }}"
+                                                style="background-color:{{ $accentBorder }};padding:10px 0;
+                                                       font-size:14px;font-weight:800;color:{{ $accentDark }};
                                                        text-align:right;font-family:monospace;letter-spacing:0.05em;">
                                                 {{ $plainPassword }}
                                             </td>
@@ -194,11 +234,10 @@
                                             </td>
                                             <td bgcolor="#f8fafc"
                                                 style="background-color:#f8fafc;padding:9px 0;border-bottom:1px solid #e2e8f0;text-align:right;">
-                                                <span style="display:inline-block;
-                                                             @if($tipoAcceso === 'docente') background-color:#d97706; @else background-color:#334155; @endif
+                                                <span style="display:inline-block;background-color:{{ $accentColor }};
                                                              color:#ffffff;font-size:12px;font-weight:700;
                                                              padding:3px 12px;border-radius:20px;">
-                                                    @if($tipoAcceso === 'docente') Docente @else Administrativo @endif
+                                                    {{ $tipoLabel }}
                                                 </span>
                                             </td>
                                         </tr>
@@ -210,10 +249,9 @@
                                             </td>
                                             <td bgcolor="#eef2f7"
                                                 style="background-color:#eef2f7;padding:9px 0;text-align:right;">
-                                                <span style="display:inline-block;
-                                                             @if($tipoAcceso === 'docente') background-color:#fef3c7;color:#92400e; @else background-color:#f1f5f9;color:#334155; @endif
+                                                <span style="display:inline-block;background-color:{{ $badgeBg }};color:{{ $badgeColor }};
                                                              font-size:12px;font-weight:700;
-                                                             padding:3px 12px;border-radius:20px;border:1px solid currentColor;">
+                                                             padding:3px 12px;border-radius:20px;border:1px solid {{ $accentBorder }};">
                                                     {{ $nombreRol }}
                                                 </span>
                                             </td>
@@ -246,7 +284,7 @@
                 <tr>
                     <td style="padding:24px 40px;text-align:center;background-color:#ffffff;">
                         <a href="{{ $instituto['url_portal'] }}"
-                           style="display:inline-block;background-color:#d97706;color:#ffffff !important;
+                           style="display:inline-block;background-color:{{ $accentColor }};color:#ffffff !important;
                                   text-decoration:none;padding:14px 36px;border-radius:8px;
                                   font-size:14px;font-weight:700;letter-spacing:0.02em;">
                             Ingresar al Sistema

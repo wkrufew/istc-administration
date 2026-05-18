@@ -20,6 +20,7 @@
         'documentos' => ['label' => 'Documentos', 'icon' => 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z'],
         'notificaciones' => ['label' => 'Notificaciones', 'icon' => 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0'],
         'matricula'      => ['label' => 'Matrícula',      'icon' => 'M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z'],
+        'cedula_api'     => ['label' => 'API Cédula',     'icon' => 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 21Z'],
     ] as $tabKey => $tabData)
                 <button wire:click="$set('tab', '{{ $tabKey }}')"
                     class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all
@@ -694,6 +695,76 @@
                         class="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 transition disabled:opacity-50">
                         <span wire:loading.remove wire:target="guardarMatricula">Guardar parámetros</span>
                         <span wire:loading wire:target="guardarMatricula">Guardando...</span>
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        {{-- ================================================================
+             TAB: API CÉDULA
+             ================================================================ --}}
+        @if ($tab === 'cedula_api')
+            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-5">
+                <div class="border-b border-gray-100 dark:border-gray-700 pb-3">
+                    <h3 class="text-base font-bold text-gray-800 dark:text-gray-100">Consulta de Cédula</h3>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Configure el servicio externo para consulta automática de datos a partir del número de cédula.
+                        El token se almacena cifrado en la base de datos.
+                    </p>
+                </div>
+
+                {{-- Info box --}}
+                <div class="flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl px-4 py-3">
+                    <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                        Al crear un usuario, el botón <strong>Consultar</strong> junto al campo de cédula
+                        llamará a esta API para obtener y prellenar automáticamente: nombres, apellidos,
+                        género, estado civil, fecha de nacimiento, nacionalidad y datos de padres.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-5">
+
+                    {{-- URL base --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                            URL Base de la API
+                        </label>
+                        <input type="url" wire:model="cedula_api_url"
+                               placeholder="https://apicedula.socket-studio.com/consulta-cedula/consulta/"
+                               class="w-full rounded-xl border border-gray-300 dark:border-gray-600
+                                      bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm
+                                      text-gray-900 dark:text-gray-100 placeholder-gray-400
+                                      focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
+                        <p class="mt-1 text-xs text-gray-400">La cédula se agrega al final de la URL automáticamente.</p>
+                        @error('cedula_api_url') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Token --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                            Token de Autorización (Bearer)
+                            <span class="ml-1 font-normal text-gray-400 normal-case">— se guarda cifrado</span>
+                        </label>
+                        <textarea wire:model="cedula_api_token" rows="3"
+                                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                  class="w-full rounded-xl border border-gray-300 dark:border-gray-600
+                                         bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-xs font-mono
+                                         text-gray-900 dark:text-gray-100 placeholder-gray-400
+                                         focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none"></textarea>
+                        <p class="mt-1 text-xs text-gray-400">Pega aquí el JWT completo. No incluyas el prefijo "Bearer".</p>
+                        @error('cedula_api_token') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button wire:click="guardarCedulaApi" wire:loading.attr="disabled"
+                        class="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50">
+                        <span wire:loading.remove wire:target="guardarCedulaApi">Guardar configuración</span>
+                        <span wire:loading wire:target="guardarCedulaApi">Guardando...</span>
                     </button>
                 </div>
             </div>

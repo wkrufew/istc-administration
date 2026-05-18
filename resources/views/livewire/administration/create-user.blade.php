@@ -1,4 +1,43 @@
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 space-y-5"
+     x-data="{
+         _scroll: 0,
+         cedulaModalErr: '',
+         cedulaFormErr: '',
+         validarCedula(c) {
+             if (!c || c.length < 10) return '';
+             if (!/^\d{10}$/.test(c)) return 'Solo se permiten 10 dígitos numéricos';
+             const prov = parseInt(c.substring(0, 2));
+             if (prov < 1 || prov > 24) return 'Código de provincia inválido';
+             if (parseInt(c[2]) >= 6) return 'Tercer dígito fuera de rango';
+             const coef = [2,1,2,1,2,1,2,1,2];
+             let sum = 0;
+             for (let i = 0; i < 9; i++) {
+                 let v = parseInt(c[i]) * coef[i];
+                 sum += v >= 10 ? v - 9 : v;
+             }
+             const check = sum % 10 === 0 ? 0 : 10 - sum % 10;
+             return check === parseInt(c[9]) ? '' : 'Número de cédula inválido';
+         }
+     }"
+     x-init="
+         document.addEventListener('livewire:request', () => {
+             if (!document.body.style.position) this._scroll = window.scrollY;
+         });
+         @js($apiActiva) && setTimeout(() => $wire.abrirEntryModal(), 10);
+     "
+     x-on:entry-modal-opened.window="
+         document.body.style.position = 'fixed';
+         document.body.style.top = `-${_scroll}px`;
+         document.body.style.width = '100%';
+     "
+     x-on:entry-modal-closed.window="
+         const sy = _scroll;
+         document.body.style.position = '';
+         document.body.style.top = '';
+         document.body.style.width = '';
+         window.scrollTo(0, sy);
+         cedulaModalErr = '';
+     ">
 
     {{-- ══ HEADER ═══════════════════════════════════════════════════════════ --}}
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm px-6 py-5">
@@ -57,7 +96,7 @@
                         @endif
                     </div>
                     <div class="flex-1 space-y-2">
-                        <input type="file" wire:model="profile_photo" accept="image/*" autocomplete="off"
+                        <input type="file" wire:model="profile_photo" accept="image/*" autocomplete="new-password"
                                class="block w-full text-sm text-slate-500 dark:text-slate-400
                                       file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0
                                       file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700
@@ -82,39 +121,38 @@
             </div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Nombre <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="first_name" placeholder="Nombre" autocomplete="off"
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                        Cédula <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" wire:model="cedula" placeholder="Número de cédula" autocomplete="new-password"
+                           x-on:input="cedulaFormErr = validarCedula($event.target.value)"
+                           maxlength="10"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
-                                  bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
+                                  bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm font-mono
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
                                   focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500
                                   focus:bg-white dark:focus:bg-slate-800 transition-all">
-                    @error('first_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Apellido <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="last_name" placeholder="Apellido" autocomplete="off"
-                           class="w-full rounded-xl border border-slate-300 dark:border-slate-600
-                                  bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
-                                  text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
-                                  focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500
-                                  focus:bg-white dark:focus:bg-slate-800 transition-all">
-                    @error('last_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Cédula <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="cedula" placeholder="Número de cédula" autocomplete="off"
-                           class="w-full rounded-xl border border-slate-300 dark:border-slate-600
-                                  bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
-                                  text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
-                                  focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500
-                                  focus:bg-white dark:focus:bg-slate-800 transition-all">
+                    <p x-show="cedulaFormErr" x-text="cedulaFormErr"
+                       class="mt-1 text-xs text-red-500 flex items-center gap-1" x-cloak></p>
+                    @if($apiActiva)
+                        <button type="button" wire:click="abrirEntryModal"
+                                class="mt-1.5 inline-flex items-center gap-1 text-[0.68rem] font-medium
+                                       text-emerald-600 dark:text-emerald-400 hover:underline transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            Consultar datos por cédula
+                        </button>
+                    @endif
                     @error('cedula') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
+
+                {{-- Correo --}}
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Correo Electrónico <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="email" placeholder="correo@ejemplo.com"
-                           autocomplete="off" name="new-email-{{ rand() }}"
+                    <input type="email" wire:model="email" placeholder="correo@ejemplo.com"
+                           autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -122,10 +160,36 @@
                                   focus:bg-white dark:focus:bg-slate-800 transition-all">
                     @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
+
+                {{-- Nombre --}}
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Nombre <span class="text-red-500">*</span></label>
+                    <input type="text" wire:model="first_name" placeholder="Nombre" autocomplete="new-password"
+                           class="w-full rounded-xl border border-slate-300 dark:border-slate-600
+                                  bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
+                                  text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
+                                  focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500
+                                  focus:bg-white dark:focus:bg-slate-800 transition-all">
+                    @error('first_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                {{-- Apellido --}}
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Apellido <span class="text-red-500">*</span></label>
+                    <input type="text" wire:model="last_name" placeholder="Apellido" autocomplete="new-password"
+                           class="w-full rounded-xl border border-slate-300 dark:border-slate-600
+                                  bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
+                                  text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
+                                  focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500
+                                  focus:bg-white dark:focus:bg-slate-800 transition-all">
+                    @error('last_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Contraseña <span class="text-red-500">*</span></label>
                     <input type="password" wire:model="password" placeholder="Mínimo 8 caracteres"
-                           autocomplete="new-password"
+                           autocomplete="new-password" readonly
+                           x-on:focus="$el.removeAttribute('readonly')"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -136,7 +200,8 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Confirmar Contraseña <span class="text-red-500">*</span></label>
                     <input type="password" wire:model="password_confirmation" placeholder="Repite la contraseña"
-                           autocomplete="new-password"
+                           autocomplete="new-password" readonly
+                           x-on:focus="$el.removeAttribute('readonly')"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -160,7 +225,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Teléfono</label>
-                    <input type="text" wire:model="phone" placeholder="0991234567" autocomplete="off"
+                    <input type="text" wire:model="phone" placeholder="0991234567" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -169,7 +234,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Fecha de Nacimiento</label>
-                    <input type="date" wire:model="fecha_nacimiento" autocomplete="off"
+                    <input type="date" wire:model="fecha_nacimiento" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100
@@ -192,7 +257,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Dirección</label>
-                    <input type="text" wire:model="address" placeholder="Calle, número, ciudad" autocomplete="off"
+                    <input type="text" wire:model="address" placeholder="Calle, número, ciudad" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -294,7 +359,7 @@
             <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Nombre del Padre</label>
-                    <input type="text" wire:model="padre" placeholder="Nombre completo" autocomplete="off"
+                    <input type="text" wire:model="padre" placeholder="Nombre completo" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -303,7 +368,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Nombre de la Madre</label>
-                    <input type="text" wire:model="madre" placeholder="Nombre completo" autocomplete="off"
+                    <input type="text" wire:model="madre" placeholder="Nombre completo" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -312,7 +377,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Tutor Legal</label>
-                    <input type="text" wire:model="tutor" placeholder="Nombre completo" autocomplete="off"
+                    <input type="text" wire:model="tutor" placeholder="Nombre completo" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -353,7 +418,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Teléfono de Emergencia</label>
-                    <input type="text" wire:model="telefono_emergencia" placeholder="0991234567" autocomplete="off"
+                    <input type="text" wire:model="telefono_emergencia" placeholder="0991234567" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -362,7 +427,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Contacto de Emergencia</label>
-                    <input type="text" wire:model="contacto_emergencia" placeholder="Nombre y relación" autocomplete="off"
+                    <input type="text" wire:model="contacto_emergencia" placeholder="Nombre y relación" autocomplete="new-password"
                            class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                   bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                   text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -371,7 +436,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Observaciones Médicas</label>
-                    <textarea wire:model="observaciones_medicas" rows="3" autocomplete="off"
+                    <textarea wire:model="observaciones_medicas" rows="3" autocomplete="new-password"
                               placeholder="Alergias, condiciones crónicas, medicación..."
                               class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                      bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
@@ -415,7 +480,7 @@
                         <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                             Descripción de la Discapacidad <span class="text-red-500">*</span>
                         </label>
-                        <textarea wire:model="discapacidad_descripcion" rows="3" autocomplete="off"
+                        <textarea wire:model="discapacidad_descripcion" rows="3" autocomplete="new-password"
                                   placeholder="Describe el tipo y grado de discapacidad..."
                                   class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                          bg-white dark:bg-slate-800 px-4 py-2.5 text-sm
@@ -470,7 +535,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Nombre Completo <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="fact_nombre" placeholder="Nombre del facturador" autocomplete="off"
+                            <input type="text" wire:model="fact_nombre" placeholder="Nombre del facturador" autocomplete="new-password"
                                    class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                           bg-white dark:bg-slate-800 px-4 py-2.5 text-sm
                                           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -479,7 +544,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Documento <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="fact_documento" placeholder="Cédula o RUC" autocomplete="off"
+                            <input type="text" wire:model="fact_documento" placeholder="Cédula o RUC" autocomplete="new-password"
                                    class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                           bg-white dark:bg-slate-800 px-4 py-2.5 text-sm
                                           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -488,7 +553,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Correo <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="fact_correo" placeholder="correo@ejemplo.com" autocomplete="off"
+                            <input type="text" wire:model="fact_correo" placeholder="correo@ejemplo.com" autocomplete="new-password"
                                    class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                           bg-white dark:bg-slate-800 px-4 py-2.5 text-sm
                                           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -497,7 +562,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Teléfono <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="fact_telefono" placeholder="0991234567" autocomplete="off"
+                            <input type="text" wire:model="fact_telefono" placeholder="0991234567" autocomplete="new-password"
                                    class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                           bg-white dark:bg-slate-800 px-4 py-2.5 text-sm
                                           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -506,7 +571,7 @@
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Dirección <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model="fact_direccion" placeholder="Calle, número, ciudad" autocomplete="off"
+                            <input type="text" wire:model="fact_direccion" placeholder="Calle, número, ciudad" autocomplete="new-password"
                                    class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                           bg-white dark:bg-slate-800 px-4 py-2.5 text-sm
                                           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600
@@ -571,4 +636,186 @@
         </div>
 
     </form>
+
+    {{-- ══ ENTRY MODAL — CONSULTA CÉDULA ═══════════════════════════════════ --}}
+    @if($showEntryModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style="background-color:rgba(0,0,0,0.65);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
+
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-white/10">
+
+                {{-- ── Header ─────────────────────────────────────────── --}}
+                <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 21Z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-white font-bold text-sm leading-tight">Consulta de Cédula</h2>
+                                <p class="text-emerald-100 text-xs mt-0.5">Ingresa la cédula para prellenar el formulario</p>
+                            </div>
+                        </div>
+                        <button type="button" wire:click="cerrarEntryModal"
+                                class="text-white/70 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- ── Body ────────────────────────────────────────────── --}}
+                <div class="p-5 space-y-4">
+
+                    {{-- Input cédula + botón Consultar --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                            Número de cédula
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="text"
+                                   wire:model="cedulaModalInput"
+                                   x-ref="modalCedula"
+                                   x-on:input="cedulaModalErr = validarCedula($event.target.value)"
+                                   x-on:keydown.enter.prevent="
+                                       cedulaModalErr = validarCedula($refs.modalCedula.value);
+                                       if (!cedulaModalErr) $wire.consultarEnModal();
+                                   "
+                                   placeholder="0000000000"
+                                   autocomplete="new-password"
+                                   maxlength="10"
+                                   autofocus
+                                   class="flex-1 rounded-xl border border-slate-300 dark:border-slate-600
+                                          bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm font-mono
+                                          text-slate-900 dark:text-slate-100 placeholder-slate-400
+                                          focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500
+                                          focus:bg-white dark:focus:bg-slate-800 transition-all">
+                            <button type="button"
+                                    x-on:click="
+                                        cedulaModalErr = validarCedula($refs.modalCedula.value);
+                                        if (!cedulaModalErr) $wire.consultarEnModal();
+                                    "
+                                    wire:loading.attr="disabled"
+                                    wire:target="consultarEnModal"
+                                    :disabled="!!cedulaModalErr"
+                                    class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold
+                                           bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.97]
+                                           disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm">
+                                <svg wire:loading.remove wire:target="consultarEnModal"
+                                     class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <svg wire:loading wire:target="consultarEnModal"
+                                     class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor"
+                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                </svg>
+                                <span wire:loading.remove wire:target="consultarEnModal">Consultar</span>
+                                <span wire:loading wire:target="consultarEnModal">Buscando…</span>
+                            </button>
+                        </div>
+                        <p x-show="cedulaModalErr" x-text="cedulaModalErr"
+                           class="mt-1.5 text-xs text-red-500 flex items-center gap-1" x-cloak></p>
+                        @error('cedulaModal')
+                            <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Resultados (aparecen inline si hay datos) --}}
+                    @if(!empty($cedulaModalData))
+                        <div class="rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-700/50">
+                            {{-- Cabecera de resultados --}}
+                            <div class="bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 border-b border-emerald-200 dark:border-emerald-700/50">
+                                <p class="text-[0.68rem] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Ciudadano encontrado
+                                </p>
+                            </div>
+                            @php
+                                $filas = [
+                                    ['Cédula',              $cedulaModalData['identificacion']  ?? '—'],
+                                    ['Nombre completo',     $cedulaModalData['nombres']          ?? '—'],
+                                    ['Fecha de nacimiento', $cedulaModalData['fechaNacimiento']  ?? '—'],
+                                    ['Género',              $cedulaModalData['genero'] ?? ($cedulaModalData['sexo'] ?? '—')],
+                                    ['Estado civil',        $cedulaModalData['estadoCivil']     ?? '—'],
+                                    ['Nacionalidad',        $cedulaModalData['nacionalidad']    ?? '—'],
+                                    ['Padre',               $cedulaModalData['nombrePadre']     ?? '—'],
+                                    ['Madre',               $cedulaModalData['nombreMadre']     ?? '—'],
+                                ];
+                            @endphp
+                            @foreach($filas as $i => [$label, $valor])
+                                <div class="flex items-center justify-between px-4 py-2
+                                            {{ $i % 2 === 0 ? 'bg-white dark:bg-slate-800/60' : 'bg-slate-50/70 dark:bg-slate-900/40' }}
+                                            {{ !$loop->last ? 'border-b border-slate-100 dark:border-slate-700/30' : '' }}">
+                                    <span class="text-[0.68rem] text-slate-500 dark:text-slate-400 font-medium">{{ $label }}</span>
+                                    <span class="text-[0.7rem] font-semibold text-slate-800 dark:text-slate-200 text-right max-w-[55%] leading-snug">
+                                        {{ $valor ?: '—' }}
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                </div>
+
+                {{-- ── Footer ──────────────────────────────────────────── --}}
+                <div class="px-5 pb-5 flex gap-3">
+                    <button type="button" wire:click="cerrarEntryModal"
+                            class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold
+                                   text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700
+                                   hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                        Llenar manualmente
+                    </button>
+                    @if(!empty($cedulaModalData))
+                        <button type="button" wire:click="aplicarDesdeModal"
+                                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                                       bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm shadow-emerald-500/25">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Rellenar formulario
+                        </button>
+                    @endif
+                </div>
+
+            </div>
+        </div>
+    @endif
+
 </div>
+
+@push('js')
+<script>
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('swal-aplicado', (eventData) => {
+            const data   = eventData[0] ?? {};
+            const isDark = document.documentElement.classList.contains('dark');
+            Swal.fire({
+                icon:               'success',
+                title:              '¡Datos aplicados!',
+                html:               `El formulario ha sido prellenado con los datos de<br><strong>${data.nombre ?? 'el ciudadano'}</strong>.<br><span style="font-size:0.85em;color:${isDark ? '#94a3b8' : '#64748b'};">Revisa y completa los campos restantes antes de guardar.</span>`,
+                confirmButtonText:  'Continuar',
+                confirmButtonColor: '#059669',
+                allowOutsideClick:  false,
+                background:         isDark ? '#1e293b' : '#ffffff',
+                color:              isDark ? '#e2e8f0' : '#1e293b',
+                iconColor:          isDark ? '#34d399' : '#059669',
+            });
+        });
+    });
+</script>
+@endpush

@@ -299,7 +299,7 @@
                                 <div class="flex items-center justify-center gap-1.5">
 
                                     {{-- Editar perfil completo --}}
-                                    <a href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}"
+                                    <a href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}?from=users"
                                         title="Editar usuario"
                                         class="inline-flex items-center justify-center h-8 w-8 rounded-lg
                                                border border-sky-500/20 bg-sky-500/10
