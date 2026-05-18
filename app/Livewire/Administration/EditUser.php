@@ -2,7 +2,10 @@
 
 namespace App\Livewire\Administration;
 
+use App\Mail\ReenvioCredencialesAcceso;
 use App\Models\User;
+use App\Services\SettingService;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Hash;
@@ -247,6 +250,78 @@ class EditUser extends Component
             'title' => 'Usuario actualizado.',
             'text'  => $this->user->name . ' ha sido guardado correctamente.',
             'timer' => 2500,
+        ]);
+    }
+
+    public function reenviarCredenciales(): void
+    {
+        $role = $this->user->roles->first();
+
+        if (!$role) {
+            $this->dispatch('swal', [
+                'icon'  => 'error',
+                'title' => 'Sin rol asignado.',
+                'text'  => 'El usuario debe tener un rol asignado para reenviar credenciales.',
+                'timer' => 3000,
+            ]);
+            return;
+        }
+
+        $tipoAcceso = null;
+        if ($role->hasPermissionTo('acceso_administrativo')) {
+            $tipoAcceso = 'administrativo';
+        } elseif ($role->hasPermissionTo('acceso_docencia')) {
+            $tipoAcceso = 'docente';
+        }
+
+        if (!$tipoAcceso) {
+            $this->dispatch('swal', [
+                'icon'  => 'warning',
+                'title' => 'No aplicable.',
+                'text'  => 'El reenvío de credenciales solo aplica a usuarios con acceso administrativo o docente.',
+                'timer' => 3500,
+            ]);
+            return;
+        }
+
+        if (!$this->user->cedula) {
+            $this->dispatch('swal', [
+                'icon'  => 'error',
+                'title' => 'Sin cédula registrada.',
+                'text'  => 'El usuario debe tener una cédula registrada para restablecer la contraseña.',
+                'timer' => 3000,
+            ]);
+            return;
+        }
+
+        $plainPassword = $this->user->cedula;
+        $this->user->update(['password' => Hash::make($plainPassword)]);
+
+        if (SettingService::get('smtp.activo', '0') === '1' && $this->user->email) {
+            try {
+                SettingService::buildMailer()
+                    ->to($this->user->email)
+                    ->send(new ReenvioCredencialesAcceso($this->user, $plainPassword, $tipoAcceso, $role->name));
+            } catch (\Throwable $e) {
+                Log::warning('ReenvioCredencialesAcceso: email falló', [
+                    'user_id' => $this->user->id,
+                    'error'   => $e->getMessage(),
+                ]);
+                $this->dispatch('swal', [
+                    'icon'  => 'warning',
+                    'title' => 'Contraseña restablecida.',
+                    'text'  => 'La contraseña fue restablecida a la cédula, pero el correo no pudo enviarse.',
+                    'timer' => 4000,
+                ]);
+                return;
+            }
+        }
+
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => 'Credenciales reenviadas.',
+            'text'  => 'Contraseña restablecida y correo enviado a ' . $this->user->email,
+            'timer' => 3000,
         ]);
     }
 

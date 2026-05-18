@@ -28,7 +28,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-semibold text-white/90 leading-none">Listo de personal administrativo</h1>
+                    <h1 class="text-xl font-semibold text-white/90 leading-none">Listo general de usuarios</h1>
                     <p class="text-xs text-lime-400/70 tracking-widest uppercase mt-1">Administración · Usuarios</p>
                 </div>
             </div>
@@ -51,7 +51,7 @@
                     placeholder="Buscar por nombres, cedula o correo…">
             </div>
 
-            <div class="flex space-x-4">
+            <div class="flex flex-wrap gap-2">
                 <a href="{{ route('administracion.administrativa.estudiantes.create') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
                            text-white/90
@@ -69,12 +69,10 @@
 
                 <a href="{{ route('administracion.administrativa.estudiantes.import') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
-               text-amber-300/90
-               bg-amber-500/10
-               border border-amber-500/25
-               hover:bg-amber-500/20 hover:border-amber-400/40 hover:text-amber-200
-               hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-900/20
-               active:translate-y-0 transition-all duration-200">
+                           text-amber-300/90 bg-amber-500/10 border border-amber-500/25
+                           hover:bg-amber-500/20 hover:border-amber-400/40 hover:text-amber-200
+                           hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-900/20
+                           active:translate-y-0 transition-all duration-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -82,6 +80,22 @@
                         <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
                     Importar Usuarios
+                </a>
+
+                <a href="{{ route('administracion.administrativa.users.eliminados') }}"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
+                           text-red-300/80 bg-red-500/10 border border-red-500/20
+                           hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-200
+                           hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-900/20
+                           active:translate-y-0 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                    Usuarios Eliminados
                 </a>
             </div>
         </div>
@@ -193,7 +207,7 @@
                             Status
                         </th>
                         <th
-                            class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-24">
+                            class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-40">
                             Opciones
                         </th>
                     </tr>
@@ -282,20 +296,65 @@
 
                             {{-- Opciones --}}
                             <td class="px-4 py-3 text-center">
-                                <a href="{{ route('administracion.administrativa.users.edit', $user) }}"
-                                    title="Asignacion Rol"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
-                                           text-slate-400 border border-white/[0.06] bg-slate-800
-                                           hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]
-                                           transition-all duration-150">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                    </svg>
-                                    Asignacion
-                                </a>
+                                <div class="flex items-center justify-center gap-1.5">
+
+                                    {{-- Editar perfil completo --}}
+                                    <a href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}"
+                                        title="Editar usuario"
+                                        class="inline-flex items-center justify-center h-8 w-8 rounded-lg
+                                               border border-sky-500/20 bg-sky-500/10
+                                               hover:bg-sky-500/20 hover:border-sky-400/40 text-sky-400
+                                               transition-all duration-150">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                        </svg>
+                                    </a>
+
+                                    {{-- Asignar rol --}}
+                                    <a href="{{ route('administracion.administrativa.users.edit', $user) }}"
+                                        title="Asignar rol"
+                                        class="inline-flex items-center justify-center h-8 w-8 rounded-lg
+                                               border border-white/[0.06] bg-slate-800
+                                               hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]
+                                               text-slate-400 transition-all duration-150">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                        </svg>
+                                    </a>
+
+                                    {{-- Eliminar (softdelete + desactivar) --}}
+                                    <button type="button" x-data
+                                        @click="Swal.fire({
+                                            title: '¿Eliminar usuario?',
+                                            html: 'Se desactivará y moverá a la papelera a <strong>{{ addslashes($user->name) }}</strong>.<br>Podrás restaurarlo desde <em>Usuarios Eliminados</em>.',
+                                            icon: 'warning',
+                                            showCancelButton: true,
+                                            confirmButtonColor: '#dc2626',
+                                            cancelButtonColor: '#64748b',
+                                            confirmButtonText: 'Sí, eliminar',
+                                            cancelButtonText: 'Cancelar',
+                                        }).then(r => r.isConfirmed && $wire.eliminar({{ $user->id }}))"
+                                        title="Eliminar usuario"
+                                        class="inline-flex items-center justify-center h-8 w-8 rounded-lg
+                                               border border-red-900/40 bg-red-950/30
+                                               hover:bg-red-950/60 hover:border-red-700/50 text-red-500
+                                               transition-all duration-150">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                            <path d="M10 11v6M14 11v6" />
+                                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                        </svg>
+                                    </button>
+
+                                </div>
                             </td>
 
                         </tr>

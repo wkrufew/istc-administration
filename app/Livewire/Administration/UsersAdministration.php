@@ -19,9 +19,33 @@ class UsersAdministration extends Component
     public function updatingFiltroRol(): void   { $this->resetPage(); }
     public function updatingFiltroEstado(): void { $this->resetPage(); }
 
+    public function eliminar(User $user): void
+    {
+        try {
+            $user->is_active = false;
+            $user->save();
+            $user->delete();
+
+            $this->dispatch('swal', [
+                'icon'  => 'success',
+                'title' => 'Usuario eliminado.',
+                'text'  => $user->name . ' ha sido desactivado y movido a la papelera.',
+                'timer' => 2500,
+                'toast' => true,
+            ]);
+        } catch (\Exception $e) {
+            $this->dispatch('swal', [
+                'icon'  => 'error',
+                'title' => 'Error al eliminar.',
+                'text'  => $e->getMessage(),
+                'toast' => true,
+            ]);
+        }
+    }
+
     public function render()
     {
-        $roles = Role::whereIn('name', ['Administrador', 'Secretaria', 'Docente', 'Estudiante', 'Admision'])
+        $roles = Role::where('name', '!=', 'Super Admin')
             ->orderBy('name')
             ->get();
 
