@@ -36,6 +36,8 @@ class RolePermissionSeeder extends Seeder
             'gestionar_docentes',     // CRUD de docentes + asignación de horarios
             'gestionar_estudiantes',  // CRUD de estudiantes + importación masiva
             'gestionar_auditorias',  // Gestion de Auditorias
+            'moodle_gestion',        // Gestión de integración con Moodle
+            'auditoria_ver',         // Ver registros de auditoría general
 
             // -----------------------------------------------------------------
             // ESTRUCTURA ACADÉMICA
@@ -136,7 +138,8 @@ class RolePermissionSeeder extends Seeder
             'gestionar_docentes',
             'gestionar_estudiantes',
             'gestionar_auditorias',
-
+            'moodle_gestion',
+            'auditoria_ver',
 
             // Estructura académica
             'gestionar_periodos',
@@ -191,6 +194,8 @@ class RolePermissionSeeder extends Seeder
             'gestionar_usuarios',
             'gestionar_docentes',
             'gestionar_estudiantes',
+            'moodle_gestion',
+            'auditoria_ver',
 
             // Estructura académica
             'gestionar_periodos',
@@ -294,6 +299,8 @@ class RolePermissionSeeder extends Seeder
             'gestionar_docentes',
             'gestionar_estudiantes',
             'gestionar_auditorias',
+            'moodle_gestion',
+            'auditoria_ver',
             'gestionar_periodos',
             'gestionar_carreras',
             'gestionar_semestres',

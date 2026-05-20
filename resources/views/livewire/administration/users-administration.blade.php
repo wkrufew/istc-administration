@@ -235,6 +235,13 @@
                                         @if($user->cedula)
                                         <p class="text-[0.65rem] text-slate-500 font-mono mt-0.5">{{ $user->cedula }}</p>
                                         @endif
+                                        @if($user->moodle_id && (int) env('MOODLE_MODE', 0) === 1)
+                                        <span class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[0.6rem] font-bold
+                                                     bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono">
+                                            <span class="w-1 h-1 rounded-full bg-emerald-400"></span>
+                                            M #{{ $user->moodle_id }}
+                                        </span>
+                                        @endif
                                     </div>
                                 </div>
                             </td>
@@ -297,6 +304,20 @@
                             {{-- Opciones --}}
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
+
+                                    {{-- Moodle --}}
+                                    @if((int) env('MOODLE_MODE', 0) === 1)
+                                    <a href="{{ route('administracion.administrativa.users.moodle', $user) }}"
+                                        title="Gestión Moodle"
+                                        class="inline-flex items-center justify-center h-8 w-8 rounded-lg
+                                               {{ $user->moodle_id ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400/40' : 'border border-slate-700/60 bg-slate-800/60 text-slate-500 hover:bg-emerald-500/10 hover:border-emerald-500/25 hover:text-emerald-400' }}
+                                               transition-all duration-150">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                                        </svg>
+                                    </a>
+                                    @endif
 
                                     {{-- Editar perfil completo --}}
                                     <a href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}?from=users"

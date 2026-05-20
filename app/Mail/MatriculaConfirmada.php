@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Matricula;
+use App\Services\MoodleService;
 use App\Services\SettingService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -37,6 +38,9 @@ class MatriculaConfirmada extends Mailable
 
     public function content(): Content
     {
+        $moodleActivo = MoodleService::activo();
+        $moodleUrl    = $moodleActivo ? SettingService::get('moodle.url', '') : null;
+
         $obligMatricula   = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'MATRICULA');
         $obligColegiatura = $this->matricula->obligacionesFinancieras
@@ -64,6 +68,8 @@ class MatriculaConfirmada extends Mailable
                     'logo_url'     => $logoPath ? url('storage/' . $logoPath) : null,
                     'url_portal'   => url('/login'),
                 ],
+                'moodle_activo' => $moodleActivo,
+                'moodle_url'    => $moodleUrl,
                 'monto'              => $obligMatricula
                     ? number_format((float) $obligMatricula->monto_final, 2) : null,
                 'fechaLimite'        => $obligMatricula?->fecha_vencimiento

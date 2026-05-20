@@ -32,3 +32,4 @@ jobs:
             php8.3 artisan optimize:clear
             chmod -R 775 storage bootstrap/cache
             sudo systemctl reload php8.3-fpm
+            sudo supervisorctl restart istc-worker:*

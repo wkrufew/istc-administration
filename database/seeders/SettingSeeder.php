@@ -64,6 +64,13 @@ class SettingSeeder extends Seeder
             ['group' => 'matricula', 'key' => 'matricula.porcentaje_arrastre',  'type' => 'decimal', 'label' => 'Porcentaje de penalización por arrastre (%)', 'value' => '10',    'is_encrypted' => false],
 
             // ----------------------------------------------------------------
+            // MOODLE
+            // ----------------------------------------------------------------
+            ['group' => 'moodle', 'key' => 'moodle.url',    'type' => 'text',     'label' => 'URL del campus Moodle',  'value' => 'https://elearning.istcumanda.edu.ec', 'is_encrypted' => false],
+            ['group' => 'moodle', 'key' => 'moodle.token',  'type' => 'password', 'label' => 'Token API REST',         'value' => '',                                    'is_encrypted' => true],
+            ['group' => 'moodle', 'key' => 'moodle.activo', 'type' => 'boolean',  'label' => 'Integración activa',     'value' => '0',                                   'is_encrypted' => false],
+
+            // ----------------------------------------------------------------
             // NOTIFICACIONES
             // ----------------------------------------------------------------
             ['group' => 'notificaciones', 'key' => 'notificaciones.matricula_whatsapp',  'type' => 'boolean', 'label' => 'Matrícula → WhatsApp',   'value' => '0', 'is_encrypted' => false],

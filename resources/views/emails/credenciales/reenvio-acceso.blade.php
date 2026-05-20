@@ -51,6 +51,19 @@
             $badgeColor     = '#15803d';
             $tipoLabel      = 'Estudiante';
             break;
+        case 'moodle':
+            $headerBg       = '#065f46';
+            $headerGrad     = 'linear-gradient(135deg,#065f46 0%,#059669 100%)';
+            $headerSubtitle = 'Tus credenciales de la plataforma virtual han sido restablecidas';
+            $accentColor    = '#059669';
+            $accentLight    = '#f0fdf4';
+            $accentBorder   = '#86efac';
+            $accentText     = '#166534';
+            $accentDark     = '#14532d';
+            $badgeBg        = '#dcfce7';
+            $badgeColor     = '#15803d';
+            $tipoLabel      = 'Plataforma Virtual';
+            break;
         default: // administrativo
             $headerBg       = '#0369a1';
             $headerGrad     = 'linear-gradient(135deg,#0369a1 0%,#0284c7 100%)';
@@ -118,9 +131,15 @@
                                         ⚠ Acción requerida — Cambia tu contraseña
                                     </p>
                                     <p style="margin:6px 0 0;color:#78350f;font-size:13px;line-height:1.6;">
-                                        Un administrador ha restablecido tu contraseña de acceso al sistema.
-                                        Tu nueva contraseña temporal es tu <strong>número de cédula</strong>.
-                                        Por favor cámbiala al ingresar.
+                                        @if($tipoAcceso === 'moodle')
+                                            Un administrador ha restablecido tu contraseña de la plataforma virtual (Moodle).
+                                            Tu nueva contraseña temporal es tu <strong>número de cédula</strong>.
+                                            Por favor cámbiala al ingresar al campus virtual.
+                                        @else
+                                            Un administrador ha restablecido tu contraseña de acceso al sistema.
+                                            Tu nueva contraseña temporal es tu <strong>número de cédula</strong>.
+                                            Por favor cámbiala al ingresar.
+                                        @endif
                                     </p>
                                 </td>
                             </tr>
@@ -137,9 +156,15 @@
                             Hola, {{ $usuario->name }}.
                         </p>
                         <p style="margin:0 0 28px;color:#64748b;font-size:14px;line-height:1.7;">
-                            Tu contraseña de acceso al sistema de gestión académica de
-                            <strong>{{ $instituto['nombre_largo'] }}</strong>
-                            ha sido restablecida. A continuación encontrarás tus credenciales actualizadas.
+                            @if($tipoAcceso === 'moodle')
+                                Tu contraseña de acceso a la <strong>plataforma virtual</strong> del
+                                <strong>{{ $instituto['nombre_largo'] }}</strong>
+                                ha sido restablecida. A continuación encontrarás tus credenciales actualizadas para el campus virtual.
+                            @else
+                                Tu contraseña de acceso al sistema de gestión académica de
+                                <strong>{{ $instituto['nombre_largo'] }}</strong>
+                                ha sido restablecida. A continuación encontrarás tus credenciales actualizadas.
+                            @endif
                         </p>
 
                         {{-- ── CREDENCIALES ──────────────────────────────── --}}

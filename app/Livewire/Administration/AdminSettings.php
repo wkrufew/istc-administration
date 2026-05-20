@@ -78,6 +78,13 @@ class AdminSettings extends Component
     public string $cedula_api_token = '';
 
     // =========================================================================
+    // GRUPO: MOODLE (solo visible cuando MOODLE_MODE=1 en .env)
+    // =========================================================================
+    public string $moodle_url    = '';
+    public string $moodle_token  = '';
+    public string $moodle_activo = '0';
+
+    // =========================================================================
     // GRUPO: NOTIFICACIONES
     // =========================================================================
     public string $notif_matricula_whatsapp  = '0';
@@ -139,6 +146,11 @@ class AdminSettings extends Component
         // API Cédula
         $this->cedula_api_url   = $s['cedula_api.url']   ?? '';
         $this->cedula_api_token = $s['cedula_api.token'] ?? '';
+
+        // Moodle
+        $this->moodle_url    = $s['moodle.url']    ?? '';
+        $this->moodle_token  = $s['moodle.token']  ?? '';
+        $this->moodle_activo = $s['moodle.activo'] ?? '0';
 
         // Notificaciones
         $this->notif_matricula_whatsapp  = $s['notificaciones.matricula_whatsapp']  ?? '0';
@@ -451,6 +463,27 @@ class AdminSettings extends Component
         ]);
 
         $this->dispatch('swal', ['icon' => 'success', 'title' => 'Configuración de matrícula guardada.', 'timer' => 2000]);
+    }
+
+    // =========================================================================
+    // GUARDAR MOODLE
+    // =========================================================================
+    public function guardarMoodle(): void
+    {
+        $this->validate([
+            'moodle_url'   => 'nullable|url|max:500',
+            'moodle_token' => 'nullable|string|max:500',
+        ], [
+            'moodle_url.url' => 'La URL de Moodle debe ser válida (comenzar con https://).',
+        ]);
+
+        $this->upsertGroup('moodle', [
+            'url'    => $this->moodle_url,
+            'token'  => $this->moodle_token,
+            'activo' => $this->moodle_activo,
+        ], encryptedKeys: ['token']);
+
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Configuración de Moodle guardada.', 'timer' => 2000]);
     }
 
     // =========================================================================

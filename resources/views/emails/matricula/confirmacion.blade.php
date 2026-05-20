@@ -264,8 +264,8 @@
                             </tr>
                         </table>
 
-                        {{-- ── CREDENCIALES PLATAFORMA VIRTUAL ────────── --}}
-                        @if($instituto['web'])
+                        {{-- ── CREDENCIALES PLATAFORMA VIRTUAL (solo si Moodle activo) ── --}}
+                        @if(isset($moodle_activo) && $moodle_activo && isset($moodle_url) && $moodle_url)
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                                style="background-color:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:24px;">
                             <tr>
@@ -281,9 +281,9 @@
                                             </td>
                                             <td style="padding:9px 0;border-bottom:1px solid #bbf7d0;font-size:13px;
                                                         font-weight:700;color:#14532d;text-align:right;">
-                                                <a href="{{ $instituto['web'] }}"
+                                                <a href="{{ $moodle_url }}"
                                                    style="color:#14532d;text-decoration:underline;">
-                                                    {{ $instituto['web'] }}
+                                                    {{ $moodle_url }}
                                                 </a>
                                             </td>
                                         </tr>

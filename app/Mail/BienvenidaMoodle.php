@@ -10,35 +10,29 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ReenvioCredencialesAcceso extends Mailable
+class BienvenidaMoodle extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
-        public readonly User   $usuario,
-        public readonly string $plainPassword,
-        public readonly string $tipoAcceso,  // 'administrativo' | 'docente' | 'estudiante' | 'moodle'
-        public readonly string $nombreRol,
+        public readonly User $usuario,
     ) {}
 
     public function envelope(): Envelope
     {
         $nombreCorto = SettingService::get('instituto.nombre_corto', 'Instituto');
-
         return new Envelope(
-            subject: "Actualización de credenciales de acceso | {$nombreCorto}",
+            subject: "Acceso a la Plataforma Virtual — {$nombreCorto}",
         );
     }
 
     public function content(): Content
     {
-        $logoPath = SettingService::get('instituto.logo_path');
-
-        $esMoodle  = $this->tipoAcceso === 'moodle';
-        $moodleUrl = $esMoodle ? SettingService::get('moodle.url', '') : null;
+        $logoPath  = SettingService::get('instituto.logo_path');
+        $moodleUrl = SettingService::get('moodle.url', '');
 
         return new Content(
-            view: 'emails.credenciales.reenvio-acceso',
+            view: 'emails.moodle.bienvenida-moodle',
             with: [
                 'instituto' => [
                     'nombre_largo' => SettingService::get('instituto.nombre_largo', 'Instituto Superior Tecnológico'),
@@ -47,9 +41,7 @@ class ReenvioCredencialesAcceso extends Mailable
                     'telefono'     => SettingService::get('instituto.telefono', ''),
                     'direccion'    => SettingService::get('instituto.direccion', ''),
                     'logo_url'     => $logoPath ? url('storage/' . $logoPath) : null,
-                    'url_portal'   => $esMoodle ? ($moodleUrl ?: url('/login')) : url('/login'),
                 ],
-                'tipoAcceso' => $this->tipoAcceso,
                 'moodle_url' => $moodleUrl,
             ],
         );

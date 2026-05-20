@@ -55,6 +55,7 @@ class User extends Authenticatable
         'tipo_sangre',
         'observaciones_medicas',
         'is_active',
+        'moodle_suspended',
         'discapacidad',
         'discapacidad_descripcion',
         /* 'certificado_discapacidad_path', */
@@ -101,7 +102,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'fecha_nacimiento' => 'date',
-            'is_active' => 'boolean',
+            'is_active'        => 'boolean',
+            'moodle_suspended' => 'boolean',
         ];
     }
 

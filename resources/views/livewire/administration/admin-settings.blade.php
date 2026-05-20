@@ -21,6 +21,9 @@
         'notificaciones' => ['label' => 'Notificaciones', 'icon' => 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0'],
         'matricula'      => ['label' => 'Matrícula',      'icon' => 'M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z'],
         'cedula_api'     => ['label' => 'API Cédula',     'icon' => 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 21Z'],
+        ...((int) env('MOODLE_MODE', 0) === 1 ? [
+            'moodle' => ['label' => 'Moodle', 'icon' => 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'],
+        ] : []),
     ] as $tabKey => $tabData)
                 <button wire:click="$set('tab', '{{ $tabKey }}')"
                     class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all
@@ -765,6 +768,94 @@
                         class="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50">
                         <span wire:loading.remove wire:target="guardarCedulaApi">Guardar configuración</span>
                         <span wire:loading wire:target="guardarCedulaApi">Guardando...</span>
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        {{-- ================================================================
+             TAB: MOODLE (solo visible si MOODLE_MODE=1 en .env)
+             ================================================================ --}}
+        @if($tab === 'moodle' && (int) env('MOODLE_MODE', 0) === 1)
+            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-5">
+                <div class="border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-800 dark:text-gray-100">Integración con Moodle</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Configura el campus virtual. El token y la URL provienen del servicio externo creado en Moodle.
+                        </p>
+                    </div>
+                    {{-- Indicador de estado --}}
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+                                 {{ $moodle_activo === '1' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' }}">
+                        <span class="w-1.5 h-1.5 rounded-full {{ $moodle_activo === '1' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400' }}"></span>
+                        {{ $moodle_activo === '1' ? 'Integración activa' : 'Desactivada' }}
+                    </span>
+                </div>
+
+                {{-- Activar integración --}}
+                <div class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Activar integración Moodle</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Habilita la creación automática de usuarios y gestión desde esta plataforma.
+                        </p>
+                    </div>
+                    <button wire:click="$set('moodle_activo', '{{ $moodle_activo === '1' ? '0' : '1' }}')"
+                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                                   {{ $moodle_activo === '1' ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600' }}">
+                        <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
+                                     {{ $moodle_activo === '1' ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                    </button>
+                </div>
+
+                {{-- URL del campus --}}
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                        URL del Campus Moodle
+                    </label>
+                    <input type="url" wire:model="moodle_url" placeholder="https://elearning.miinstituto.edu.ec"
+                           class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800
+                                  text-gray-900 dark:text-gray-100 px-4 py-2.5 text-sm
+                                  focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition">
+                    @error('moodle_url')
+                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Token --}}
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                        Token API REST
+                    </label>
+                    <input type="password" wire:model="moodle_token" placeholder="Token del servicio externo en Moodle"
+                           autocomplete="new-password"
+                           class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800
+                                  text-gray-900 dark:text-gray-100 px-4 py-2.5 text-sm font-mono
+                                  focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition">
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        Obtenido en Moodle: Administración → Plugins → Servicios web → Gestionar tokens.
+                    </p>
+                    @error('moodle_token')
+                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Info funciones configuradas --}}
+                <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-700 dark:text-emerald-400 space-y-1">
+                    <p class="font-semibold">Funciones configuradas en el servicio externo:</p>
+                    <ul class="list-disc list-inside space-y-0.5 text-emerald-600 dark:text-emerald-500 font-mono">
+                        <li>core_user_create_users</li>
+                        <li>core_user_update_users</li>
+                        <li>core_user_get_users_by_field</li>
+                    </ul>
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button wire:click="guardarMoodle" wire:loading.attr="disabled"
+                        class="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition disabled:opacity-50">
+                        <span wire:loading.remove wire:target="guardarMoodle">Guardar configuración</span>
+                        <span wire:loading wire:target="guardarMoodle">Guardando...</span>
                     </button>
                 </div>
             </div>

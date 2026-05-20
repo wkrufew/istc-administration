@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Jobs\CrearUsuarioMoodleJob;
 use App\Mail\MatriculaConfirmada;
 use App\Models\Matricula;
+use App\Services\MoodleService;
 use App\Services\SettingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -64,6 +66,14 @@ class EnviarEmailMatricula implements ShouldQueue
             esPrimerMatricula: $this->esPrimerMatricula,
             esEdicion:         $this->esEdicion,
         ));
+
+        // Registrar en Moodle al confirmar la primera matrícula
+        if ($this->esPrimerMatricula && ! $this->esEdicion && MoodleService::activo()) {
+            $estudiante = $matricula->estudiante;
+            if ($estudiante && ! $estudiante->moodle_id) {
+                CrearUsuarioMoodleJob::dispatch($estudiante->id);
+            }
+        }
     }
 
     public function failed(\Throwable $exception): void

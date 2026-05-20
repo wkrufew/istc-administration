@@ -172,6 +172,9 @@ Route::middleware([
         // Configuración del sistema
         Route::get('settings', \App\Livewire\Administration\AdminSettings::class)->name('settings');
 
+        // Gestión Moodle por usuario
+        Route::get('users/{usuario}/moodle', \App\Livewire\Administration\MoodleGestion::class)->name('users.moodle');
+
         // Otras rutas administrativas (rutas de despliguegue) - Solo accesibles para usuarios con permisos específicos
         //Rutas para despliegue
         //deseo que estas rutas se accionen mediante un boton en el dashboard administrativo, y que solo sean accesibles para usuarios con permisos específicos
