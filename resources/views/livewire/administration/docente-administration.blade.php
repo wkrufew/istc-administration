@@ -4,7 +4,7 @@
          BLOQUE 1 — HEADER FUSIONADO
          Título + Buscador + Botones
     ═══════════════════════════════════════ --}}
-    <div class="bg-slate-900 border border-slate-700/50 relative overflow-hidden rounded-xl">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 relative overflow-hidden rounded-xl">
 
         <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-lime-500 to-sky-600 opacity-70"></div>
         <div
@@ -25,7 +25,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-semibold text-white/90 leading-none">Gestión de Docentes</h1>
+                    <h1 class="text-xl font-semibold text-slate-800 dark:text-white/90 leading-none">Gestión de Docentes</h1>
                     <p class="text-xs text-lime-400/70 tracking-widest uppercase mt-1">Administración · Personal
                         Académico</p>
                 </div>
@@ -42,8 +42,8 @@
                     </svg>
                 </div>
                 <input wire:model.live="search"
-                    class="w-full pl-9 pr-4 py-2 rounded-full text-xs text-white/80 placeholder-slate-500
-                           bg-slate-800 border border-white/[0.08]
+                    class="w-full pl-9 pr-4 py-2 rounded-full text-xs text-slate-700 dark:text-white/80 placeholder-slate-400 dark:placeholder-slate-500
+                           bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200"
                     placeholder="Buscar docente…">
@@ -54,8 +54,8 @@
 
                 <a href="{{ route('administracion.administrativa.documentacion-personal.index') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-wide
-                           text-slate-300 border border-white/10 bg-white/5
-                           hover:bg-white/10 hover:text-white transition-all duration-200">
+                           text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5
+                           hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-white transition-all duration-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -76,7 +76,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         <div
-            class="bg-slate-900 border border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-white/[0.04] shadow-lg shadow-black/20">
+            class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04] shadow-lg shadow-slate-200 dark:shadow-black/20">
             <div
                 class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-sky-400" fill="none" viewBox="0 0 24 24"
@@ -88,14 +88,14 @@
                 </svg>
             </div>
             <div>
-                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-500 mb-0.5">Total Docentes
+                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Total Docentes
                 </p>
-                <p class="text-2xl font-semibold text-white/90 leading-none">{{ $users->count() }}</p>
+                <p class="text-2xl font-semibold text-slate-800 dark:text-white/90 leading-none">{{ $users->count() }}</p>
             </div>
         </div>
 
         <div
-            class="bg-slate-900 border border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-white/[0.04] shadow-lg shadow-black/20">
+            class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04] shadow-lg shadow-slate-200 dark:shadow-black/20">
             <div
                 class="w-10 h-10 rounded-xl bg-lime-500/10 border border-lime-500/20 flex items-center justify-center flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-lime-400" fill="none" viewBox="0 0 24 24"
@@ -104,14 +104,14 @@
                 </svg>
             </div>
             <div>
-                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-500 mb-0.5">Activos</p>
+                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Activos</p>
                 <p class="text-2xl font-semibold text-lime-400 leading-none">
                     {{ $users->where('is_active', true)->count() }}</p>
             </div>
         </div>
 
         <div
-            class="bg-slate-900 border border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-white/[0.04] shadow-lg shadow-black/20">
+            class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04] shadow-lg shadow-slate-200 dark:shadow-black/20">
             <div
                 class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24"
@@ -122,7 +122,7 @@
                 </svg>
             </div>
             <div>
-                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-500 mb-0.5">Inactivos</p>
+                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Inactivos</p>
                 <p class="text-2xl font-semibold text-red-400 leading-none">
                     {{ $users->where('is_active', false)->count() }}</p>
             </div>
@@ -135,7 +135,7 @@
          BLOQUE 3 — TABLA
     ═══════════════════════════════════════ --}}
     <div
-        class="bg-slate-900 rounded-2xl border border-white/[0.06] overflow-hidden shadow-2xl shadow-black/40 ring-1 ring-inset ring-white/[0.04]">
+        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/[0.06] overflow-hidden shadow-xl shadow-slate-200/80 dark:shadow-2xl dark:shadow-black/40 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04]">
 
         <div class="h-px bg-gradient-to-r from-transparent via-lime-500/30 to-transparent"></div>
 
@@ -155,24 +155,24 @@
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
-                    <tr class="border-b border-white/[0.05]">
+                    <tr class="border-b border-slate-100 dark:border-white/[0.05]">
                         <th
-                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Docente</th>
                         <th
-                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Contacto</th>
                         <th
-                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-32">
+                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-32">
                             Estado</th>
                         <th
-                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-48">
+                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-48">
                             Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-white/[0.04]">
+                <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                     @forelse ($users as $user)
-                        <tr class="group hover:bg-white/[0.02] transition-colors duration-150">
+                        <tr class="group hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors duration-150">
 
                             {{-- Docente --}}
                             <td class="px-5 py-3.5">
@@ -184,16 +184,16 @@
                                         </span>
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium text-white/80">{{ $user->name }}</p>
-                                        <p class="text-xs text-slate-500 mt-0.5">C.I: {{ $user->cedula }}</p>
+                                        <p class="text-sm font-medium text-slate-700 dark:text-white/80">{{ $user->name }}</p>
+                                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">C.I: {{ $user->cedula }}</p>
                                     </div>
                                 </div>
                             </td>
 
                             {{-- Contacto --}}
                             <td class="px-5 py-3.5">
-                                <p class="text-xs text-slate-300">{{ $user->email }}</p>
-                                <p class="text-xs text-slate-500 mt-0.5">Registrado:
+                                <p class="text-xs text-slate-600 dark:text-slate-300">{{ $user->email }}</p>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Registrado:
                                     {{ $user->created_at->format('d M Y') }}</p>
                             </td>
 
@@ -218,10 +218,10 @@
                                             @if ($user->is_active) checked @endif
                                             wire:click="toggleStatus({{ $user->id }})">
                                         <div
-                                            class="peer h-5 w-9 rounded-full bg-slate-700 border border-white/[0.06]
+                                            class="peer h-5 w-9 rounded-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-white/[0.06]
                                                     after:absolute after:left-[2px] after:top-[2px]
                                                     after:h-4 after:w-4 after:rounded-full
-                                                    after:bg-slate-400 after:transition-all after:content-['']
+                                                    after:bg-white dark:after:bg-slate-400 after:transition-all after:content-['']
                                                     peer-checked:bg-lime-600/70 peer-checked:border-lime-500/30
                                                     peer-checked:after:translate-x-full peer-checked:after:bg-white
                                                     peer-focus:ring-2 peer-focus:ring-lime-500/20">
@@ -237,7 +237,7 @@
                                     <a title="Editar datos"
                                         href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}?from=docentes"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.7rem] font-medium
-                                               text-slate-400 border border-white/[0.06] bg-slate-800
+                                               text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                                hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]
                                                transition-all duration-150">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
@@ -252,7 +252,7 @@
                                     <a title="Documentos del docente"
                                         href="{{ route('administracion.administrativa.docentes.documentos', $user) }}"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.7rem] font-medium
-                                               text-slate-400 border border-white/[0.06] bg-slate-800
+                                               text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                                hover:text-sky-400 hover:border-sky-500/30 hover:bg-sky-500/[0.06]
                                                transition-all duration-150">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
@@ -269,7 +269,7 @@
                                     <a title="Asignación de materias"
                                         href="{{ route('administracion.administrativa.docentes.asignar.form', $user) }}"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.7rem] font-medium
-                                               text-slate-400 border border-white/[0.06] bg-slate-800
+                                               text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                                hover:text-purple-400 hover:border-purple-500/30 hover:bg-purple-500/[0.06]
                                                transition-all duration-150">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
@@ -305,7 +305,7 @@
         </div>
 
         @if ($users->hasPages())
-            <div class="px-6 py-4 border-t border-white/[0.05] bg-black/10">
+            <div class="px-6 py-4 border-t border-slate-100 dark:border-white/[0.05] bg-slate-50 dark:bg-black/10">
                 {{ $users->links() }}
             </div>
         @endif

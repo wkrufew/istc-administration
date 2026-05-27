@@ -447,7 +447,7 @@
                                     <span
                                         class="text-sm font-bold text-slate-900 dark:text-gray-100">{{ $pa->fecha_fin?->format('d/m/Y') }}</span>
                                 </div>
-                                <div class="flex items-center justify-between">
+                                {{-- <div class="flex items-center justify-between">
                                     <p class="text-sm text-slate-500 dark:text-slate-400">Límite matrícula</p>
                                     <span
                                         class="text-sm font-bold {{ now()->gt($pa->fecha_limite_matricula) ? 'text-red-500' : 'text-slate-900 dark:text-gray-100' }}">
@@ -460,7 +460,7 @@
                                         class="text-sm font-bold {{ now()->gt($pa->fecha_limite_pago) ? 'text-red-500' : 'text-slate-900 dark:text-gray-100' }}">
                                         {{ $pa->fecha_limite_pago?->format('d/m/Y') }}
                                     </span>
-                                </div>
+                                </div> --}}
                                 <div class="flex items-center justify-between border-t border-slate-100 dark:border-slate-700/60 pt-3">
                                     <p class="text-sm text-slate-500 dark:text-slate-400">Matrículas abiertas</p>
                                     @if (now()->lte($pa->fecha_limite_matricula))
@@ -472,6 +472,45 @@
                             </div>
                         </div>
                     @endif
+
+                    {{-- SOLICITUDES --}}
+                    @php $ss = $this->statsSolicitudes; @endphp
+                    <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-900 dark:text-gray-100">Solicitudes</h3>
+                            @if ($ss['pendientes'] > 0)
+                                <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-white text-xs font-bold">
+                                    {{ $ss['pendientes'] }}
+                                </span>
+                            @endif
+                        </div>
+                        <div class="space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Pendientes</p>
+                                <span class="text-sm font-bold {{ $ss['pendientes'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-gray-100' }}">
+                                    {{ $ss['pendientes'] }}
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm text-slate-500 dark:text-slate-400">En trámite</p>
+                                <span class="text-sm font-bold text-slate-900 dark:text-gray-100">{{ $ss['en_tramite'] }}</span>
+                            </div>
+                            <div class="flex items-center justify-between border-t border-slate-100 dark:border-slate-700/60 pt-2.5">
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Recibidas hoy</p>
+                                <span class="text-sm font-bold text-slate-900 dark:text-gray-100">{{ $ss['hoy'] }}</span>
+                            </div>
+                        </div>
+                        <a href="{{ route('administracion.administrativa.solicitudes.index') }}"
+                           class="mt-4 flex items-center justify-between px-4 py-2.5 rounded-xl
+                                  bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50
+                                  hover:bg-amber-100 dark:hover:bg-amber-900/40 transition
+                                  text-sm font-semibold text-amber-700 dark:text-amber-400">
+                            Ver todas las solicitudes
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </div>
 
                     {{-- ALERTAS --}}
                     <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 shadow-sm p-6">
@@ -578,31 +617,31 @@
                                         'label' => 'Registrar estudiante',
                                         'tag' => 'Nuevo',
                                         'color' => 'text-emerald-600',
-                                        'route' => '#',
+                                        'route' => route('administracion.administrativa.users.index'),
                                     ],
                                     [
                                         'label' => 'Nueva matrícula',
                                         'tag' => 'Académico',
                                         'color' => 'text-sky-600',
-                                        'route' => '#',
+                                        'route' => route('administracion.administrativa.matriculacion.index'),
                                     ],
                                     [
                                         'label' => 'Asignar docente',
                                         'tag' => 'Gestión',
                                         'color' => 'text-violet-600',
-                                        'route' => '#',
+                                        'route' => route('administracion.administrativa.docentes.index'),
                                     ],
                                     [
                                         'label' => 'Ver obligaciones',
                                         'tag' => 'Urgente',
                                         'color' => 'text-red-600',
-                                        'route' => '#',
+                                        'route' => route('administracion.administrativa.obligaciones.index'),
                                     ],
                                     [
                                         'label' => 'Reportes académicos',
                                         'tag' => 'Consulta',
                                         'color' => 'text-amber-600',
-                                        'route' => '#',
+                                        'route' => route('administracion.administrativa.reportes.carrera-materia'),
                                     ],
                                 ];
                             @endphp

@@ -4,6 +4,7 @@ namespace App\Livewire\Administration;
 
 use App\Models\Setting;
 use App\Services\SettingService;
+use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
@@ -12,7 +13,7 @@ use Livewire\WithFileUploads;
 
 class AdminSettings extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithAuthorization;
 
     public string $tab = 'instituto';
 
@@ -99,6 +100,8 @@ class AdminSettings extends Component
     // =========================================================================
     public function mount(): void
     {
+        $this->requierePermiso('gestionar_configuracion');
+
         $s = SettingService::all();
 
         // Instituto

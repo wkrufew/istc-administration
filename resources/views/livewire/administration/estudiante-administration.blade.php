@@ -4,7 +4,7 @@
          BLOQUE 1 — HEADER FUSIONADO
          Título + Buscador
     ═══════════════════════════════════════ --}}
-    <div class="bg-slate-900 border border-slate-700/50 relative overflow-hidden rounded-xl">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 relative overflow-hidden rounded-xl">
 
         <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-lime-500 to-sky-600 opacity-70"></div>
         <div
@@ -26,7 +26,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-semibold text-white/90 leading-none">Listado de Estudiantes</h1>
+                    <h1 class="text-xl font-semibold text-slate-800 dark:text-white/90 leading-none">Listado de Estudiantes</h1>
                     <p class="text-xs text-lime-400/70 tracking-widest uppercase mt-1">Administración · Usuarios</p>
                 </div>
             </div>
@@ -42,8 +42,8 @@
                     </svg>
                 </div>
                 <input wire:model.live="search"
-                    class="w-full pl-9 pr-4 py-2 rounded-full text-xs text-white/80 placeholder-slate-500
-                           bg-slate-800 border border-white/[0.08]
+                    class="w-full pl-9 pr-4 py-2 rounded-full text-xs text-slate-700 dark:text-white/80 placeholder-slate-400 dark:placeholder-slate-500
+                           bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200"
                     placeholder="Buscar por nombre o correo…">
@@ -57,7 +57,7 @@
          BLOQUE 2 — TABLA
     ═══════════════════════════════════════ --}}
     <div
-        class="bg-slate-900 rounded-2xl border border-white/[0.06] overflow-hidden shadow-2xl shadow-black/40 ring-1 ring-inset ring-white/[0.04]">
+        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/[0.06] overflow-hidden shadow-xl shadow-slate-200/80 dark:shadow-2xl dark:shadow-black/40 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04]">
 
         {{-- Shimmer top --}}
         <div class="h-px bg-gradient-to-r from-transparent via-lime-500/30 to-transparent"></div>
@@ -77,32 +77,32 @@
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
-                    <tr class="border-b border-white/[0.05]">
+                    <tr class="border-b border-slate-100 dark:border-white/[0.05]">
                         <th
-                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-12">
+                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-12">
                             ID
                         </th>
                         <th
-                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Nombre
                         </th>
                         <th
-                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Correo
                         </th>
                         <th
-                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-36">
+                            class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-36">
                             Status
                         </th>
                         <th
-                            class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-24">
+                            class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-24">
                             Opciones
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-white/[0.04]">
+                <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                     @forelse ($users as $estudiante)
-                        <tr class="group hover:bg-white/[0.02] transition-colors duration-150">
+                        <tr class="group hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors duration-150">
 
                             {{-- ID --}}
                             <td class="px-4 py-3">
@@ -118,13 +118,13 @@
                                             {{ substr($estudiante->name, 0, 1) }}
                                         </span>
                                     </div>
-                                    <span class="text-sm text-white/75 font-medium">{{ $estudiante->name }}</span>
+                                    <span class="text-sm text-slate-700 dark:text-white/75 font-medium">{{ $estudiante->name }}</span>
                                 </div>
                             </td>
 
                             {{-- Correo --}}
                             <td class="px-4 py-3">
-                                <span class="text-xs text-slate-400">{{ $estudiante->email }}</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ $estudiante->email }}</span>
                             </td>
 
                             {{-- Status --}}
@@ -150,10 +150,10 @@
                                             @if ($estudiante->is_active) checked @endif
                                             wire:click="toggleStatus({{ $estudiante }})">
                                         <div
-                                            class="peer h-5 w-9 rounded-full bg-slate-700 border border-white/[0.06]
+                                            class="peer h-5 w-9 rounded-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-white/[0.06]
                                                     after:absolute after:left-[2px] after:top-[2px]
                                                     after:h-4 after:w-4 after:rounded-full
-                                                    after:bg-slate-400 after:transition-all after:content-['']
+                                                    after:bg-white dark:after:bg-slate-400 after:transition-all after:content-['']
                                                     peer-checked:bg-lime-600/70 peer-checked:border-lime-500/30
                                                     peer-checked:after:translate-x-full peer-checked:after:bg-white
                                                     peer-focus:ring-2 peer-focus:ring-lime-500/20">
@@ -167,7 +167,7 @@
                                 <a href="{{ route('administracion.administrativa.estudiantes.edit', $estudiante) }}?from=estudiantes"
                                     title="Editar Usuario"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
-                                           text-slate-400 border border-white/[0.06] bg-slate-800
+                                           text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                            hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]
                                            transition-all duration-150">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
@@ -202,7 +202,7 @@
 
         {{-- Paginación --}}
         @if ($users->hasPages())
-            <div class="px-6 py-4 border-t border-white/[0.05] bg-black/10">
+            <div class="px-6 py-4 border-t border-slate-100 dark:border-white/[0.05] bg-slate-50 dark:bg-black/10">
                 {{ $users->links() }}
             </div>
         @endif

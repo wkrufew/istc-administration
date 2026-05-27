@@ -2,26 +2,18 @@
 
 namespace App\Livewire\Administration;
 
-use App\Jobs\ActualizarDatosMoodleJob;
-use App\Jobs\CrearUsuarioMoodleJob;
-use App\Jobs\RestablecerCredencialesMoodleJob;
-use App\Jobs\SincronizarMoodleIdJob;
-use App\Jobs\SuspenderAccesoMoodleJob;
 use App\Mail\BienvenidaMoodle;
+use App\Mail\ReenvioCredencialesAcceso;
 use App\Models\User;
 use App\Services\MoodleService;
 use App\Services\SettingService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Throwable;
 
 class MoodleGestion extends Component
 {
     public User $usuario;
-
-    // Estado de la UI
-    public ?string $mensaje     = null;
-    public string  $tipoMensaje = 'info'; // info | success | error | warning
-    public bool    $cargando    = false;
 
     public function mount(User $usuario): void
     {
@@ -29,50 +21,51 @@ class MoodleGestion extends Component
     }
 
     // =========================================================================
-    // OBTENER / SINCRONIZAR moodle_id (solo busca, no crea)
+    // SINCRONIZAR ID — busca en Moodle y guarda el moodle_id si lo encuentra
     // =========================================================================
     public function sincronizarId(): void
     {
-        $this->resetMensaje();
-
         if (! MoodleService::activo()) {
-            $this->setMensaje('La integración con Moodle no está activa.', 'warning');
+            $this->toastError('Integración desactivada', 'Active la integración Moodle en Configuración.');
             return;
         }
 
-        $this->cargando = true;
-        SincronizarMoodleIdJob::dispatch($this->usuario->id);
+        try {
+            $moodle     = new MoodleService();
+            $encontrado = $moodle->buscarUsuario($this->usuario);
 
-        $this->setMensaje(
-            'Búsqueda enviada. El ID de Moodle se actualizará en breve si el usuario existe en el campus virtual.',
-            'info'
-        );
-        $this->cargando = false;
+            if ($encontrado) {
+                $this->usuario->moodle_id = $encontrado['id'];
+                $this->usuario->saveQuietly();
+                $this->toastSuccess('ID Sincronizado', "Moodle ID #{$encontrado['id']} guardado correctamente.");
+            } else {
+                $this->toastWarning('No encontrado', 'El usuario no existe en Moodle. Use "Registrar en Moodle" para crearlo.');
+            }
+        } catch (Throwable $e) {
+            $this->toastError('Error al sincronizar', $e->getMessage());
+        }
     }
 
     // =========================================================================
-    // REGISTRAR EN MOODLE (crear si no existe + enviar email de bienvenida)
+    // REGISTRAR EN MOODLE — crea cuenta o vincula si ya existe
     // =========================================================================
     public function registrarEnMoodle(): void
     {
-        $this->resetMensaje();
-
         if (! MoodleService::activo()) {
-            $this->setMensaje('La integración con Moodle no está activa.', 'warning');
+            $this->toastError('Integración desactivada', 'Active la integración Moodle en Configuración.');
             return;
         }
 
         if ($this->usuario->moodle_id) {
-            $this->setMensaje('Este usuario ya está registrado en Moodle (ID: ' . $this->usuario->moodle_id . ').', 'warning');
+            $this->toastWarning('Ya registrado', 'Este usuario ya tiene Moodle ID #' . $this->usuario->moodle_id . '.');
             return;
         }
 
         if (! $this->usuario->cedula) {
-            $this->setMensaje('El usuario no tiene cédula registrada. Es necesaria para crear el acceso en Moodle.', 'error');
+            $this->toastError('Sin cédula', 'El usuario no tiene cédula registrada. Es necesaria para crear el acceso en Moodle.');
             return;
         }
 
-        // Validar que tenga un rol con acceso al campus virtual
         $tieneAcceso = $this->usuario->hasAnyPermission([
             'acceso_administrativo',
             'acceso_docencia',
@@ -80,135 +73,156 @@ class MoodleGestion extends Component
         ]);
 
         if (! $tieneAcceso) {
-            $this->setMensaje(
-                'El usuario no tiene un rol con acceso al campus virtual. Asigne el rol correspondiente antes de registrarlo en Moodle.',
-                'error'
-            );
+            $this->toastError('Sin rol de acceso', 'Asigne un rol con acceso al campus virtual antes de registrar en Moodle.');
             return;
         }
 
-        // Si es exclusivamente estudiantil, verificar matrícula activa
         $soloEstudiantil = $this->usuario->hasPermissionTo('acceso_estudiantil')
             && ! $this->usuario->hasAnyPermission(['acceso_administrativo', 'acceso_docencia']);
 
-        if ($soloEstudiantil) {
-            $tieneMatricula = $this->usuario->matriculas()
-                ->where('estado', 'Habilitada')
-                ->exists();
+        if ($soloEstudiantil && ! $this->usuario->matriculas()->where('estado', 'Habilitada')->exists()) {
+            $this->toastError('Sin matrícula activa', 'El estudiante no tiene matrícula habilitada. Habilite su matrícula antes de registrarlo en Moodle.');
+            return;
+        }
 
-            if (! $tieneMatricula) {
-                $this->setMensaje(
-                    'El estudiante no tiene matrícula habilitada en ningún período activo. Habilite su matrícula antes de registrarlo en Moodle.',
-                    'error'
-                );
-                return;
+        try {
+            $moodle     = new MoodleService();
+            $encontrado = $moodle->buscarUsuario($this->usuario);
+
+            if ($encontrado) {
+                $moodleId = (int) $encontrado['id'];
+                $this->usuario->moodle_id = $moodleId;
+                $this->usuario->saveQuietly();
+                $this->toastSuccess('Usuario vinculado', "El usuario ya existía en Moodle. ID #{$moodleId} guardado.");
+            } else {
+                $moodleId = $moodle->crearUsuario($this->usuario);
+                $this->usuario->moodle_id = $moodleId;
+                $this->usuario->saveQuietly();
+
+                if (SettingService::get('smtp.activo', '0') === '1') {
+                    $mailer = SettingService::buildMailer();
+                    $mailer->to($this->usuario->email)->send(new BienvenidaMoodle($this->usuario));
+                }
+
+                $this->toastSuccess('Registrado en Moodle', "Cuenta creada. Moodle ID #{$moodleId}. Credenciales enviadas por correo.");
             }
+        } catch (Throwable $e) {
+            $this->toastError('Error al registrar', $e->getMessage());
         }
-
-        // Crear en Moodle via Job
-        CrearUsuarioMoodleJob::dispatch($this->usuario->id);
-
-        // Enviar email de bienvenida Moodle si SMTP activo
-        if (SettingService::get('smtp.activo', '0') === '1') {
-            $mailer = SettingService::buildMailer();
-            $mailer->to($this->usuario->email)->send(new BienvenidaMoodle($this->usuario));
-        }
-
-        $this->setMensaje(
-            'Registro en Moodle encolado. El usuario recibirá sus credenciales por correo una vez procesado.',
-            'success'
-        );
     }
 
     // =========================================================================
-    // ACTUALIZAR DATOS (nombre, email) EN MOODLE
+    // ACTUALIZAR DATOS — sincroniza nombre, correo, teléfono y dirección
     // =========================================================================
     public function actualizarDatos(): void
     {
-        $this->resetMensaje();
-
         if (! MoodleService::activo()) {
-            $this->setMensaje('La integración con Moodle no está activa.', 'warning');
+            $this->toastError('Integración desactivada', 'Active la integración Moodle en Configuración.');
             return;
         }
 
         if (! $this->usuario->moodle_id) {
-            $this->setMensaje('El usuario no tiene Moodle ID. Regístrelo primero en Moodle.', 'error');
+            $this->toastError('Sin Moodle ID', 'El usuario no tiene Moodle ID. Regístrelo primero.');
             return;
         }
 
-        ActualizarDatosMoodleJob::dispatch($this->usuario->id);
-        $this->setMensaje('Actualización de datos en Moodle encolada.', 'success');
+        try {
+            (new MoodleService())->actualizarUsuario($this->usuario);
+            $this->toastSuccess('Datos actualizados', 'Nombre, correo, teléfono y dirección sincronizados en Moodle.');
+        } catch (Throwable $e) {
+            $this->toastError('Error al actualizar', $e->getMessage());
+        }
     }
 
     // =========================================================================
-    // RESTABLECER CREDENCIALES (password = cédula + email reenvío)
+    // RESTABLECER CREDENCIALES — password = cédula + email de notificación
     // =========================================================================
     public function restablecerCredenciales(): void
     {
-        $this->resetMensaje();
-
         if (! MoodleService::activo()) {
-            $this->setMensaje('La integración con Moodle no está activa.', 'warning');
+            $this->toastError('Integración desactivada', 'Active la integración Moodle en Configuración.');
             return;
         }
 
         if (! $this->usuario->moodle_id) {
-            $this->setMensaje('El usuario no tiene Moodle ID. Regístrelo primero en Moodle.', 'error');
+            $this->toastError('Sin Moodle ID', 'El usuario no tiene Moodle ID. Regístrelo primero.');
             return;
         }
 
         if (! $this->usuario->cedula) {
-            $this->setMensaje('El usuario no tiene cédula registrada. Se necesita para restablecer la contraseña.', 'error');
+            $this->toastError('Sin cédula', 'El usuario no tiene cédula registrada. Se necesita para restablecer la contraseña.');
             return;
         }
 
-        RestablecerCredencialesMoodleJob::dispatch($this->usuario->id);
-        $this->setMensaje(
-            'Restablecimiento de contraseña encolado. El usuario recibirá un correo con sus nuevas credenciales.',
-            'success'
-        );
+        try {
+            (new MoodleService())->restablecerPassword($this->usuario);
+
+            if (SettingService::get('smtp.activo', '0') === '1') {
+                $mailer = SettingService::buildMailer();
+                $mailer->to($this->usuario->email)->send(
+                    new ReenvioCredencialesAcceso(
+                        usuario: $this->usuario,
+                        plainPassword: $this->usuario->cedula,
+                        tipoAcceso: 'moodle',
+                        nombreRol: 'Campus Virtual',
+                    )
+                );
+            }
+
+            $this->toastSuccess('Contraseña restablecida', 'La contraseña Moodle fue restablecida a la cédula del usuario.');
+        } catch (Throwable $e) {
+            $this->toastError('Error al restablecer', $e->getMessage());
+        }
     }
 
     // =========================================================================
-    // SUSPENDER / REACTIVAR ACCESO EN MOODLE
+    // SUSPENDER / REACTIVAR ACCESO
     // =========================================================================
     public function suspenderAcceso(bool $suspender): void
     {
-        $this->resetMensaje();
-
         if (! MoodleService::activo()) {
-            $this->setMensaje('La integración con Moodle no está activa.', 'warning');
+            $this->toastError('Integración desactivada', 'Active la integración Moodle en Configuración.');
             return;
         }
 
         if (! $this->usuario->moodle_id) {
-            $this->setMensaje('El usuario no tiene Moodle ID. Regístrelo primero en Moodle.', 'error');
+            $this->toastError('Sin Moodle ID', 'El usuario no tiene Moodle ID. Regístrelo primero.');
             return;
         }
 
-        SuspenderAccesoMoodleJob::dispatch($this->usuario->id, $suspender);
+        try {
+            (new MoodleService())->suspenderAcceso($this->usuario, $suspender);
 
-        $texto = $suspender
-            ? 'Suspensión de acceso encolada. El usuario no podrá ingresar al campus virtual una vez procesado.'
-            : 'Reactivación de acceso encolada. El usuario podrá ingresar al campus virtual una vez procesado.';
+            $this->usuario->moodle_suspended = $suspender;
+            $this->usuario->saveQuietly();
 
-        $this->setMensaje($texto, 'success');
+            $titulo  = $suspender ? 'Acceso suspendido'  : 'Acceso reactivado';
+            $mensaje = $suspender
+                ? 'El usuario ya no puede ingresar al campus virtual.'
+                : 'El usuario puede ingresar nuevamente al campus virtual.';
+
+            $this->toastSuccess($titulo, $mensaje);
+        } catch (Throwable $e) {
+            $this->toastError('Error', $e->getMessage());
+        }
     }
 
     // =========================================================================
     // HELPERS
     // =========================================================================
-    private function resetMensaje(): void
+    private function toastSuccess(string $titulo, string $mensaje): void
     {
-        $this->mensaje     = null;
-        $this->tipoMensaje = 'info';
+        $this->dispatch('moodle-toast', tipo: 'success', titulo: $titulo, mensaje: $mensaje);
     }
 
-    private function setMensaje(string $texto, string $tipo = 'info'): void
+    private function toastError(string $titulo, string $mensaje): void
     {
-        $this->mensaje     = $texto;
-        $this->tipoMensaje = $tipo;
+        $this->dispatch('moodle-toast', tipo: 'error', titulo: $titulo, mensaje: $mensaje);
+    }
+
+    private function toastWarning(string $titulo, string $mensaje): void
+    {
+        $this->dispatch('moodle-toast', tipo: 'warning', titulo: $titulo, mensaje: $mensaje);
     }
 
     #[Layout('layouts.admin')]

@@ -32,12 +32,23 @@ class RolePermissionSeeder extends Seeder
             // -----------------------------------------------------------------
             'asignar_roles',          // accede a /roles (RoleController)
             'crear_roles',            // reservado para creación explícita de roles
-            'gestionar_usuarios',     // CRUD de personal administrativo (UserController)
-            'gestionar_docentes',     // CRUD de docentes + asignación de horarios
-            'gestionar_estudiantes',  // CRUD de estudiantes + importación masiva
-            'gestionar_auditorias',  // Gestion de Auditorias
-            'moodle_gestion',        // Gestión de integración con Moodle
-            'auditoria_ver',         // Ver registros de auditoría general
+            'gestionar_usuarios',     // menú Usuarios + listado
+            'gestionar_docentes',     // menú Docentes + listado
+            'gestionar_estudiantes',  // menú Estudiantes + listado
+            'gestionar_auditorias',   // menú Auditoría
+            'moodle_gestion',         // Gestión de integración con Moodle
+            'auditoria_ver',          // Ver registros de auditoría general
+
+            // Sub-permisos usuarios
+            'crear_usuarios',          // botón Nuevo usuario
+            'editar_usuarios',         // botón editar (lápiz)
+            'eliminar_usuarios',       // botón eliminar + restaurar desde papelera
+            'reenviar_credenciales',   // botón Reenviar credenciales
+
+            // -----------------------------------------------------------------
+            // CONFIGURACIÓN — permiso único para todo el módulo de settings
+            // -----------------------------------------------------------------
+            'gestionar_configuracion',
 
             // -----------------------------------------------------------------
             // ESTRUCTURA ACADÉMICA
@@ -53,10 +64,20 @@ class RolePermissionSeeder extends Seeder
             // -----------------------------------------------------------------
             // MATRÍCULA Y FINANZAS
             // -----------------------------------------------------------------
-            'gestionar_matriculas',             // MatriculacionController + PagoMatricula (Livewire)
-            'gestionar_pagos',                  // PagosController
-            'gestionar_obligaciones_financieras', // ObligacionesEstudiante (Livewire)
-            'ver_reportes_financieros',         // ReportesFinancierosController
+            'gestionar_matriculas',               // menú Matrículas + listado
+            'gestionar_pagos',                    // PagosController
+            'gestionar_obligaciones_financieras', // menú Obligaciones + listado
+            'ver_reportes_financieros',           // ReportesFinancierosController
+
+            // Sub-permisos matrículas
+            'crear_matriculas',    // botón Nueva matrícula
+            'editar_matriculas',   // botón editar matrícula
+            'cancelar_matriculas', // botón cancelar matrícula
+
+            // Sub-permisos obligaciones
+            'crear_obligaciones_manuales', // botón Nueva obligación manual
+            'registrar_pagos',             // botón registrar / subir comprobante
+            'verificar_pagos',             // botón verificar / confirmar pago
 
             // -----------------------------------------------------------------
             // PROCESOS ACADÉMICOS (administración)
@@ -84,6 +105,15 @@ class RolePermissionSeeder extends Seeder
             'asignar_tickets',         // asignar ticket a un usuario (TicketShow → asignar())
             'cambiar_estado_tickets',  // cambiar estado (TicketShow → cambiarEstado())
             'cerrar_tickets',          // cerrar/resolver ticket definitivamente
+
+            // -----------------------------------------------------------------
+            // SOLICITUDES — módulo completo
+            // -----------------------------------------------------------------
+            'gestionar_solicitudes',        // menú Solicitudes + listado
+            'aprobar_solicitudes',          // botón Aprobar
+            'rechazar_solicitudes',         // botón Rechazar
+            'avanzar_solicitudes',          // botón Avanzar estado
+            'gestionar_tipos_solicitudes',  // menú Tipos Solicitud + CRUD
 
             // -----------------------------------------------------------------
             // DOCENCIA
@@ -115,8 +145,8 @@ class RolePermissionSeeder extends Seeder
         $admin               = Role::firstOrCreate(['name' => 'Administrador',          'guard_name' => 'web']);
         $secretaria          = Role::firstOrCreate(['name' => 'Secretaria',              'guard_name' => 'web']);
         $docente             = Role::firstOrCreate(['name' => 'Docente',                 'guard_name' => 'web']);
-        $estudiante          = Role::firstOrCreate(['name' => 'Estudiante',              'guard_name' => 'web']);
-        $admision            = Role::firstOrCreate(['name' => 'Admision',                'guard_name' => 'web']);
+        $estudiante          = Role::firstOrCreate(['name' => 'Estudiante',             'guard_name' => 'web']);
+        $admision            = Role::firstOrCreate(['name' => 'Admision',               'guard_name' => 'web']);
         $rector              = Role::firstOrCreate(['name' => 'Rector',                  'guard_name' => 'web']);
         $vicerrectora        = Role::firstOrCreate(['name' => 'Vicerrectora',            'guard_name' => 'web']);
         $coordAcademica      = Role::firstOrCreate(['name' => 'Coordinadora Academica',  'guard_name' => 'web']);
@@ -125,148 +155,13 @@ class RolePermissionSeeder extends Seeder
         $procuraduria        = Role::firstOrCreate(['name' => 'Procuraduria',            'guard_name' => 'web']);
 
         // =====================================================================
-        // ADMINISTRADOR — acceso total al sistema
+        // ADMINISTRADOR — acceso total: recibe TODOS los permisos
+        // Los demás roles se configuran desde la UI de Roles y Permisos
         // =====================================================================
-        $admin->syncPermissions([
-            // Porteros
-            'acceso_administrativo',
-
-            // Roles y usuarios
-            'asignar_roles',
-            'crear_roles',
-            'gestionar_usuarios',
-            'gestionar_docentes',
-            'gestionar_estudiantes',
-            'gestionar_auditorias',
-            'moodle_gestion',
-            'auditoria_ver',
-
-            // Estructura académica
-            'gestionar_periodos',
-            'gestionar_carreras',
-            'gestionar_semestres',
-            'gestionar_materias',
-            'gestionar_paralelos',
-            'gestionar_horarios',
-            'gestionar_modulos_academicos',
-
-            // Matrícula y finanzas
-            'gestionar_matriculas',
-            'gestionar_pagos',
-            'gestionar_obligaciones_financieras',
-            'ver_reportes_financieros',
-
-            // Procesos académicos
-            'gestionar_practicas_preprofesionales',
-            'gestionar_practicas_comunitarias',
-            'gestionar_titulacion',
-            'ver_reportes_academicos',
-            'ver_consolidado_cohortes',
-
-            // Documentación institucional
-            'gestionar_actas_colegiado',
-            'gestionar_normas',
-            'gestionar_documentacion_personal',
-
-            // Tickets (todos)
-            'ver_tickets',
-            'ver_todos_tickets',
-            'crear_tickets',
-            'responder_tickets',
-            'asignar_tickets',
-            'cambiar_estado_tickets',
-            'cerrar_tickets',
-
-            // Docencia (puede revisar)
-            'ver_notas_estudiantes',
-            'ingresar_notas_estudiantes',
-            'gestionar_asistencias',
-        ]);
+        $admin->syncPermissions($permissions);
 
         // =====================================================================
-        // SECRETARIA — gestión operativa completa, sin gestión de roles
-        // =====================================================================
-        $secretaria->syncPermissions([
-            // Porteros
-            'acceso_administrativo',
-
-            // Usuarios (sin roles)
-            'gestionar_usuarios',
-            'gestionar_docentes',
-            'gestionar_estudiantes',
-            'moodle_gestion',
-            'auditoria_ver',
-
-            // Estructura académica
-            'gestionar_periodos',
-            'gestionar_carreras',
-            'gestionar_semestres',
-            'gestionar_materias',
-            'gestionar_paralelos',
-            'gestionar_horarios',
-            'gestionar_modulos_academicos',
-
-            // Matrícula y finanzas
-            'gestionar_matriculas',
-            'gestionar_pagos',
-            'gestionar_obligaciones_financieras',
-            'ver_reportes_financieros',
-
-            // Procesos académicos
-            'gestionar_practicas_preprofesionales',
-            'gestionar_practicas_comunitarias',
-            'gestionar_titulacion',
-            'ver_reportes_academicos',
-            'ver_consolidado_cohortes',
-
-            // Documentación institucional
-            'gestionar_actas_colegiado',
-            'gestionar_normas',
-            'gestionar_documentacion_personal',
-
-            // Tickets (todos excepto asignar)
-            'ver_tickets',
-            'ver_todos_tickets',
-            'crear_tickets',
-            'responder_tickets',
-            'cambiar_estado_tickets',
-            'cerrar_tickets',
-
-            // Docencia (solo lectura)
-            'ver_notas_estudiantes',
-        ]);
-
-        // =====================================================================
-        // ADMISION — enfocado en matrícula, pagos y atención al estudiante
-        // =====================================================================
-        $admision->syncPermissions([
-            // Porteros
-            'acceso_admision',
-
-            // Estudiantes y docentes (consulta/registro básico)
-            /* 'gestionar_estudiantes', */
-
-            // Matrícula y finanzas
-            /* 'gestionar_matriculas',
-            'gestionar_pagos',
-            'gestionar_obligaciones_financieras',
-            'ver_reportes_financieros', */
-
-            // Consultas académicas
-            /* 'ver_reportes_academicos',
-            'ver_notas_estudiantes', */
-
-            // Tickets (atención y seguimiento)
-            /* 'ver_tickets',
-            'ver_todos_tickets',
-            'crear_tickets',
-            'responder_tickets',
-            'cambiar_estado_tickets',
-            'cerrar_tickets', */
-        ]);
-
-        // =====================================================================
-        // DOCENTE — portal de docencia
+        // DOCENTE — solo portal de docencia (no se gestiona por UI de roles)
         // =====================================================================
         $docente->syncPermissions([
             'acceso_docencia',
@@ -276,7 +171,7 @@ class RolePermissionSeeder extends Seeder
         ]);
 
         // =====================================================================
-        // ESTUDIANTE — portal estudiantil
+        // ESTUDIANTE — solo portal estudiantil (no se gestiona por UI de roles)
         // =====================================================================
         $estudiante->syncPermissions([
             'acceso_estudiantil',
@@ -288,55 +183,13 @@ class RolePermissionSeeder extends Seeder
         ]);
 
         // =====================================================================
-        // PERMISOS COMPLETOS ADMINISTRATIVOS — compartidos por los roles
-        // directivos e institucionales
+        // TODOS LOS DEMÁS ROLES ADMINISTRATIVOS
+        // Solo tienen acceso al portal; los permisos específicos los asigna
+        // el Administrador desde la pantalla de Roles y Permisos.
         // =====================================================================
-        $permisosDirectivos = [
-            'acceso_administrativo',
-            'asignar_roles',
-            'crear_roles',
-            'gestionar_usuarios',
-            'gestionar_docentes',
-            'gestionar_estudiantes',
-            'gestionar_auditorias',
-            'moodle_gestion',
-            'auditoria_ver',
-            'gestionar_periodos',
-            'gestionar_carreras',
-            'gestionar_semestres',
-            'gestionar_materias',
-            'gestionar_paralelos',
-            'gestionar_horarios',
-            'gestionar_modulos_academicos',
-            'gestionar_matriculas',
-            'gestionar_pagos',
-            'gestionar_obligaciones_financieras',
-            'ver_reportes_financieros',
-            'gestionar_practicas_preprofesionales',
-            'gestionar_practicas_comunitarias',
-            'gestionar_titulacion',
-            'ver_reportes_academicos',
-            'ver_consolidado_cohortes',
-            'gestionar_actas_colegiado',
-            'gestionar_normas',
-            'gestionar_documentacion_personal',
-            'ver_tickets',
-            'ver_todos_tickets',
-            'crear_tickets',
-            'responder_tickets',
-            'asignar_tickets',
-            'cambiar_estado_tickets',
-            'cerrar_tickets',
-            'ver_notas_estudiantes',
-            'ingresar_notas_estudiantes',
-            'gestionar_asistencias',
-        ];
-
-        $rector->syncPermissions($permisosDirectivos);
-        $vicerrectora->syncPermissions($permisosDirectivos);
-        $coordAcademica->syncPermissions($permisosDirectivos);
-        $coordGeneral->syncPermissions($permisosDirectivos);
-        $secretariaGeneral->syncPermissions($permisosDirectivos);
-        $procuraduria->syncPermissions($permisosDirectivos);
+        foreach ([$secretaria, $admision, $rector, $vicerrectora,
+                  $coordAcademica, $coordGeneral, $secretariaGeneral, $procuraduria] as $role) {
+            $role->syncPermissions(['acceso_administrativo']);
+        }
     }
 }

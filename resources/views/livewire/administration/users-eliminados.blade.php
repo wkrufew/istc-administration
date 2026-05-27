@@ -95,7 +95,7 @@
                         <th class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">Correo</th>
                         <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">Rol(es)</th>
                         <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-36">Eliminado</th>
-                        <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-28">Acción</th>
+                        <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-52">Acción</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-white/[0.04]">
@@ -151,32 +151,68 @@
                                 </span>
                             </td>
 
-                            {{-- Restaurar --}}
+                            {{-- Acciones --}}
                             <td class="px-4 py-3 text-center">
-                                <button type="button" x-data
-                                    @click="Swal.fire({
-                                        title: '¿Restaurar usuario?',
-                                        html: 'Se habilitará y activará la cuenta de <strong>{{ addslashes($user->name) }}</strong>.',
-                                        icon: 'question',
-                                        showCancelButton: true,
-                                        confirmButtonColor: '#16a34a',
-                                        cancelButtonColor: '#64748b',
-                                        confirmButtonText: 'Sí, restaurar',
-                                        cancelButtonText: 'Cancelar',
-                                    }).then(r => r.isConfirmed && $wire.restaurar({{ $user->id }}))"
-                                    title="Restaurar usuario"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
-                                           text-lime-400 border border-lime-500/20 bg-lime-500/[0.07]
-                                           hover:bg-lime-500/20 hover:border-lime-500/40
-                                           transition-all duration-150">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
-                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                        <path d="M3 3v5h5" />
-                                    </svg>
-                                    Restaurar
-                                </button>
+                                <div class="flex items-center justify-center gap-2">
+
+                                    {{-- Restaurar --}}
+                                    <button type="button" x-data
+                                        @click="Swal.fire({
+                                            title: '¿Restaurar usuario?',
+                                            html: 'Se habilitará y activará la cuenta de <strong>{{ addslashes($user->name) }}</strong>.',
+                                            icon: 'question',
+                                            showCancelButton: true,
+                                            confirmButtonColor: '#16a34a',
+                                            cancelButtonColor: '#475569',
+                                            confirmButtonText: 'Sí, restaurar',
+                                            cancelButtonText: 'Cancelar',
+                                            customClass: { popup: 'rounded-xl border border-white/10 shadow-2xl' },
+                                            ...swalTheme(),
+                                        }).then(r => r.isConfirmed && $wire.restaurar({{ $user->id }}))"
+                                        title="Restaurar usuario"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
+                                               text-lime-400 border border-lime-500/20 bg-lime-500/[0.07]
+                                               hover:bg-lime-500/20 hover:border-lime-500/40
+                                               transition-all duration-150">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
+                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                            <path d="M3 3v5h5" />
+                                        </svg>
+                                        Restaurar
+                                    </button>
+
+                                    {{-- Eliminar definitivamente --}}
+                                    <button type="button" x-data
+                                        @click="Swal.fire({
+                                            title: '¿Eliminar definitivamente?',
+                                            html: 'Esta acción es <strong>irreversible</strong>.<br>El usuario <strong>{{ addslashes($user->name) }}</strong> será borrado de forma permanente del sistema.',
+                                            icon: 'warning',
+                                            showCancelButton: true,
+                                            confirmButtonColor: '#dc2626',
+                                            cancelButtonColor: '#475569',
+                                            confirmButtonText: 'Sí, eliminar',
+                                            cancelButtonText: 'Cancelar',
+                                            customClass: { popup: 'rounded-xl border border-white/10 shadow-2xl' },
+                                            ...swalTheme(),
+                                        }).then(r => r.isConfirmed && $wire.forceEliminar({{ $user->id }}))"
+                                        title="Eliminar permanentemente"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
+                                               text-red-400 border border-red-500/20 bg-red-500/[0.07]
+                                               hover:bg-red-500/20 hover:border-red-500/40
+                                               transition-all duration-150">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
+                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                            <line x1="10" y1="11" x2="10" y2="17" />
+                                            <line x1="14" y1="11" x2="14" y2="17" />
+                                        </svg>
+                                        Definitivo
+                                    </button>
+
+                                </div>
                             </td>
 
                         </tr>

@@ -204,7 +204,7 @@ class ObligacionesEstudiante extends Component
 
     public function guardarObligacion()
     {
-        if ($this->sinPermiso('gestionar_obligaciones_financieras')) return;
+        if ($this->sinPermiso('crear_obligaciones_manuales')) return;
 
         $this->validate([
             'estudianteSeleccionado' => 'required|exists:users,id',
@@ -317,7 +317,7 @@ class ObligacionesEstudiante extends Component
 
     public function guardarPago()
     {
-        if ($this->sinPermiso('gestionar_obligaciones_financieras')) return;
+        if ($this->sinPermiso('registrar_pagos')) return;
 
         // Re-consultar INSCRIPCION desde DB — no depender de la propiedad serializada por Livewire
         $obligInscripcion = null;
@@ -492,7 +492,7 @@ class ObligacionesEstudiante extends Component
 
     public function aprobarPago()
     {
-        if ($this->sinPermiso('gestionar_obligaciones_financieras')) return;
+        if ($this->sinPermiso('verificar_pagos')) return;
         if (! $this->pagoSeleccionado) return;
 
         try {
@@ -535,7 +535,7 @@ class ObligacionesEstudiante extends Component
 
     public function rechazarPago()
     {
-        if ($this->sinPermiso('gestionar_obligaciones_financieras')) return;
+        if ($this->sinPermiso('verificar_pagos')) return;
 
         $this->validate([
             'observacionVerificacion' => 'required|min:10',

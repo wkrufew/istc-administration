@@ -22,6 +22,7 @@ class ObligacionesFinanciera extends Model
         'estado',
         'fecha_vencimiento',
         'descripcion',
+        'solicitud_id',
     ];
 
     protected $casts = [
@@ -63,6 +64,12 @@ class ObligacionesFinanciera extends Model
     public function pagos()
     {
         return $this->hasMany(Pago::class, 'obligacion_id');
+    }
+
+    // 🔹 Puede estar ligada a una solicitud
+    public function solicitud()
+    {
+        return $this->belongsTo(Solicitud::class);
     }
 
     /*

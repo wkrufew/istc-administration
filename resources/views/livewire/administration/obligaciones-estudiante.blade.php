@@ -156,8 +156,16 @@
                     <select wire:model.live="filtroTipo"
                         class="w-full rounded-lg border-gray-300 dark:border-slate-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm dark:bg-slate-800 dark:text-gray-100">
                         <option value="">Todos los tipos</option>
-                        @foreach (['MATRICULA', 'COLEGIATURA', 'ARRASTRE', 'MULTA', 'OTROS'] as $tipo)
-                            <option value="{{ $tipo }}">{{ ucfirst(strtolower($tipo)) }}</option>
+                        @foreach ([
+                            'MATRICULA'   => 'Matrícula',
+                            'INSCRIPCION' => 'Inscripción',
+                            'COLEGIATURA' => 'Colegiatura',
+                            'ARRASTRE'    => 'Arrastre',
+                            'CERTIFICADO' => 'Certificado',
+                            'MULTA'       => 'Multa',
+                            'OTROS'       => 'Otros',
+                        ] as $val => $etiqueta)
+                            <option value="{{ $val }}">{{ $etiqueta }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -236,8 +244,10 @@
                                     @php
                                         $tipoColors = [
                                             'MATRICULA'   => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+                                            'INSCRIPCION' => 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
                                             'COLEGIATURA' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
                                             'ARRASTRE'    => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+                                            'CERTIFICADO' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
                                             'MULTA'       => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
                                             'OTROS'       => 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-300',
                                         ];

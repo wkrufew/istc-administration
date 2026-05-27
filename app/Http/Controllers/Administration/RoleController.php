@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Administration;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -17,8 +19,19 @@ class RoleController extends Controller
 
     public function index()
     {
+        $pivotTable = config('permission.table_names.model_has_roles', 'model_has_roles');
 
-        $roles = Role::whereNotIn('name', ['Super Admin'])->paginate(10);
+        $roles = Role::select('roles.*')
+            ->selectSub(
+                DB::table($pivotTable)
+                    ->selectRaw('count(*)')
+                    ->whereColumn('role_id', 'roles.id')
+                    ->where('model_type', User::class),
+                'users_count'
+            )
+            ->whereNotIn('name', ['Super Admin'])
+            ->paginate(10);
+
         return view('administracion.roles.index', compact('roles'));
     }
 
@@ -73,8 +86,19 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
+        $pivotTable = config('permission.table_names.model_has_roles', 'model_has_roles');
+        $usersCount = DB::table($pivotTable)
+            ->where('role_id', $role->id)
+            ->where('model_type', User::class)
+            ->count();
+
+        if ($usersCount > 0) {
+            return redirect()->route('administracion.administrativa.roles.index')
+                ->with('error_rol', 'El rol "' . $role->name . '" está asignado a ' . $usersCount . ' usuario(s) y no puede eliminarse.');
+        }
+
         $role->delete();
 
-        return redirect()->route('administracion.administrativa.roles.index')->with('menssage', 'El rol se ha eliminado correctamente');
+        return redirect()->route('administracion.administrativa.roles.index')->with('menssage', 'El rol se ha eliminado correctamente.');
     }
 }

@@ -1,4 +1,55 @@
-<div class="max-w-4xl mx-auto px-4 py-6 space-y-4">
+@script
+<script>
+    Alpine.data('moodleGestion', () => ({
+
+        moodleConfirm(opts, onConfirm) {
+            Swal.fire(Object.assign({
+                background: '#0f172a',
+                color: '#cbd5e1',
+                customClass: { popup: 'rounded-xl border border-white/10 shadow-2xl' },
+                showCancelButton: true,
+                cancelButtonColor: '#475569',
+                cancelButtonText: 'Cancelar',
+            }, opts)).then(r => r.isConfirmed && onConfirm())
+        },
+
+        moodleToast(detail) {
+            if (detail.tipo === 'error') {
+                Swal.fire({
+                    icon: 'error',
+                    title: detail.titulo,
+                    html: detail.mensaje || '',
+                    background: '#0f172a',
+                    color: '#e2e8f0',
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'rounded-xl border border-white/10 shadow-2xl' },
+                })
+            } else {
+                Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true,
+                    background: '#0f172a',
+                    color: '#e2e8f0',
+                    customClass: { popup: 'rounded-xl border border-white/10 shadow-xl' },
+                }).fire({
+                    icon: detail.tipo,
+                    title: detail.titulo,
+                    html: detail.mensaje || '',
+                })
+            }
+        }
+
+    }))
+</script>
+@endscript
+
+<div class="max-w-4xl mx-auto px-4 py-6 space-y-4"
+     x-data="moodleGestion"
+     x-on:moodle-toast.window="moodleToast($event.detail)">
 
     {{-- ═══════ HEADER ═══════ --}}
     <div class="bg-slate-900 border border-slate-700/50 relative overflow-hidden rounded-xl">
@@ -8,7 +59,6 @@
         <div class="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-700 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-900/40 flex-shrink-0">
-                    {{-- Ícono Moodle-like --}}
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
@@ -51,30 +101,6 @@
                 para habilitar estas acciones.
             </p>
         </div>
-    </div>
-    @endif
-
-    {{-- ═══════ MENSAJE DE ESTADO ═══════ --}}
-    @if($mensaje)
-    <div class="rounded-xl px-5 py-4 flex items-start gap-3 border
-        {{ $tipoMensaje === 'success' ? 'bg-lime-500/10 border-lime-500/25' : '' }}
-        {{ $tipoMensaje === 'error'   ? 'bg-red-500/10 border-red-500/25'   : '' }}
-        {{ $tipoMensaje === 'warning' ? 'bg-amber-500/10 border-amber-500/25' : '' }}
-        {{ $tipoMensaje === 'info'    ? 'bg-sky-500/10 border-sky-500/25'   : '' }}
-    ">
-        @if($tipoMensaje === 'success')
-            <svg class="w-5 h-5 text-lime-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p class="text-lime-400 text-sm">{{ $mensaje }}</p>
-        @elseif($tipoMensaje === 'error')
-            <svg class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p class="text-red-400 text-sm">{{ $mensaje }}</p>
-        @elseif($tipoMensaje === 'warning')
-            <svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            <p class="text-amber-400 text-sm">{{ $mensaje }}</p>
-        @else
-            <svg class="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p class="text-sky-400 text-sm">{{ $mensaje }}</p>
-        @endif
     </div>
     @endif
 
@@ -149,7 +175,7 @@
         <div class="bg-slate-900 border border-white/[0.06] rounded-xl p-5 space-y-3">
             <p class="text-[0.65rem] font-medium tracking-widest uppercase text-slate-500 mb-4">Acciones Moodle</p>
 
-            {{-- 1. Obtener / Sincronizar ID --}}
+            {{-- 1. Sincronizar ID --}}
             <div class="group flex items-start gap-3 p-3 rounded-lg border border-white/[0.05] bg-slate-800/40 hover:border-sky-500/25 transition-all">
                 <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -159,13 +185,26 @@
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-white/80">Sincronizar ID</p>
                     <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Busca al usuario en Moodle por cédula o correo y guarda su ID aquí.</p>
-                    <button wire:click="sincronizarId" wire:loading.attr="disabled"
+                    <button wire:loading.attr="disabled" wire:target="sincronizarId"
+                            @click.prevent="moodleConfirm({
+                                title: 'Sincronizar ID Moodle',
+                                html: 'Se buscará a <b>{{ addslashes($usuario->name) }}</b> en el campus virtual por cédula y correo.',
+                                icon: 'question',
+                                confirmButtonColor: '#0284c7',
+                                confirmButtonText: 'Sí, sincronizar',
+                            }, () => $wire.sincronizarId())"
                             class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                                    bg-sky-500/10 border border-sky-500/20 text-sky-400
                                    hover:bg-sky-500/20 hover:border-sky-400/40 transition-all duration-150
                                    disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="sincronizarId">Sincronizar</span>
-                        <span wire:loading wire:target="sincronizarId">Buscando…</span>
+                        <span wire:loading wire:target="sincronizarId" class="inline-flex items-center gap-1.5">
+                            <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                            </svg>
+                            Buscando…
+                        </span>
                     </button>
                 </div>
             </div>
@@ -181,24 +220,26 @@
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-white/80">Registrar en Moodle</p>
                     <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Crea la cuenta en Moodle con cédula como usuario y contraseña. Envía email de bienvenida.</p>
-                    <button wire:click="registrarEnMoodle" wire:loading.attr="disabled"
-                            x-data
-                            @click.prevent="Swal.fire({
+                    <button wire:loading.attr="disabled" wire:target="registrarEnMoodle"
+                            @click.prevent="moodleConfirm({
                                 title: 'Registrar en Moodle',
-                                html: 'Se creará la cuenta de <strong>{{ addslashes($usuario->name) }}</strong> en el campus virtual.<br>Usuario y contraseña: <code>{{ $usuario->cedula }}</code>',
+                                html: 'Se creará la cuenta de <b>{{ addslashes($usuario->name) }}</b> en el campus virtual.<br><br>Usuario y contraseña: <code style=\'background:#1e293b;padding:2px 6px;border-radius:4px;font-family:monospace\'>{{ $usuario->cedula }}</code>',
                                 icon: 'question',
-                                showCancelButton: true,
                                 confirmButtonColor: '#059669',
-                                cancelButtonColor: '#64748b',
                                 confirmButtonText: 'Sí, registrar',
-                                cancelButtonText: 'Cancelar',
-                            }).then(r => r.isConfirmed && $wire.registrarEnMoodle())"
+                            }, () => $wire.registrarEnMoodle())"
                             class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                                    bg-emerald-500/10 border border-emerald-500/20 text-emerald-400
                                    hover:bg-emerald-500/20 hover:border-emerald-400/40 transition-all duration-150
                                    disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="registrarEnMoodle">Registrar</span>
-                        <span wire:loading wire:target="registrarEnMoodle">Procesando…</span>
+                        <span wire:loading wire:target="registrarEnMoodle" class="inline-flex items-center gap-1.5">
+                            <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                            </svg>
+                            Procesando…
+                        </span>
                     </button>
                 </div>
             </div>
@@ -214,14 +255,27 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-white/80">Actualizar datos</p>
-                    <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Sincroniza nombre y correo del usuario hacia Moodle.</p>
-                    <button wire:click="actualizarDatos" wire:loading.attr="disabled"
+                    <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Sincroniza nombre, correo, teléfono y dirección del usuario hacia Moodle.</p>
+                    <button wire:loading.attr="disabled" wire:target="actualizarDatos"
+                            @click.prevent="moodleConfirm({
+                                title: 'Actualizar datos en Moodle',
+                                html: 'Se sincronizarán los datos actuales de <b>{{ addslashes($usuario->name) }}</b> hacia el campus virtual.',
+                                icon: 'question',
+                                confirmButtonColor: '#d97706',
+                                confirmButtonText: 'Sí, actualizar',
+                            }, () => $wire.actualizarDatos())"
                             class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                                    bg-amber-500/10 border border-amber-500/20 text-amber-400
                                    hover:bg-amber-500/20 hover:border-amber-400/40 transition-all duration-150
                                    disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="actualizarDatos">Actualizar</span>
-                        <span wire:loading wire:target="actualizarDatos">Actualizando…</span>
+                        <span wire:loading wire:target="actualizarDatos" class="inline-flex items-center gap-1.5">
+                            <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                            </svg>
+                            Actualizando…
+                        </span>
                     </button>
                 </div>
             </div>
@@ -235,30 +289,32 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-white/80">Restablecer credenciales</p>
-                    <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Resetea la contraseña Moodle a la cédula y envía correo de notificación al estudiante.</p>
-                    <button wire:click="restablecerCredenciales" wire:loading.attr="disabled"
-                            x-data
-                            @click.prevent="Swal.fire({
+                    <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Resetea la contraseña Moodle a la cédula y envía correo de notificación al usuario.</p>
+                    <button wire:loading.attr="disabled" wire:target="restablecerCredenciales"
+                            @click.prevent="moodleConfirm({
                                 title: 'Restablecer contraseña Moodle',
-                                html: 'La contraseña de <strong>{{ addslashes($usuario->name) }}</strong> en Moodle se restablecerá a su cédula: <code>{{ $usuario->cedula }}</code>',
+                                html: 'La contraseña de <b>{{ addslashes($usuario->name) }}</b> en Moodle se restablecerá a su cédula:<br><br><code style=\'background:#1e293b;padding:2px 6px;border-radius:4px;font-family:monospace\'>{{ $usuario->cedula }}</code>',
                                 icon: 'warning',
-                                showCancelButton: true,
                                 confirmButtonColor: '#dc2626',
-                                cancelButtonColor: '#64748b',
                                 confirmButtonText: 'Sí, restablecer',
-                                cancelButtonText: 'Cancelar',
-                            }).then(r => r.isConfirmed && $wire.restablecerCredenciales())"
+                            }, () => $wire.restablecerCredenciales())"
                             class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                                    bg-red-500/10 border border-red-500/20 text-red-400
                                    hover:bg-red-500/20 hover:border-red-400/40 transition-all duration-150
                                    disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="restablecerCredenciales">Restablecer</span>
-                        <span wire:loading wire:target="restablecerCredenciales">Procesando…</span>
+                        <span wire:loading wire:target="restablecerCredenciales" class="inline-flex items-center gap-1.5">
+                            <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                            </svg>
+                            Procesando…
+                        </span>
                     </button>
                 </div>
             </div>
 
-            {{-- 5. Suspender / Reactivar acceso --}}
+            {{-- 5a. Suspender acceso --}}
             @if(! $usuario->moodle_suspended)
             <div class="group flex items-start gap-3 p-3 rounded-lg border border-white/[0.05] bg-slate-800/40 hover:border-orange-500/25 transition-all">
                 <div class="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -269,27 +325,31 @@
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-white/80">Suspender acceso</p>
                     <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Bloquea el acceso de este usuario al campus virtual de Moodle.</p>
-                    <button wire:loading.attr="disabled"
-                            x-data
-                            @click.prevent="Swal.fire({
+                    <button wire:loading.attr="disabled" wire:target="suspenderAcceso"
+                            @click.prevent="moodleConfirm({
                                 title: 'Suspender acceso Moodle',
-                                html: 'Se bloqueará el acceso de <strong>{{ addslashes($usuario->name) }}</strong> al campus virtual. El usuario no podrá iniciar sesión.',
+                                html: 'Se bloqueará el acceso de <b>{{ addslashes($usuario->name) }}</b> al campus virtual. El usuario no podrá iniciar sesión.',
                                 icon: 'warning',
-                                showCancelButton: true,
                                 confirmButtonColor: '#ea580c',
-                                cancelButtonColor: '#64748b',
                                 confirmButtonText: 'Sí, suspender',
-                                cancelButtonText: 'Cancelar',
-                            }).then(r => r.isConfirmed && $wire.suspenderAcceso(true))"
+                            }, () => $wire.suspenderAcceso(true))"
                             class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                                    bg-orange-500/10 border border-orange-500/20 text-orange-400
                                    hover:bg-orange-500/20 hover:border-orange-400/40 transition-all duration-150
                                    disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="suspenderAcceso">Suspender</span>
-                        <span wire:loading wire:target="suspenderAcceso">Procesando…</span>
+                        <span wire:loading wire:target="suspenderAcceso" class="inline-flex items-center gap-1.5">
+                            <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                            </svg>
+                            Procesando…
+                        </span>
                     </button>
                 </div>
             </div>
+
+            {{-- 5b. Reactivar acceso --}}
             @else
             <div class="group flex items-start gap-3 p-3 rounded-lg border border-white/[0.05] bg-slate-800/40 hover:border-lime-500/25 transition-all">
                 <div class="w-8 h-8 rounded-lg bg-lime-500/10 border border-lime-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -300,24 +360,26 @@
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-white/80">Reactivar acceso</p>
                     <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Restaura el acceso de este usuario al campus virtual de Moodle.</p>
-                    <button wire:loading.attr="disabled"
-                            x-data
-                            @click.prevent="Swal.fire({
+                    <button wire:loading.attr="disabled" wire:target="suspenderAcceso"
+                            @click.prevent="moodleConfirm({
                                 title: 'Reactivar acceso Moodle',
-                                html: 'Se restaurará el acceso de <strong>{{ addslashes($usuario->name) }}</strong> al campus virtual.',
+                                html: 'Se restaurará el acceso de <b>{{ addslashes($usuario->name) }}</b> al campus virtual.',
                                 icon: 'question',
-                                showCancelButton: true,
                                 confirmButtonColor: '#16a34a',
-                                cancelButtonColor: '#64748b',
                                 confirmButtonText: 'Sí, reactivar',
-                                cancelButtonText: 'Cancelar',
-                            }).then(r => r.isConfirmed && $wire.suspenderAcceso(false))"
+                            }, () => $wire.suspenderAcceso(false))"
                             class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                                    bg-lime-500/10 border border-lime-500/20 text-lime-400
                                    hover:bg-lime-500/20 hover:border-lime-400/40 transition-all duration-150
                                    disabled:opacity-50 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="suspenderAcceso">Reactivar</span>
-                        <span wire:loading wire:target="suspenderAcceso">Procesando…</span>
+                        <span wire:loading wire:target="suspenderAcceso" class="inline-flex items-center gap-1.5">
+                            <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                            </svg>
+                            Procesando…
+                        </span>
                     </button>
                 </div>
             </div>

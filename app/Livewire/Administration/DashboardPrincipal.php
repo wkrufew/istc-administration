@@ -12,6 +12,7 @@ use App\Models\Matricula;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Paralelo;
 use App\Models\Periodo;
+use App\Models\Solicitud;
 use App\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -387,6 +388,16 @@ class DashboardPrincipal extends Component
             ['label' => 'Obligaciones pagadas',   'pct' => $pctPagos,      'color' => 'bg-blue-500',    'valor' => "{$pagadas}/{$totalOblig}"],
             ['label' => 'Aprobación general',      'pct' => $pctAprobacion, 'color' => 'bg-violet-500',  'valor' => "{$aprobados}/{$totalCal}"],
             ['label' => 'Ocupación paralelos',     'pct' => $pctOcupacion,  'color' => 'bg-amber-500',   'valor' => "{$pctOcupacion}%"],
+        ];
+    }
+
+    #[Computed]
+    public function statsSolicitudes(): array
+    {
+        return [
+            'pendientes' => Solicitud::where('estado', 'pendiente')->count(),
+            'en_tramite' => Solicitud::whereIn('estado', ['aprobada', 'pendiente_pago', 'pagada', 'en_proceso', 'lista'])->count(),
+            'hoy'        => Solicitud::whereDate('created_at', today())->count(),
         ];
     }
 

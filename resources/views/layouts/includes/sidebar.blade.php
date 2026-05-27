@@ -1,22 +1,33 @@
-{{-- <div class = "fixed w-full z-30 flex bg-[#7ea41e] dark:bg-gray-800 p-2 items-center justify-center h-16 px-10"> --}}
 <div
-    class="fixed w-full z-30 flex 
+    x-data
+    class="fixed w-full z-30 flex
     bg-white/70 dark:bg-slate-900/70
     backdrop-blur-md
     border-b border-slate-200 dark:border-slate-800
-    p-2 items-center justify-center h-16 px-10">
-    {{-- <div
-        class = "logo ml-12 dark:text-white  transform ease-in-out duration-500 flex-none h-full flex items-center justify-center font-semibold">
-        ISTC
-    </div> --}}
+    p-2 items-center h-16 px-4 md:px-6">
+
+    {{-- Mobile hamburger --}}
+    <button @click="$store.sidebar.toggle()"
+        class="md:hidden flex items-center justify-center w-8 h-8 rounded-lg mr-2 flex-shrink-0
+               text-slate-600 dark:text-slate-300
+               hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        aria-label="Abrir menú">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+    </button>
+
     <div
-        class="logo ml-12 text-slate-900 dark:text-white 
+        :class="{ 'md:ml-64': $store.sidebar.open, 'md:ml-14': !$store.sidebar.open }"
+        class="logo text-slate-900 dark:text-white ml-0 transition-all duration-300
     flex-none h-full flex items-center justify-center font-semibold tracking-wide">
-        @php
+        {{-- @php
             $nombreCorto =
                 \App\Services\SettingService::get('instituto.nombre_corto') ?: config('app.name', 'ISTCumandá');
         @endphp
-        {{ $nombreCorto }}
+        {{ $nombreCorto }}  --}}
+         Zona Administrativa
     </div>
     <!-- SPACER -->
     <div class = "grow h-full flex items-center justify-center"></div>

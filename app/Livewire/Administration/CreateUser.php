@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Administration;
 
-use App\Mail\BienvenidaAccesoInterno;
+use App\Jobs\EnviarBienvenidaAccesoInternoJob;
 use App\Models\User;
 use App\Services\SettingService;
 use Livewire\Component;
@@ -252,7 +252,7 @@ class CreateUser extends Component
 
     public function save()
     {
-        if ($this->sinPermiso('gestionar_usuarios')) return;
+        if ($this->sinPermiso('crear_usuarios')) return;
 
         $this->validate();
 
@@ -336,17 +336,8 @@ class CreateUser extends Component
             }
 
             if ($tipoAcceso && $user->email) {
-                try {
-                    SettingService::buildMailer()
-                        ->to($user->email)
-                        ->send(new BienvenidaAccesoInterno($user, $plainPassword, $tipoAcceso, $role->name));
-                    Log::info('CreateUser — correo enviado', ['user_id' => $user->id, 'tipo' => $tipoAcceso]);
-                } catch (\Throwable $e) {
-                    Log::warning('BienvenidaAccesoInterno: email falló', [
-                        'user_id' => $user->id,
-                        'error'   => $e->getMessage(),
-                    ]);
-                }
+                EnviarBienvenidaAccesoInternoJob::dispatch($user->id, $plainPassword, $tipoAcceso, $role->name);
+                Log::info('CreateUser — correo encolado', ['user_id' => $user->id, 'tipo' => $tipoAcceso]);
             } else {
                 Log::warning('CreateUser — correo no enviado', [
                     'tipoAcceso' => $tipoAcceso,

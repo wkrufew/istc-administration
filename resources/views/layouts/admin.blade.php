@@ -59,7 +59,9 @@
     @include('layouts.includes.aside')
 
     <div
-        class = "content flex flex-col justify-between ml-12 transform ease-in-out duration-500 pt-20 px-2 md:px-5 pb-4">
+        x-data
+        :class="{ 'md:ml-64': $store.sidebar.open, 'md:ml-14': !$store.sidebar.open }"
+        class="flex flex-col justify-between ml-0 transition-all duration-300 ease-in-out pt-20 px-2 md:px-5 pb-4">
 
         {{--  @include('layouts.includes.navigation') --}}
 
@@ -79,47 +81,31 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
     @stack('js')
     <script>
-        const sidebar = document.querySelector("aside");
-        const maxSidebar = document.querySelector(".max")
-        const miniSidebar = document.querySelector(".mini")
-        const roundout = document.querySelector(".roundout")
-        const maxToolbar = document.querySelector(".max-toolbar")
-        const logo = document.querySelector('.logo')
-        const content = document.querySelector('.content')
         const moon = document.querySelector(".moon")
         const sun = document.querySelector(".sun")
 
-        function openNav() {
-            if (sidebar.classList.contains('-translate-x-48')) {
-                // max sidebar
-                sidebar.classList.remove("-translate-x-48")
-                sidebar.classList.add("translate-x-none")
-                maxSidebar.classList.remove("hidden")
-                maxSidebar.classList.add("flex")
-                miniSidebar.classList.remove("flex")
-                miniSidebar.classList.add("hidden")
-                maxToolbar.classList.add("translate-x-0")
-                maxToolbar.classList.remove("translate-x-24", "scale-x-0")
-                logo.classList.remove("ml-12")
-                content.classList.remove("ml-12")
-                content.classList.add("ml-12", "md:ml-60")
-            } else {
-                // mini sidebar
-                sidebar.classList.add("-translate-x-48")
-                sidebar.classList.remove("translate-x-none")
-                maxSidebar.classList.add("hidden")
-                maxSidebar.classList.remove("flex")
-                miniSidebar.classList.add("flex")
-                miniSidebar.classList.remove("hidden")
-                maxToolbar.classList.add("translate-x-24", "scale-x-0")
-                maxToolbar.classList.remove("translate-x-0")
-                logo.classList.add('ml-12')
-                content.classList.remove("ml-12", "md:ml-60")
-                content.classList.add("ml-12")
-
-            }
-
-        }
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('sidebar', {
+                open: localStorage.getItem('sidebar') !== 'closed',
+                mobile: window.innerWidth < 768,
+                mobileOpen: false,
+                init() {
+                    const self = this;
+                    window.addEventListener('resize', () => {
+                        self.mobile = window.innerWidth < 768;
+                        if (!self.mobile) self.mobileOpen = false;
+                    });
+                },
+                toggle() {
+                    if (this.mobile) {
+                        this.mobileOpen = !this.mobileOpen;
+                    } else {
+                        this.open = !this.open;
+                        localStorage.setItem('sidebar', this.open ? 'open' : 'closed');
+                    }
+                }
+            });
+        });
 
         function toggleFullScreen() {
             if ((document.fullScreenElement && document.fullScreenElement !== null) || (!document.mozFullScreen && !document
@@ -143,6 +129,15 @@
         }
 
         $(document).ready(function() {
+            // Sincronizar iconos de tema con el estado real al cargar
+            if (document.documentElement.classList.contains('dark')) {
+                moon.classList.add("hidden");
+                sun.classList.remove("hidden");
+            } else {
+                sun.classList.add("hidden");
+                moon.classList.remove("hidden");
+            }
+
             $("#full-screen").click(function() {
                 toggleFullScreen()
                 $("#full-icon").toggleClass("hidden");
@@ -192,6 +187,7 @@
                 toast.onmouseenter = Swal.stopTimer;
                 toast.onmouseleave = Swal.resumeTimer;
             },
+            ...swalTheme(),
         });
 
         // ── session('success') → toast verde ─────────────────────────────

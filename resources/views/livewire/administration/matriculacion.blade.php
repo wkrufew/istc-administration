@@ -23,7 +23,7 @@
     {{-- ═══════════════════════════════════════
          BLOQUE 1 — HEADER FUSIONADO
     ═══════════════════════════════════════ --}}
-    <div class="bg-slate-900 border border-slate-700/50 relative overflow-hidden rounded-xl">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 relative overflow-hidden rounded-xl">
 
         <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-lime-500 to-sky-600 opacity-70"></div>
         <div
@@ -42,7 +42,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-semibold text-white/90 leading-none">Gestión de Matrículas</h1>
+                    <h1 class="text-xl font-semibold text-slate-800 dark:text-white/90 leading-none">Gestión de Matrículas</h1>
                     <p class="text-xs text-lime-400/70 tracking-widest uppercase mt-1">Administración · Estudiantes</p>
                 </div>
             </div>
@@ -58,8 +58,8 @@
                     </svg>
                 </div>
                 <input wire:model.live="search" type="text" placeholder="Nombre, email, cédula…"
-                    class="w-full pl-9 pr-4 py-2 rounded-full text-xs text-white/80 placeholder-slate-500
-                           bg-slate-800 border border-white/[0.08]
+                    class="w-full pl-9 pr-4 py-2 rounded-full text-xs text-slate-700 dark:text-white/80 placeholder-slate-400 dark:placeholder-slate-500
+                           bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200">
             </div>
@@ -71,7 +71,7 @@
     {{-- ═══════════════════════════════════════
          BLOQUE 2 — FILTROS
     ═══════════════════════════════════════ --}}
-    <div class="bg-slate-900 border border-white/[0.06] rounded-xl overflow-hidden ring-1 ring-inset ring-white/[0.04]">
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/[0.06] rounded-xl overflow-hidden ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04]">
 
         <div class="h-px bg-gradient-to-r from-transparent via-lime-500/20 to-transparent"></div>
 
@@ -79,12 +79,12 @@
 
             {{-- Período --}}
             <div>
-                <label class="block text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 mb-1.5">
+                <label class="block text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 mb-1.5">
                     Período
                 </label>
                 <select wire:model.live="selectedPeriodo"
-                    class="w-full px-4 py-2 rounded-xl text-xs text-white/80
-                           bg-slate-800 border border-white/[0.08]
+                    class="w-full px-4 py-2 rounded-xl text-xs text-slate-700 dark:text-white/80
+                           bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200">
                     <option value="">Todos los períodos</option>
@@ -96,12 +96,12 @@
 
             {{-- Carrera --}}
             <div>
-                <label class="block text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 mb-1.5">
+                <label class="block text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 mb-1.5">
                     Carrera
                 </label>
                 <select wire:model.live="selectedCarrera"
-                    class="w-full px-4 py-2 rounded-xl text-xs text-white/80
-                           bg-slate-800 border border-white/[0.08]
+                    class="w-full px-4 py-2 rounded-xl text-xs text-slate-700 dark:text-white/80
+                           bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200">
                     <option value="">Todas las carreras</option>
@@ -119,38 +119,38 @@
          BLOQUE 3 — TABLA
     ═══════════════════════════════════════ --}}
     <div
-        class="bg-slate-900 rounded-2xl border border-white/[0.06] overflow-hidden shadow-2xl shadow-black/40 ring-1 ring-inset ring-white/[0.04]">
+        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/[0.06] overflow-hidden shadow-xl shadow-slate-200/80 dark:shadow-2xl dark:shadow-black/40 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04]">
 
         <div class="h-px bg-gradient-to-r from-transparent via-lime-500/30 to-transparent"></div>
 
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
-                    <tr class="border-b border-white/[0.05]">
+                    <tr class="border-b border-slate-100 dark:border-white/[0.05]">
                         <th
-                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Estudiante</th>
                         <th
-                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Cédula</th>
                         <th
-                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Email</th>
                         <th
-                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Matrícula Actual</th>
                         <th
-                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Estado</th>
                         <th
-                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 w-24">
+                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-24">
                             Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-white/[0.04]">
+                <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                     @forelse($estudiantes as $student)
                         @php $matriculaActual = $student->matriculas->first(); @endphp
-                        <tr class="group hover:bg-white/[0.02] transition-colors duration-150">
+                        <tr class="group hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors duration-150">
 
                             {{-- Estudiante --}}
                             <td class="px-5 py-3.5">
@@ -162,7 +162,7 @@
                                         </span>
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium text-white/80">{{ $student->name }}</p>
+                                        <p class="text-sm font-medium text-slate-700 dark:text-white/80">{{ $student->name }}</p>
                                         <p class="text-xs text-slate-500 mt-0.5">{{ $student->matricula_numero }}</p>
                                     </div>
                                 </div>
@@ -170,19 +170,19 @@
 
                             {{-- Cédula --}}
                             <td class="px-5 py-3.5 text-center">
-                                <span class="text-xs text-slate-400 font-mono">{{ $student->cedula }}</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ $student->cedula }}</span>
                             </td>
 
                             {{-- Email --}}
                             <td class="px-5 py-3.5">
-                                <span class="text-xs text-slate-400">{{ $student->email }}</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ $student->email }}</span>
                             </td>
 
                             {{-- Matrícula --}}
                             <td class="px-5 py-3.5 text-center">
                                 @if ($matriculaActual)
-                                    <p class="text-xs font-semibold text-white/75">{{ $matriculaActual->code }}</p>
-                                    <p class="text-[0.65rem] text-slate-500 mt-0.5">
+                                    <p class="text-xs font-semibold text-slate-700 dark:text-white/75">{{ $matriculaActual->code }}</p>
+                                    <p class="text-[0.65rem] text-slate-400 dark:text-slate-500 mt-0.5">
                                         {{ $matriculaActual->carrera->name }}</p>
                                 @else
                                     <span class="text-slate-600 text-xs">—</span>
@@ -242,7 +242,7 @@
                                     <button type="button" wire:click="editarMatricula({{ $matriculaActual->id }})"
                                         title="Editar matrícula"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
-                                               text-slate-400 border border-white/[0.06] bg-slate-800
+                                               text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                                hover:text-sky-400 hover:border-sky-500/30 hover:bg-sky-500/[0.06]
                                                transition-all duration-150">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
@@ -257,7 +257,7 @@
                                     <button type="button" wire:click="iniciarMatricula({{ $student->id }})"
                                         title="Nueva matrícula"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
-                                               text-white/90
+                                               text-white
                                                bg-gradient-to-r from-green-800/70 via-sky-800/60 to-purple-900/55
                                                border border-lime-500/25
                                                hover:from-green-700/80 hover:via-sky-700/70 hover:to-purple-800/65
@@ -294,7 +294,7 @@
             </div>
 
             {{-- Paginación --}}
-            <div class="px-6 py-4 border-t border-white/[0.05] bg-black/10">
+            <div class="px-6 py-4 border-t border-slate-100 dark:border-white/[0.05] bg-slate-50 dark:bg-black/10">
                 {{ $estudiantes->links() }}
             </div>
 
@@ -315,7 +315,7 @@
                 <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" wire:click="cerrarModal"></div>
 
                 {{-- Panel --}}
-                <div class="relative w-full max-w-5xl bg-slate-900 rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden flex flex-col max-h-[90vh]"
+                <div class="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden flex flex-col max-h-[90vh]"
                     x-data="{
                         paralelosLocales: {},
                         init() {
@@ -337,7 +337,7 @@
 
                     {{-- Modal Header --}}
                     <div
-                        class="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between gap-4 flex-shrink-0">
+                        class="px-6 py-4 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-4 flex-shrink-0">
                         <div class="flex items-center gap-3">
                             <div
                                 class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-700/60 to-sky-700/60 border border-white/[0.08] flex items-center justify-center">
@@ -346,15 +346,15 @@
                                 </span>
                             </div>
                             <div>
-                                <h3 class="text-sm font-semibold text-white/90 leading-none">
+                                <h3 class="text-sm font-semibold text-slate-800 dark:text-white/90 leading-none">
                                     {{ $matriculaId ? 'Editar' : 'Nueva' }} Matrícula
                                 </h3>
-                                <p class="text-xs text-slate-400 mt-0.5">{{ $estudiante->name }} · #{{ $estudiante->id }}
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ $estudiante->name }} · #{{ $estudiante->id }}
                                 </p>
                             </div>
                         </div>
                         <button type="button" wire:click="cerrarModal"
-                            class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 border border-white/[0.06] bg-slate-800 hover:text-white hover:bg-slate-700 transition-all duration-150">
+                            class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-150">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -364,7 +364,7 @@
                     </div>
 
                     {{-- Progress Steps --}}
-                    <div class="px-6 py-4 border-b border-white/[0.05] flex-shrink-0">
+                    <div class="px-6 py-4 border-b border-slate-100 dark:border-white/[0.05] flex-shrink-0">
                         <div class="flex items-center gap-2">
                             @php
                                 $steps = [
@@ -381,7 +381,7 @@
                                             class="w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem] font-semibold flex-shrink-0
                                         {{ $paso >= $step['num']
                                             ? 'bg-lime-500/20 border border-lime-500/40 text-lime-400'
-                                            : 'bg-slate-800 border border-white/[0.06] text-slate-500' }}">
+                                            : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] text-slate-400 dark:text-slate-500' }}">
                                             @if ($paso > $step['num'])
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
                                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"
@@ -394,13 +394,14 @@
                                         </div>
                                         <span
                                             class="text-[0.65rem] font-medium hidden sm:block
-                                        {{ $paso >= $step['num'] ? 'text-lime-400/80' : 'text-slate-500' }}">
+                                        {{ $paso >= $step['num'] ? 'text-lime-400/80' : 'text-slate-400 dark:text-slate-500' }}"
+>
                                             {{ $step['label'] }}
                                         </span>
                                     </div>
                                     @if ($i < count($steps) - 1)
                                         <div
-                                            class="flex-1 mx-2 h-px {{ $paso > $step['num'] ? 'bg-lime-500/30' : 'bg-white/[0.05]' }}">
+                                            class="flex-1 mx-2 h-px {{ $paso > $step['num'] ? 'bg-lime-500/30' : 'bg-slate-200 dark:bg-white/[0.05]' }}">
                                         </div>
                                     @endif
                                 </div>
@@ -412,8 +413,8 @@
                     <div
                         class="flex-1 overflow-y-auto overscroll-contain px-6 pb-5
                     [&::-webkit-scrollbar]:w-1.5
-                    [&::-webkit-scrollbar-track]:bg-slate-800/50
-                    [&::-webkit-scrollbar-thumb]:bg-slate-600
+                    [&::-webkit-scrollbar-track]:bg-slate-100 dark:[&::-webkit-scrollbar-track]:bg-slate-800/50
+                    [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600
                     [&::-webkit-scrollbar-thumb]:rounded-full">
 
                         {{-- ── PASO 1: Información ── --}}
@@ -421,25 +422,25 @@
                             <div class="pt-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                                 {{-- Info estudiante --}}
-                                <div class="bg-slate-800 border border-white/[0.06] rounded-xl p-4">
-                                    <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 mb-3">
+                                <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl p-4">
+                                    <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 mb-3">
                                         Información del Estudiante
                                     </h4>
                                     <div class="space-y-2">
                                         @foreach ([['Nombre', $estudiante->name], ['Email', $estudiante->email], ['Cédula', $estudiante->cedula], ['Celular', $estudiante->phone], ['Matrícula', $estudiante->matricula_numero]] as [$key, $val])
                                             <div class="flex items-start gap-2">
                                                 <span
-                                                    class="text-[0.65rem] text-slate-500 uppercase tracking-wide w-16 flex-shrink-0 mt-0.5">{{ $key }}</span>
-                                                <span class="text-xs text-white/70">{{ $val }}</span>
+                                                    class="text-[0.65rem] text-slate-400 dark:text-slate-500 uppercase tracking-wide w-16 flex-shrink-0 mt-0.5">{{ $key }}</span>
+                                                <span class="text-xs text-slate-600 dark:text-white/70">{{ $val }}</span>
                                             </div>
                                         @endforeach
                                         <div class="flex items-start gap-2">
                                             <span
                                                 class="text-[0.65rem] text-slate-500 uppercase tracking-wide w-16 flex-shrink-0 mt-0.5">Edad</span>
-                                            <span class="text-xs text-white/70">
+                                            <span class="text-xs text-slate-600 dark:text-white/70">
                                                 {{ $estudiante->fecha_nacimiento }}
                                                 <span
-                                                    class="text-slate-400">({{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->age }}
+                                                    class="text-slate-400 dark:text-slate-400">({{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->age }}
                                                     años)</span>
                                             </span>
                                         </div>
@@ -456,7 +457,7 @@
                                             Período Académico <span class="text-red-400">*</span>
                                         </label>
                                         <select wire:model="periodo_id"
-                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-white/80 bg-slate-800 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('periodo_id') border-red-500/50 @enderror">
+                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-slate-700 dark:text-white/80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('periodo_id') border-red-500/50 @enderror">
                                             <option value="">Seleccionar período</option>
                                             @foreach ($periodos as $periodo)
                                                 <option value="{{ $periodo->id }}">{{ $periodo->code }} -
@@ -475,7 +476,7 @@
                                             Carrera <span class="text-red-400">*</span>
                                         </label>
                                         <select wire:model="carrera_id"
-                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-white/80 bg-slate-800 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('carrera_id') border-red-500/50 @enderror">
+                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-slate-700 dark:text-white/80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('carrera_id') border-red-500/50 @enderror">
                                             <option value="">Seleccionar carrera</option>
                                             @foreach ($carreras as $carrera)
                                                 <option value="{{ $carrera->id }}">{{ $carrera->name }}</option>
@@ -493,7 +494,7 @@
                                             Tipo de Matrícula
                                         </label>
                                         <select wire:model="tipo"
-                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-white/80 bg-slate-800 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all">
+                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-slate-700 dark:text-white/80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all">
                                             <option value="Nueva">Nueva</option>
                                             <option value="Renovacion">Renovación</option>
                                             <option value="Arrastre">Arrastre</option>
@@ -507,7 +508,7 @@
                                             Observaciones
                                         </label>
                                         <textarea wire:model="observaciones" rows="3" placeholder="Observaciones adicionales…"
-                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-white/80 placeholder-slate-500 bg-slate-800 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all resize-none"></textarea>
+                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-slate-700 dark:text-white/80 placeholder-slate-400 dark:placeholder-slate-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all resize-none"></textarea>
                                     </div>
 
                                 </div>
@@ -532,10 +533,10 @@
                                                         <input type="checkbox" class="w-4 h-4 rounded accent-lime-500"
                                                             wire:model="materiasArrastradas.{{ $index }}.incluir"
                                                             id="arrastre_{{ $index }}">
-                                                        <span class="text-xs text-white/70">
+                                                        <span class="text-xs text-slate-600 dark:text-white/70">
                                                             <strong
-                                                                class="text-white/85">{{ $materiaArrastrada['materia']['name'] }}</strong>
-                                                            <span class="text-slate-400"> — Nota:
+                                                                class="text-slate-700 dark:text-white/85">{{ $materiaArrastrada['materia']['name'] }}</strong>
+                                                            <span class="text-slate-500 dark:text-slate-400"> — Nota:
                                                                 {{ $materiaArrastrada['nota_obtenida'] }}</span>
                                                         </span>
                                                     </label>
@@ -550,7 +551,7 @@
                         {{-- ── PASO 2: Materias ── --}}
                         @if ($paso == 2)
                             <div class="pt-5">
-                                <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400 mb-4">
+                                <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 mb-4">
                                     Materias Disponibles</h4>
 
                                 @if (empty($materiasDisponibles))
@@ -569,9 +570,9 @@
                                     <div class="space-y-4">
                                         @foreach ($materiasDisponibles as $semestreNombre => $materias)
                                             <div
-                                                class="bg-slate-800 border border-white/[0.06] rounded-xl overflow-hidden">
-                                                <div class="px-4 py-2.5 border-b border-white/[0.05]">
-                                                    <h5 class="text-xs font-medium text-white/60">{{ $semestreNombre }}
+                                                class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl overflow-hidden">
+                                                <div class="px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.05]">
+                                                    <h5 class="text-xs font-medium text-slate-500 dark:text-white/60">{{ $semestreNombre }}
                                                     </h5>
                                                 </div>
                                                 <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -583,12 +584,12 @@
                                                                 wire:model="materiasSeleccionadas"
                                                                 {{ !$materia['puede_inscribir'] ? 'disabled' : '' }}>
                                                             <div
-                                                                class="border border-white/[0.06] rounded-lg p-3 bg-slate-900 transition-all duration-150
+                                                                class="border border-slate-100 dark:border-white/[0.06] rounded-lg p-3 bg-white dark:bg-slate-900 transition-all duration-150
                                                             {{ $materia['puede_inscribir'] ? 'hover:border-lime-500/30 hover:bg-lime-500/[0.04]' : '' }}
                                                             peer-checked:border-lime-500/40 peer-checked:bg-lime-500/[0.07]">
-                                                                <p class="text-xs font-medium text-white/80 mb-0.5">
+                                                                <p class="text-xs font-medium text-slate-700 dark:text-white/80 mb-0.5">
                                                                     {{ $materia['name'] }}</p>
-                                                                <p class="text-[0.65rem] text-slate-500 mb-2">
+                                                                <p class="text-[0.65rem] text-slate-400 dark:text-slate-500 mb-2">
                                                                     {{ $materia['code'] }}</p>
                                                                 <div class="flex items-center justify-between">
                                                                     <span
@@ -633,8 +634,8 @@
                             <div>
                                 <h4
                                     class="sticky top-0 z-10 -mx-6 px-6 pt-5 pb-3 mb-4
-                                           bg-slate-900 border-b border-white/[0.04]
-                                           text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                                           bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-white/[0.04]
+                                           text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                                     Selección de Paralelos</h4>
                                 @php
                                     $todasLasMaterias = collect($materiasSeleccionadas)
@@ -649,9 +650,9 @@
                                             $materia = \App\Models\Materia::find($materiaId);
                                             $paralelos = $paralelosDisponibles[$materiaId] ?? [];
                                         @endphp
-                                        <div class="bg-slate-800 border border-white/[0.06] rounded-xl overflow-hidden">
-                                            <div class="px-4 py-2.5 border-b border-white/[0.05]">
-                                                <h5 class="text-xs font-medium text-white/70">{{ $materia->name }}
+                                        <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl overflow-hidden">
+                                            <div class="px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.05]">
+                                                <h5 class="text-xs font-medium text-slate-700 dark:text-white/70">{{ $materia->name }}
                                                     <span class="text-slate-500">({{ $materia->code }})</span>
                                                 </h5>
                                             </div>
@@ -672,7 +673,7 @@
                                                                     x-model="paralelosLocales[{{ $materiaId }}]"
                                                                     {{ !$paralelo['tiene_cupo'] ? 'disabled' : '' }}>
                                                                 <div
-                                                                    class="border border-white/[0.06] rounded-lg p-3 bg-slate-900 transition-all duration-150
+                                                                    class="border border-slate-100 dark:border-white/[0.06] rounded-lg p-3 bg-white dark:bg-slate-900 transition-all duration-150
                                                                 {{ $paralelo['tiene_cupo'] ? 'hover:border-lime-500/30' : '' }}
                                                                 peer-checked:border-lime-500/40 peer-checked:bg-lime-500/[0.07]">
                                                                     <p class="text-xs font-medium text-white/80 mb-1">
@@ -708,16 +709,16 @@
 
                                     {{-- Materias regulares --}}
                                     @if (!empty($materiasSeleccionadas))
-                                        <div class="bg-slate-800 border border-white/[0.06] rounded-xl overflow-hidden">
-                                            <div class="px-4 py-2.5 border-b border-white/[0.05]">
+                                        <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl overflow-hidden">
+                                            <div class="px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.05]">
                                                 <h5
-                                                    class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                                                    class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                                                     Materias Regulares</h5>
                                             </div>
                                             <div class="overflow-x-auto">
                                                 <table class="w-full">
                                                     <thead>
-                                                        <tr class="border-b border-white/[0.05]">
+                                                        <tr class="border-b border-slate-100 dark:border-white/[0.05]">
                                                             <th
                                                                 class="px-4 py-2.5 text-left text-[0.6rem] uppercase tracking-wider text-slate-500">
                                                                 Materia</th>
@@ -732,7 +733,7 @@
                                                                 Costo</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody class="divide-y divide-white/[0.04]">
+                                                    <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                                                         @foreach ($materiasSeleccionadas as $materiaId)
                                                             @php
                                                                 $materia = \App\Models\Materia::find($materiaId);
@@ -746,7 +747,7 @@
                                                             @endphp
                                                             <tr>
                                                                 <td class="px-4 py-2.5">
-                                                                    <p class="text-xs text-white/75">{{ $materia->name }}
+                                                                    <p class="text-xs text-slate-700 dark:text-white/75">{{ $materia->name }}
                                                                     </p>
                                                                     <p class="text-[0.65rem] text-slate-500">
                                                                         {{ $materia->code }}</p>
@@ -779,7 +780,7 @@
                                             <div class="overflow-x-auto">
                                                 <table class="w-full">
                                                     <thead>
-                                                        <tr class="border-b border-white/[0.05]">
+                                                        <tr class="border-b border-slate-100 dark:border-white/[0.05]">
                                                             <th
                                                                 class="px-4 py-2.5 text-left text-[0.6rem] uppercase tracking-wider text-slate-500">
                                                                 Materia</th>
@@ -794,7 +795,7 @@
                                                                 Costo</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody class="divide-y divide-white/[0.04]">
+                                                    <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                                                         @foreach ($materiasArrastradasIncluidas as $materiaArrastrada)
                                                             @php
                                                                 $materia = \App\Models\Materia::find(
@@ -815,7 +816,7 @@
                                                             @endphp
                                                             <tr>
                                                                 <td class="px-4 py-2.5">
-                                                                    <p class="text-xs text-white/75">{{ $materia->name }}
+                                                                    <p class="text-xs text-slate-700 dark:text-white/75">{{ $materia->name }}
                                                                     </p>
                                                                     <p class="text-[0.65rem] text-slate-500">
                                                                         {{ $materia->code }}</p>
@@ -840,10 +841,10 @@
                                 {{-- Panel costos --}}
                                 <div class="lg:col-span-1">
                                     <div
-                                        class="bg-slate-800 border border-white/[0.06] rounded-xl overflow-hidden sticky top-0">
-                                        <div class="px-4 py-2.5 border-b border-white/[0.05]">
+                                        class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl overflow-hidden sticky top-0">
+                                        <div class="px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.05]">
                                             <h5
-                                                class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-400">
+                                                class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                                                 Resumen de Costos</h5>
                                         </div>
                                         <div class="p-4 space-y-4">
@@ -857,13 +858,13 @@
                                                     Créditos
                                                 </p>
                                                 <div class="flex justify-between items-center">
-                                                    <span class="text-xs text-slate-400">Total Créditos</span>
-                                                    <span class="text-xs font-semibold text-sky-300">
+                                                    <span class="text-xs text-slate-500 dark:text-slate-400">Total Créditos</span>
+    <span class="text-xs font-semibold text-sky-300">
                                                         {{ number_format($totalCreditos, 2) }}
                                                     </span>
                                                 </div>
                                                 <div class="flex justify-between items-center">
-                                                    <span class="text-xs text-slate-400">Costo por Crédito</span>
+                                                    <span class="text-xs text-slate-500 dark:text-slate-400">Costo por Crédito</span>
                                                     <span class="text-xs font-semibold text-sky-300">
                                                         ${{ number_format($costoPorCredito, 2) }}
                                                     </span>
@@ -893,8 +894,8 @@
 
                                                 <div class="space-y-2">
                                                     <div class="flex justify-between items-center">
-                                                        <span class="text-xs text-slate-400">Costo Matrícula</span>
-                                                        <span class="text-xs font-medium text-white/70">
+                                                        <span class="text-xs text-slate-500 dark:text-slate-400">Costo Matrícula</span>
+                                                        <span class="text-xs font-medium text-slate-700 dark:text-white/70">
                                                             ${{ number_format($montoMatricula, 2) }}
                                                         </span>
                                                     </div>
@@ -918,14 +919,14 @@
 
                                                 <div
                                                     class="flex justify-between items-center bg-lime-500/[0.07] border border-lime-500/20 rounded-lg px-3 py-2">
-                                                    <span class="text-xs font-semibold text-white/70">Total a Pagar</span>
+                                                    <span class="text-xs font-semibold text-slate-700 dark:text-white/70">Total a Pagar</span>
                                                     <span class="text-base font-bold text-lime-400">
                                                         ${{ number_format($totalPagar + $valorInscripcion, 2) }}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <div class="h-px bg-white/[0.05]"></div>
+                                            <div class="h-px bg-slate-200 dark:bg-white/[0.05]"></div>
 
                                             {{-- ── SECCIÓN VALOR PENDIENTE (pago futuro) ── --}}
                                             <div
@@ -935,7 +936,7 @@
                                                     Valor Pendiente
                                                 </p>
                                                 <div class="flex justify-between items-center">
-                                                    <span class="text-xs text-slate-400">Arancel Semestral</span>
+                                                    <span class="text-xs text-slate-500 dark:text-slate-400">Arancel Semestral</span>
                                                     <span class="text-xs font-semibold text-amber-300">
                                                         ${{ number_format($montoArancel, 2) }}
                                                     </span>
@@ -956,14 +957,14 @@
 
                     {{-- Modal Footer --}}
                     <div
-                        class="px-6 py-4 border-t border-white/[0.05] bg-black/15 flex items-center justify-between gap-3 flex-shrink-0">
+                        class="px-6 py-4 border-t border-slate-100 dark:border-white/[0.05] bg-slate-50 dark:bg-black/15 flex items-center justify-between gap-3 flex-shrink-0">
 
                         {{-- Anterior --}}
                         <div>
                             @if ($paso > 1)
                                 <button type="button" wire:click="pasoAnterior"
                                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium
-                                       text-slate-400 border border-white/[0.08] bg-transparent
+                                       text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.08] bg-transparent
                                        hover:bg-white/5 hover:text-slate-200 transition-all duration-200">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
@@ -978,7 +979,7 @@
                         {{-- Cancelar + Siguiente/Guardar --}}
                         <div class="flex items-center gap-2">
                             <button type="button" wire:click="cerrarModal"
-                                class="px-4 py-2 rounded-full text-xs font-medium text-slate-400 border border-white/[0.08] hover:bg-white/5 hover:text-slate-200 transition-all duration-200">
+                                class="px-4 py-2 rounded-full text-xs font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-200">
                                 Cancelar
                             </button>
 

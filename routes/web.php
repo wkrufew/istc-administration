@@ -31,6 +31,8 @@ use App\Livewire\Administration\ActaCalificacionAdmin;
 use App\Livewire\Administration\DocumentosPersonalForm;
 use App\Livewire\Administration\ObligacionesEstudiante;
 use App\Livewire\Administration\PagoMatricula;
+use App\Livewire\Administration\SolicitudesGestion;
+use App\Livewire\Administration\TiposSolicitudesGestion;
 use App\Livewire\Administration\TicketList;
 use App\Livewire\Administration\TicketCreate;
 use App\Livewire\Administration\TicketShow;
@@ -175,6 +177,10 @@ Route::middleware([
         // Gestión Moodle por usuario
         Route::get('users/{usuario}/moodle', \App\Livewire\Administration\MoodleGestion::class)->name('users.moodle');
 
+        // Módulo Solicitudes
+        Route::get('solicitudes', SolicitudesGestion::class)->name('solicitudes.index');
+        Route::get('tipos-solicitudes', TiposSolicitudesGestion::class)->name('tipos-solicitudes.index');
+
         // Otras rutas administrativas (rutas de despliguegue) - Solo accesibles para usuarios con permisos específicos
         //Rutas para despliegue
         //deseo que estas rutas se accionen mediante un boton en el dashboard administrativo, y que solo sean accesibles para usuarios con permisos específicos
@@ -225,6 +231,7 @@ Route::middleware([
         Route::get('obligaciones-financieras', [EstudiantilPagosController::class, 'index'])->name('obligaciones-financieras');
         Route::get('acta-calificaciones', [ActaCalificacionesController::class, 'index'])->name('acta-calificaciones.index');
         Route::get('avisos', AvisosEstudiante::class)->name('avisos');
+        Route::get('solicitudes', \App\Livewire\Estudiante\SolicitudesEstudiante::class)->name('solicitudes');
     });
 
     Route::middleware('permisos:acceso_admision')->prefix('administracion/admision ')->name('administracion.admision.')->group(function () {

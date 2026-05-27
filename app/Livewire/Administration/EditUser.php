@@ -2,9 +2,10 @@
 
 namespace App\Livewire\Administration;
 
-use App\Mail\ReenvioCredencialesAcceso;
+use App\Jobs\EnviarReenvioCredencialesJob;
 use App\Models\User;
 use App\Services\SettingService;
+use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -14,7 +15,7 @@ use Spatie\Permission\Models\Role;
 
 class EditUser extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithAuthorization;
 
     public $userId;
     public $user;
@@ -190,6 +191,8 @@ class EditUser extends Component
 
     public function update()
     {
+        if ($this->sinPermiso('editar_usuarios')) return;
+
         $this->validate();
 
         $data = [
@@ -257,6 +260,8 @@ class EditUser extends Component
 
     public function reenviarCredenciales(): void
     {
+        if ($this->sinPermiso('reenviar_credenciales')) return;
+
         $role = $this->user->roles->first();
 
         if (!$role) {
@@ -318,24 +323,8 @@ class EditUser extends Component
         Log::info('ReenvioCredenciales — smtp.activo', ['valor' => $smtpActivo, 'user_id' => $this->user->id]);
 
         if ($smtpActivo === '1' && $this->user->email) {
-            try {
-                SettingService::buildMailer()
-                    ->to($this->user->email)
-                    ->send(new ReenvioCredencialesAcceso($this->user, $plainPassword, $tipoAcceso, $role->name));
-                Log::info('ReenvioCredenciales — correo enviado', ['user_id' => $this->user->id]);
-            } catch (\Throwable $e) {
-                Log::warning('ReenvioCredencialesAcceso: email falló', [
-                    'user_id' => $this->user->id,
-                    'error'   => $e->getMessage(),
-                ]);
-                $this->dispatch('swal', [
-                    'icon'  => 'warning',
-                    'title' => 'Contraseña restablecida.',
-                    'text'  => 'La contraseña fue restablecida a la cédula, pero el correo no pudo enviarse.',
-                    'timer' => 4000,
-                ]);
-                return;
-            }
+            EnviarReenvioCredencialesJob::dispatch($this->user->id, $tipoAcceso, $role->name);
+            Log::info('ReenvioCredenciales — correo encolado', ['user_id' => $this->user->id]);
         } else {
             Log::warning('ReenvioCredenciales — correo omitido', [
                 'smtp_activo' => $smtpActivo,
@@ -346,7 +335,7 @@ class EditUser extends Component
         $this->dispatch('swal', [
             'icon'  => 'success',
             'title' => 'Credenciales reenviadas.',
-            'text'  => 'Contraseña restablecida y correo enviado a ' . $this->user->email,
+            'text'  => 'Contraseña restablecida. El correo llegará en breve a ' . $this->user->email,
             'timer' => 3000,
         ]);
     }

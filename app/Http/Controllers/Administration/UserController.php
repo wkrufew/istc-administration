@@ -27,7 +27,13 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $roles = Role::all();
+        $roles = Role::withCount('permissions')
+            ->where('name', '!=', 'Super Admin')
+            ->orderBy('name')
+            ->get();
+
+        $user->load('roles');
+
         return view('administracion.users.edit', compact('user', 'roles'));
     }
 
@@ -42,7 +48,7 @@ class UserController extends Controller
         $rolesString = implode(', ', $roles);
         $menssage = "Al usuario $user->name se le asigno el rol $rolesString  correctamente";
 
-        return redirect()->route('administracion.administrativa.users.index')->with('menssage', $menssage);
+        return redirect()->route('administracion.administrativa.users.index')->with('success', $menssage);
     }
 
     public function profile()

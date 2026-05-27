@@ -148,7 +148,7 @@ class Matriculacion extends Component
     // =========================================================================
     public function iniciarMatricula($estudianteId)
     {
-        if ($this->sinPermiso('gestionar_matriculas')) return;
+        if ($this->sinPermiso('crear_matriculas')) return;
 
         $this->resetFormulario();
 
@@ -189,7 +189,7 @@ class Matriculacion extends Component
 
     public function editarMatricula($matriculaId)
     {
-        if ($this->sinPermiso('gestionar_matriculas')) return;
+        if ($this->sinPermiso('editar_matriculas')) return;
 
         $this->resetFormulario();
 
@@ -474,7 +474,8 @@ class Matriculacion extends Component
     // =========================================================================
     public function guardarMatricula()
     {
-        if ($this->sinPermiso('gestionar_matriculas')) return;
+        $permisoGuardar = $this->matriculaId ? 'editar_matriculas' : 'crear_matriculas';
+        if ($this->sinPermiso($permisoGuardar)) return;
 
         $this->validate([
             'carrera_id'  => 'required|exists:carreras,id',

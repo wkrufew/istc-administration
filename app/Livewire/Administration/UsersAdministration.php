@@ -3,17 +3,23 @@
 namespace App\Livewire\Administration;
 
 use App\Models\User;
+use App\Traits\WithAuthorization;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Role;
 
 class UsersAdministration extends Component
 {
-    use WithPagination;
+    use WithPagination, WithAuthorization;
 
     public string $search      = '';
     public string $filtroRol   = '';
     public string $filtroEstado = '';
+
+    public function mount(): void
+    {
+        $this->requierePermiso('gestionar_usuarios');
+    }
 
     public function updatingSearch(): void      { $this->resetPage(); }
     public function updatingFiltroRol(): void   { $this->resetPage(); }
@@ -21,6 +27,8 @@ class UsersAdministration extends Component
 
     public function eliminar(User $user): void
     {
+        if ($this->sinPermiso('eliminar_usuarios')) return;
+
         try {
             $user->is_active = false;
             $user->save();
@@ -71,6 +79,8 @@ class UsersAdministration extends Component
 
     public function toggleStatus(User $user): void
     {
+        if ($this->sinPermiso('editar_usuarios')) return;
+
         try {
             $user->is_active = ! $user->is_active;
             $user->save();
