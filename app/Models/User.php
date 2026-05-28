@@ -66,6 +66,7 @@ class User extends Authenticatable
         'fact_direccion',
         'fact_telefono',
         'profile_photo_path',
+        'cumpleanos_notificado_year',
     ];
 
     /**

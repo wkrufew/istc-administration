@@ -204,7 +204,28 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                     @forelse ($users as $user)
-                        <tr class="group hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors duration-150">
+                        @php
+                            $cumple        = null;
+                            $diasFaltan    = null;
+                            $esCumple      = false;
+                            $proximoCumple = false;
+
+                            if ($user->fecha_nacimiento) {
+                                $cumple = \Carbon\Carbon::parse($user->fecha_nacimiento)
+                                    ->setYear(now()->year)
+                                    ->startOfDay();
+                                if ($cumple->isPast() && ! $cumple->isToday()) {
+                                    $cumple->addYear();
+                                }
+                                $diasFaltan    = (int) now()->startOfDay()->diffInDays($cumple, false);
+                                $esCumple      = $diasFaltan === 0;
+                                $proximoCumple = $diasFaltan >= 1 && $diasFaltan <= 5;
+                            }
+                        @endphp
+                        <tr class="group transition-colors duration-150
+                                   {{ $esCumple
+                                       ? 'bg-fuchsia-50/60 dark:bg-fuchsia-950/20 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/30'
+                                       : 'hover:bg-slate-50 dark:hover:bg-white/[0.02]' }}">
 
                             {{-- ID --}}
                             <td class="px-4 py-3 text-left">
@@ -214,10 +235,18 @@
                             {{-- Nombre --}}
                             <td class="px-4 py-3 text-left">
                                 <div class="flex items-center gap-2.5">
-                                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-green-700/60 to-sky-700/60 border border-slate-200 dark:border-white/[0.08] flex items-center justify-center flex-shrink-0">
-                                        <span class="text-[0.6rem] font-semibold text-white uppercase">
-                                            {{ substr($user->name, 0, 1) }}
-                                        </span>
+                                    <div class="relative w-7 h-7 rounded-full flex-shrink-0">
+                                        @if($esCumple)
+                                            <span class="absolute inset-0 rounded-full animate-ping bg-fuchsia-400 opacity-30"></span>
+                                        @endif
+                                        <div class="w-7 h-7 rounded-full bg-gradient-to-br
+                                                    {{ $esCumple ? 'from-fuchsia-500 to-pink-500' : 'from-green-700/60 to-sky-700/60' }}
+                                                    {{ $esCumple ? 'ring-2 ring-fuchsia-400 ring-offset-1 ring-offset-white dark:ring-offset-slate-900' : 'border border-slate-200 dark:border-white/[0.08]' }}
+                                                    flex items-center justify-center">
+                                            <span class="text-[0.6rem] font-semibold text-white uppercase">
+                                                {{ substr($user->name, 0, 1) }}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div>
                                         <span class="text-sm text-slate-800 dark:text-white/75 font-medium leading-tight">{{ $user->name }}</span>
@@ -238,6 +267,23 @@
                             {{-- Correo --}}
                             <td class="px-4 py-3 text-left">
                                 <span class="text-xs text-slate-500 dark:text-slate-400">{{ $user->email }}</span>
+
+                                @if($esCumple)
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold
+                                                     bg-fuchsia-500/15 border border-fuchsia-400/40 text-fuchsia-600 dark:text-fuchsia-300
+                                                     animate-pulse">
+                                            🎂 ¡Hoy es su cumpleaños!
+                                        </span>
+                                    </div>
+                                @elseif($proximoCumple)
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium
+                                                     bg-amber-500/10 border border-amber-400/30 text-amber-600 dark:text-amber-400">
+                                            🎂 En {{ $diasFaltan }} {{ $diasFaltan === 1 ? 'día' : 'días' }}
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
 
                             {{-- Roles --}}
