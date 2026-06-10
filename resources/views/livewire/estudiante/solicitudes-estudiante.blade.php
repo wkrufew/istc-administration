@@ -52,7 +52,10 @@
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-green-50 border border-green-200 text-green-700">Gratuito</span>
                                     @endif
                                     @if ($tipo->requiere_documento)
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-slate-50 border border-slate-200 text-slate-500">Genera documento</span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-blue-50 border border-blue-200 text-blue-600">
+                                            <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                            Requiere documento adjunto
+                                        </span>
                                     @endif
                                 </div>
                             </div>
@@ -88,6 +91,33 @@
                     <span class="text-xs text-slate-400">{{ strlen($descripcion) }}/1000</span>
                 </div>
             </div>
+
+            {{-- Adjuntar documento (solo si el tipo lo requiere) --}}
+            @if ($this->tipoSeleccionado?->requiere_documento)
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                    Documento adjunto *
+                </label>
+                <div class="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/50 px-4 py-4 transition hover:border-blue-400">
+                    <input type="file" wire:model="documento" accept=".pdf,.jpg,.jpeg,.png"
+                        class="block w-full text-sm text-slate-600
+                               file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                               file:text-xs file:font-semibold file:bg-blue-600 file:text-white
+                               hover:file:bg-blue-700 cursor-pointer">
+                    <p class="text-xs text-slate-400 mt-2">PDF, JPG o PNG — máximo 5 MB</p>
+
+                    {{-- Preview del archivo seleccionado --}}
+                    @if ($documento)
+                        <div class="mt-2 flex items-center gap-2 text-xs text-green-700 font-medium">
+                            <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {{ $documento->getClientOriginalName() }}
+                            <span class="text-slate-400 font-normal">({{ number_format($documento->getSize() / 1024, 1) }} KB)</span>
+                        </div>
+                    @endif
+                </div>
+                @error('documento') <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p> @enderror
+            </div>
+            @endif
 
             {{-- Botones --}}
             <div class="flex justify-end gap-2 pt-1">
@@ -155,11 +185,19 @@
                                 </div>
                             @endif
 
+                            {{-- Documento adjunto --}}
+                            @if ($sol->documento_path)
+                                <div class="mt-1 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                    <span class="text-xs text-blue-500">Documento adjunto enviado</span>
+                                </div>
+                            @endif
+
                             {{-- Notas del admin --}}
                             @if ($sol->notas_admin)
                                 <div class="mt-1.5 flex items-start gap-1.5 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
                                     <svg class="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    <p class="text-xs text-blue-700"><strong>Secretaría:</strong> {{ $sol->notas_admin }}</p>
+                                    <div class="text-xs text-blue-700"><strong>Secretaría:</strong> {!! $sol->notas_admin !!}</div>
                                 </div>
                             @endif
                         </div>

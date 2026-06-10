@@ -32,12 +32,13 @@ trait WithAuthorization
     protected function requierePermiso(string $permiso, ?string $mensaje = null): void
     {
         if (! auth()->check() || ! auth()->user()->can($permiso)) {
-            $this->dispatch('swal', [
+            // session()->flash persiste hasta el siguiente request (la página destino).
+            // dispatch() se pierde con el redirect, por eso usamos la sesión.
+            session()->flash('swal', [
                 'icon'              => 'error',
                 'title'             => 'Acceso denegado',
                 'text'              => $mensaje ?? 'No tienes permiso para acceder a esta sección.',
                 'confirmButtonText' => 'Entendido',
-                'toast'             => false,
             ]);
             $this->redirectRoute($this->rutaFallback(), navigate: true);
         }

@@ -211,17 +211,17 @@
         @endif
 
         // ── session('swal') → modal centrado (acceso denegado, etc.) ─────
+        // Sin DOMContentLoaded: con Livewire Navigate los scripts inline se
+        // re-ejecutan en cada navegación SPA, por lo que la llamada directa
+        // funciona tanto en carga inicial como en navegación entre páginas.
         @if (session('swal'))
-            document.addEventListener('DOMContentLoaded', function() {
-                const data = @json(session('swal'));
-                Swal.fire({
-                    icon: data.icon ?? 'info',
-                    title: data.title ?? '',
-                    text: data.text ?? '',
-                    confirmButtonText: data.confirmButtonText ?? 'Aceptar',
-                    confirmButtonColor: '#65a30d',
-                    ...swalTheme(),
-                });
+            Swal.fire({
+                icon:               @json(session('swal')['icon']              ?? 'info'),
+                title:              @json(session('swal')['title']             ?? ''),
+                text:               @json(session('swal')['text']              ?? ''),
+                confirmButtonText:  @json(session('swal')['confirmButtonText'] ?? 'Aceptar'),
+                confirmButtonColor: '#65a30d',
+                ...swalTheme(),
             });
         @endif
 

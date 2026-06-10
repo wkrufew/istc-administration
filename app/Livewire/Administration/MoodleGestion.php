@@ -7,16 +7,20 @@ use App\Mail\ReenvioCredencialesAcceso;
 use App\Models\User;
 use App\Services\MoodleService;
 use App\Services\SettingService;
+use App\Traits\WithAuthorization;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Throwable;
 
 class MoodleGestion extends Component
 {
+    use WithAuthorization;
+
     public User $usuario;
 
     public function mount(User $usuario): void
     {
+        $this->requierePermiso('moodle_gestion');
         $this->usuario = $usuario;
     }
 

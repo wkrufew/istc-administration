@@ -51,6 +51,7 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
+                @can('crear_usuarios')
                 <a href="{{ route('administracion.administrativa.estudiantes.create') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
                            text-white/90
@@ -65,7 +66,9 @@
                     </svg>
                     Crear Usuario
                 </a>
+                @endcan
 
+                @can('crear_usuarios')
                 <a href="{{ route('administracion.administrativa.estudiantes.import') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
                            text-amber-700 dark:text-amber-300/90
@@ -81,7 +84,9 @@
                     </svg>
                     Importar Usuarios
                 </a>
+                @endcan
 
+                @can('eliminar_usuarios')
                 <a href="{{ route('administracion.administrativa.users.eliminados') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
                            text-red-600 dark:text-red-300/80
@@ -98,6 +103,7 @@
                     </svg>
                     Usuarios Eliminados
                 </a>
+                @endcan
             </div>
         </div>
     </div>
@@ -149,8 +155,20 @@
             </div>
         </div>
 
+        {{-- Separador --}}
+        <div class="w-px h-5 bg-slate-200 dark:bg-white/[0.07]"></div>
+
+        {{-- Filtro Cumpleaños --}}
+        <button wire:click="$toggle('filtroCumpleanos')"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.65rem] font-medium transition-all
+                       {{ $filtroCumpleanos
+                           ? 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-300 border border-fuchsia-400/40'
+                           : 'text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] hover:border-fuchsia-400/30 hover:text-fuchsia-500 dark:hover:text-fuchsia-400' }}">
+            🎂 Cumpleaños
+        </button>
+
         {{-- Limpiar filtros --}}
-        @if($filtroRol !== '' || $filtroEstado !== '')
+        @if($filtroRol !== '' || $filtroEstado !== '' || $filtroCumpleanos)
         <div class="flex items-center gap-2 ml-auto">
             <button wire:click="limpiarFiltros"
                     class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[0.65rem] font-medium
@@ -316,6 +334,7 @@
                                     @endif
 
                                     {{-- Toggle --}}
+                                    @can('editar_usuarios')
                                     <label class="relative inline-flex cursor-pointer items-center">
                                         <input type="checkbox" class="peer sr-only" id="switch-{{ $user->id }}"
                                             @if ($user->is_active) checked @endif
@@ -331,6 +350,7 @@
                                                     peer-focus:ring-2 peer-focus:ring-lime-500/20">
                                         </div>
                                     </label>
+                                    @endcan
                                 </div>
                             </td>
 
@@ -339,6 +359,7 @@
                                 <div class="flex items-center justify-center gap-1.5">
 
                                     {{-- Moodle --}}
+                                    @can('moodle_gestion')
                                     @if((int) env('MOODLE_MODE', 0) === 1)
                                     <a href="{{ route('administracion.administrativa.users.moodle', $user) }}"
                                         title="Gestión Moodle"
@@ -352,8 +373,10 @@
                                         </svg>
                                     </a>
                                     @endif
+                                    @endcan
 
                                     {{-- Editar perfil completo --}}
+                                    @can('editar_usuarios')
                                     <a href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}?from=users"
                                         title="Editar usuario"
                                         class="inline-flex items-center justify-center h-8 w-8 rounded-lg
@@ -367,8 +390,10 @@
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                         </svg>
                                     </a>
+                                    @endcan
 
                                     {{-- Asignar rol --}}
+                                    @can('asignar_roles')
                                     <a href="{{ route('administracion.administrativa.users.edit', $user) }}"
                                         title="Asignar rol"
                                         class="inline-flex items-center justify-center h-8 w-8 rounded-lg
@@ -384,8 +409,10 @@
                                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                                         </svg>
                                     </a>
+                                    @endcan
 
                                     {{-- Eliminar (softdelete + desactivar) --}}
+                                    @can('eliminar_usuarios')
                                     <button type="button" x-data
                                         @click="Swal.fire({
                                             title: '¿Eliminar usuario?',
@@ -416,6 +443,7 @@
                                             <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                                         </svg>
                                     </button>
+                                    @endcan
 
                                 </div>
                             </td>

@@ -108,6 +108,14 @@
                             </td>
                             <td class="px-4 py-3">
                                 <span class="text-xs text-slate-600 dark:text-slate-300">{{ $solicitud->tipoSolicitud->nombre ?? '—' }}</span>
+                                @if ($solicitud->documento_path)
+                                    <a href="{{ Storage::url($solicitud->documento_path) }}" target="_blank"
+                                        title="Ver documento adjunto"
+                                        class="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 rounded text-[0.6rem] font-medium bg-blue-500/10 border border-blue-500/20 text-blue-500 hover:bg-blue-500/20 transition">
+                                        <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                        Doc. adjunto
+                                    </a>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if ($solicitud->precio_aplicado > 0)
@@ -150,6 +158,31 @@
                                         </button>
                                     @else
                                         <span class="text-xs text-slate-400 italic">—</span>
+                                    @endif
+
+                                    {{-- Botón certificado (CNA o Matrícula) --}}
+                                    @php
+                                        $tipoCert = $solicitud->tipoSolicitud?->tipo_certificado;
+                                    @endphp
+                                    @if ($tipoCert && in_array($solicitud->estado, ['en_proceso', 'entregada']))
+                                        @if ($tipoCert === 'cna')
+                                            <button wire:click="generarCna({{ $solicitud->id }})" wire:loading.attr="disabled"
+                                                title="{{ $solicitud->certificado_codigo ? 'Reimprimir ' . $solicitud->certificado_codigo : 'Generar Certificado de No Adeudar' }}"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.65rem] font-medium transition
+                                                    {{ $solicitud->certificado_codigo
+                                                        ? 'bg-violet-500/10 border border-violet-500/20 text-violet-500 hover:bg-violet-500/20'
+                                                        : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/20' }}">
+                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                {{ $solicitud->certificado_codigo ? 'Reimprimir CNA' : 'Generar CNA' }}
+                                            </button>
+                                        @elseif ($tipoCert === 'matricula')
+                                            <button wire:click="generarCertMatricula({{ $solicitud->id }})" wire:loading.attr="disabled"
+                                                title="Generar Certificado de Matrícula"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.65rem] font-medium bg-sky-500/10 border border-sky-500/20 text-sky-600 hover:bg-sky-500/20 transition">
+                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                Generar Matrícula
+                                            </button>
+                                        @endif
                                     @endif
 
                                     {{-- Ver descripción --}}
@@ -266,13 +299,32 @@
             $solAv = \App\Models\Solicitud::with(['estudiante','tipoSolicitud'])->find($avanzarId);
             $flujo = ['pendiente_pago'=>'pagada','pagada'=>'en_proceso','en_proceso'=>'entregada'];
             $sig = $flujo[$solAv?->estado ?? ''] ?? null;
+            $necesitaDocente = $sig === 'en_proceso' && ($solAv?->tipoSolicitud?->notifica_docente ?? false);
         @endphp
         @if ($solAv && $sig)
-        <div x-data x-init="document.body.style.overflow='hidden'" x-destroy="document.body.style.overflow=''"
+        <div
+            x-data="{
+                ckAvance: null,
+                initCK() {
+                    const el = document.getElementById('ck-notas-avance');
+                    if (!el || !window.ClassicEditor) return;
+                    ClassicEditor.create(el, {
+                        toolbar: ['bold','italic','underline','|','bulletedList','numberedList','|','blockQuote','|','undo','redo'],
+                        language: 'es',
+                    }).then(editor => {
+                        this.ckAvance = editor;
+                        editor.model.document.on('change:data', () => {
+                            @this.set('notasAvance', editor.getData());
+                        });
+                    });
+                }
+            }"
+            x-init="document.body.style.overflow='hidden'; $nextTick(() => initCK())"
+            x-destroy="document.body.style.overflow=''; if(ckAvance){ ckAvance.destroy(); ckAvance=null; }"
             class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="cerrarAvanzar"></div>
 
-            <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-white/[0.08]">
+            <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-white/[0.08]">
                 <div class="px-6 py-4 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
                     <h3 class="text-base font-semibold text-slate-800 dark:text-white/90">Avanzar Estado</h3>
                     <button wire:click="cerrarAvanzar" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
@@ -285,7 +337,7 @@
                         Confirmar cambio de estado de la solicitud de
                         <strong class="text-slate-800 dark:text-white/90">{{ $solAv->estudiante->name }}</strong>:
                     </p>
-                    <div class="flex items-center gap-3 justify-center py-3">
+                    <div class="flex items-center gap-3 justify-center py-2">
                         <span class="px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08]">
                             {{ \App\Models\Solicitud::ESTADOS[$solAv->estado] }}
                         </span>
@@ -295,10 +347,69 @@
                         </span>
                     </div>
 
+                    @if ($necesitaDocente)
+                    {{-- Buscador predictivo de docente --}}
                     <div>
-                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Notas (opcional)</label>
-                        <textarea wire:model="notasAvance" rows="2" placeholder="Observaciones…"
-                            class="w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-white/80 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition resize-none"></textarea>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                            Docente a notificar
+                            <span class="text-amber-500 ml-1">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            </div>
+                            <input
+                                wire:model.live.debounce.300ms="busquedaDocente"
+                                type="text"
+                                placeholder="Buscar docente por nombre o correo…"
+                                autocomplete="off"
+                                class="w-full pl-9 pr-3 py-2 rounded-lg text-sm text-slate-700 dark:text-white/80 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition">
+
+                            @if ($mostrarDocentes && count($this->docentesSugeridos) > 0)
+                            <div class="absolute z-10 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] rounded-xl shadow-xl overflow-hidden">
+                                @foreach ($this->docentesSugeridos as $doc)
+                                <button type="button"
+                                    wire:click="seleccionarDocente({{ $doc->id }}, '{{ addslashes($doc->name) }}', '{{ $doc->email }}')"
+                                    class="w-full text-left px-4 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition flex flex-col gap-0.5 border-b border-slate-100 dark:border-white/[0.04] last:border-0">
+                                    <span class="text-sm font-medium text-slate-700 dark:text-white/80">{{ $doc->name }}</span>
+                                    <span class="text-xs text-slate-400">{{ $doc->email }}</span>
+                                </button>
+                                @endforeach
+                            </div>
+                            @elseif ($mostrarDocentes && strlen($busquedaDocente) >= 2 && count($this->docentesSugeridos) === 0)
+                            <div class="absolute z-10 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] rounded-xl shadow-xl px-4 py-3">
+                                <p class="text-xs text-slate-400 text-center">Sin resultados</p>
+                            </div>
+                            @endif
+                        </div>
+
+                        @if ($docenteId)
+                        <div class="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+                            <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/></svg>
+                            <div>
+                                <p class="text-xs font-medium text-amber-700 dark:text-amber-400">{{ $docenteNombre }}</p>
+                                <p class="text-[0.65rem] text-amber-600/70 dark:text-amber-400/60">{{ $docenteEmail }}</p>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+
+                    {{-- Observación con CKEditor --}}
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                            @if($necesitaDocente)
+                                Observación / Detalle para el docente <span class="text-amber-500">*</span>
+                            @else
+                                Notas (opcional)
+                            @endif
+                        </label>
+                        <div class="rounded-lg overflow-hidden border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-slate-800 text-sm">
+                            <div id="ck-notas-avance"></div>
+                        </div>
+                        @if($necesitaDocente)
+                            <p class="text-[0.65rem] text-slate-400 mt-1">Incluye materia, fecha límite y cualquier detalle relevante. Este mensaje se enviará al docente.</p>
+                        @endif
                     </div>
                 </div>
 
@@ -318,3 +429,7 @@
     @endif
 
 </div>
+
+@push('js')
+<script src="https://cdn.ckeditor.com/ckeditor5/41.3.1/classic/ckeditor.js"></script>
+@endpush

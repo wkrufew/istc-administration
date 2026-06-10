@@ -23,6 +23,7 @@ class AdminSettings extends Component
     public string $instituto_nombre_largo  = '';
     public string $instituto_nombre_corto  = '';
     public string $instituto_ruc           = '';
+    public string $instituto_senescyt      = '';
     public string $instituto_direccion     = '';
     public string $instituto_telefono      = '';
     public string $instituto_email         = '';
@@ -60,11 +61,12 @@ class AdminSettings extends Component
     // =========================================================================
     // GRUPO: DOCUMENTOS
     // =========================================================================
-    public string $doc_rector           = '';
-    public string $doc_secretario       = '';
-    public string $doc_coordinador      = '';
-    public string $doc_ciudad           = '';
-    public string $doc_pie_pagina       = '';
+    public string $doc_rector                = '';
+    public string $doc_secretario           = '';
+    public string $doc_coordinador          = '';
+    public string $doc_departamento_financiero = '';
+    public string $doc_ciudad               = '';
+    public string $doc_pie_pagina           = '';
 
     // =========================================================================
     // GRUPO: MATRÍCULA
@@ -108,6 +110,7 @@ class AdminSettings extends Component
         $this->instituto_nombre_largo  = $s['instituto.nombre_largo']  ?? '';
         $this->instituto_nombre_corto  = $s['instituto.nombre_corto']  ?? '';
         $this->instituto_ruc           = $s['instituto.ruc']           ?? '';
+        $this->instituto_senescyt      = $s['instituto.senescyt']      ?? '';
         $this->instituto_direccion     = $s['instituto.direccion']      ?? '';
         $this->instituto_telefono      = $s['instituto.telefono']       ?? '';
         $this->instituto_email         = $s['instituto.email']          ?? '';
@@ -136,11 +139,12 @@ class AdminSettings extends Component
         $this->smtp_activo       = $s['smtp.activo']       ?? '0';
 
         // Documentos
-        $this->doc_rector      = $s['documentos.rector']      ?? '';
-        $this->doc_secretario  = $s['documentos.secretario']  ?? '';
-        $this->doc_coordinador = $s['documentos.coordinador'] ?? '';
-        $this->doc_ciudad      = $s['documentos.ciudad']      ?? '';
-        $this->doc_pie_pagina  = $s['documentos.pie_pagina']  ?? '';
+        $this->doc_rector                    = $s['documentos.rector']                    ?? '';
+        $this->doc_secretario               = $s['documentos.secretario']               ?? '';
+        $this->doc_coordinador              = $s['documentos.coordinador']              ?? '';
+        $this->doc_departamento_financiero  = $s['documentos.departamento_financiero']  ?? '';
+        $this->doc_ciudad                   = $s['documentos.ciudad']                   ?? '';
+        $this->doc_pie_pagina               = $s['documentos.pie_pagina']               ?? '';
 
         // Matrícula
         $this->matricula_valor_inscripcion   = $s['matricula.valor_inscripcion']   ?? '10.00';
@@ -173,6 +177,7 @@ class AdminSettings extends Component
             'instituto_nombre_largo' => 'required|string|max:255',
             'instituto_nombre_corto' => 'required|string|max:50',
             'instituto_ruc'          => 'nullable|string|max:20',
+            'instituto_senescyt'     => 'nullable|string|max:50',
             'instituto_direccion'    => 'nullable|string|max:255',
             'instituto_telefono'     => 'nullable|string|max:30',
             'instituto_email'        => 'nullable|email|max:255',
@@ -217,6 +222,7 @@ class AdminSettings extends Component
             'nombre_largo'  => $this->instituto_nombre_largo,
             'nombre_corto'  => $this->instituto_nombre_corto,
             'ruc'           => $this->instituto_ruc,
+            'senescyt'      => $this->instituto_senescyt,
             'direccion'     => $this->instituto_direccion,
             'telefono'      => $this->instituto_telefono,
             'email'         => $this->instituto_email,
@@ -427,19 +433,21 @@ class AdminSettings extends Component
     public function guardarDocumentos(): void
     {
         $this->validate([
-            'doc_rector'      => 'nullable|string|max:150',
-            'doc_secretario'  => 'nullable|string|max:150',
-            'doc_coordinador' => 'nullable|string|max:150',
-            'doc_ciudad'      => 'nullable|string|max:100',
-            'doc_pie_pagina'  => 'nullable|string|max:500',
+            'doc_rector'                   => 'nullable|string|max:150',
+            'doc_secretario'               => 'nullable|string|max:150',
+            'doc_coordinador'              => 'nullable|string|max:150',
+            'doc_departamento_financiero'  => 'nullable|string|max:150',
+            'doc_ciudad'                   => 'nullable|string|max:100',
+            'doc_pie_pagina'               => 'nullable|string|max:500',
         ]);
 
         $this->upsertGroup('documentos', [
-            'rector'      => $this->doc_rector,
-            'secretario'  => $this->doc_secretario,
-            'coordinador' => $this->doc_coordinador,
-            'ciudad'      => $this->doc_ciudad,
-            'pie_pagina'  => $this->doc_pie_pagina,
+            'rector'                   => $this->doc_rector,
+            'secretario'               => $this->doc_secretario,
+            'coordinador'              => $this->doc_coordinador,
+            'departamento_financiero'  => $this->doc_departamento_financiero,
+            'ciudad'                   => $this->doc_ciudad,
+            'pie_pagina'               => $this->doc_pie_pagina,
         ]);
 
         $this->dispatch('swal', ['icon' => 'success', 'title' => 'Datos de documentos guardados.', 'timer' => 2000]);

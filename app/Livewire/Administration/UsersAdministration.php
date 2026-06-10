@@ -12,18 +12,20 @@ class UsersAdministration extends Component
 {
     use WithPagination, WithAuthorization;
 
-    public string $search      = '';
-    public string $filtroRol   = '';
-    public string $filtroEstado = '';
+    public string $search           = '';
+    public string $filtroRol        = '';
+    public string $filtroEstado     = '';
+    public bool   $filtroCumpleanos = false;
 
     public function mount(): void
     {
         $this->requierePermiso('gestionar_usuarios');
     }
 
-    public function updatingSearch(): void      { $this->resetPage(); }
-    public function updatingFiltroRol(): void   { $this->resetPage(); }
-    public function updatingFiltroEstado(): void { $this->resetPage(); }
+    public function updatingSearch(): void           { $this->resetPage(); }
+    public function updatingFiltroRol(): void        { $this->resetPage(); }
+    public function updatingFiltroEstado(): void     { $this->resetPage(); }
+    public function updatingFiltroCumpleanos(): void { $this->resetPage(); }
 
     public function eliminar(User $user): void
     {
@@ -71,6 +73,16 @@ class UsersAdministration extends Component
             ->when($this->filtroEstado !== '', fn($q) =>
                 $q->where('is_active', $this->filtroEstado === '1')
             )
+            ->when($this->filtroCumpleanos, function ($q) {
+                $fechas = collect(range(0, 5))
+                    ->map(fn($d) => now()->addDays($d)->format('m-d'))
+                    ->toArray();
+                $q->whereNotNull('fecha_nacimiento')
+                  ->whereRaw(
+                      "DATE_FORMAT(fecha_nacimiento, '%m-%d') IN (" . implode(',', array_fill(0, 6, '?')) . ")",
+                      $fechas
+                  );
+            })
             ->with('roles')
             ->paginate(10);
 
@@ -101,7 +113,7 @@ class UsersAdministration extends Component
 
     public function limpiarFiltros(): void
     {
-        $this->reset(['filtroRol', 'filtroEstado']);
+        $this->reset(['filtroRol', 'filtroEstado', 'filtroCumpleanos']);
         $this->resetPage();
     }
 }

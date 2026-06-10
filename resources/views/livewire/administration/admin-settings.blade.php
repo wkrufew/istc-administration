@@ -1,5 +1,5 @@
 <div>
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-2 space-y-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 space-y-6">
 
         {{-- HEADER --}}
         <div
@@ -106,7 +106,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="sm:col-span-2">
+                    <div>
                         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                             Nombre largo <span class="text-red-500">*</span>
                         </label>
@@ -129,11 +129,16 @@
                         @enderror
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">RUC / Código
-                            SENESCYT</label>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">RUC</label>
                         <input type="text" wire:model="instituto_ruc"
                             class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                             placeholder="0690012345001">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Código SENESCYT</label>
+                        <input type="text" wire:model="instituto_senescyt"
+                            class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                            placeholder="07-2024-01-SETEC">
                     </div>
                     <div class="sm:col-span-2">
                         <label
@@ -472,6 +477,15 @@
                         <input type="text" wire:model="doc_coordinador"
                             class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                             placeholder="Ing. Nombre Apellido, Mg.">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                            Departamento Financiero
+                            <span class="font-normal text-gray-400">(opcional — aparece en certificados)</span>
+                        </label>
+                        <input type="text" wire:model="doc_departamento_financiero"
+                            class="w-full rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                            placeholder="Lcda. Nombre Apellido">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">

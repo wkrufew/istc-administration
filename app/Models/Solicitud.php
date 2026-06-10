@@ -29,9 +29,12 @@ class Solicitud extends Model
         'estudiante_id',
         'tipo_solicitud_id',
         'descripcion',
+        'documento_path',
         'estado',
         'precio_aplicado',
         'notas_admin',
+        'certificado_codigo',
+        'docente_notificado_id',
         'procesado_por',
     ];
 
@@ -52,6 +55,11 @@ class Solicitud extends Model
     public function procesadoPor()
     {
         return $this->belongsTo(User::class, 'procesado_por');
+    }
+
+    public function docenteNotificado()
+    {
+        return $this->belongsTo(User::class, 'docente_notificado_id');
     }
 
     public function obligacion()

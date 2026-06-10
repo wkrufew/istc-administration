@@ -8,6 +8,28 @@
     $solicitudesPendientes   = \App\Models\Solicitud::where('estado', 'pendiente')->count();
     $pagosPendientesVerif    = \App\Models\Pago::where('estado', \App\Models\Pago::ESTADO_PENDIENTE)->count();
 
+    // Pre-filtra navItems: elimina secciones que no tendrían ningún item visible
+    $buildNav = function(array $items) {
+        $result         = [];
+        $pendingSection = null;
+        $user           = auth()->user();
+        foreach ($items as $item) {
+            if (($item['type'] ?? 'link') === 'section') {
+                $pendingSection = $item;
+            } else {
+                $perm = $item['permission'] ?? null;
+                if (! $perm || $user?->can($perm)) {
+                    if ($pendingSection) {
+                        $result[]       = $pendingSection;
+                        $pendingSection = null;
+                    }
+                    $result[] = $item;
+                }
+            }
+        }
+        return $result;
+    };
+
     $navItems = [
         ['type' => 'section', 'label' => 'Sistema'],
 
@@ -128,6 +150,8 @@
          'active' => 'administracion.administrativa.normas-aprobadas.*',    'permission' => 'gestionar_normas', 'viewBox' => '0 0 640 640',
          'svg' => '<path d="M80 88C80 74.7 69.3 64 56 64C42.7 64 32 74.7 32 88L32 456C32 486.9 57.1 512 88 512L272 512L272 464L88 464C83.6 464 80 460.4 80 456L80 224L272 224L272 176L80 176L80 88zM368 288L560 288C586.5 288 608 266.5 608 240L608 144C608 117.5 586.5 96 560 96L477.3 96C468.8 96 460.7 92.6 454.7 86.6L446.1 78C437.1 69 424.9 63.9 412.2 63.9L368 64C341.5 64 320 85.5 320 112L320 240C320 266.5 341.5 288 368 288zM368 576L560 576C586.5 576 608 554.5 608 528L608 432C608 405.5 586.5 384 560 384L477.3 384C468.8 384 460.7 380.6 454.7 374.6L446.1 366C437.1 357 424.9 351.9 412.2 351.9L368 352C341.5 352 320 373.5 320 400L320 528C320 554.5 341.5 576 368 576z"/>'],
     ];
+
+    $navItems = $buildNav($navItems);
 @endphp
 
 <style>
@@ -199,11 +223,6 @@
     <nav class="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 sidebar-scrollbar">
 
         @foreach($navItems as $item)
-
-            @php $perm = $item['permission'] ?? null; @endphp
-            @if($perm && !auth()->user()?->can($perm))
-                @continue
-            @endif
 
             @if(($item['type'] ?? 'link') === 'section')
                 {{-- Section header --}}

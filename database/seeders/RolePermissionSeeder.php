@@ -140,56 +140,85 @@ class RolePermissionSeeder extends Seeder
         }
 
         // =====================================================================
-        // ROLES
+        // CATEGORÍAS — solo afectan la columna 'category' (UI), no la lógica
+        // de autorización. Seguro de re-ejecutar: solo hace UPDATE de display.
         // =====================================================================
-        $admin               = Role::firstOrCreate(['name' => 'Administrador',          'guard_name' => 'web']);
-        $secretaria          = Role::firstOrCreate(['name' => 'Secretaria',              'guard_name' => 'web']);
-        $docente             = Role::firstOrCreate(['name' => 'Docente',                 'guard_name' => 'web']);
-        $estudiante          = Role::firstOrCreate(['name' => 'Estudiante',             'guard_name' => 'web']);
-        $admision            = Role::firstOrCreate(['name' => 'Admision',               'guard_name' => 'web']);
-        $rector              = Role::firstOrCreate(['name' => 'Rector',                  'guard_name' => 'web']);
-        $vicerrectora        = Role::firstOrCreate(['name' => 'Vicerrectora',            'guard_name' => 'web']);
-        $coordAcademica      = Role::firstOrCreate(['name' => 'Coordinadora Academica',  'guard_name' => 'web']);
-        $coordGeneral        = Role::firstOrCreate(['name' => 'Coordinador General',     'guard_name' => 'web']);
-        $secretariaGeneral   = Role::firstOrCreate(['name' => 'Secretaria General',      'guard_name' => 'web']);
-        $procuraduria        = Role::firstOrCreate(['name' => 'Procuraduria',            'guard_name' => 'web']);
+        $categorias = [
+            'Porteros' => [
+                'acceso_administrativo', 'acceso_docencia',
+                'acceso_estudiantil', 'acceso_admision',
+            ],
+            'Usuarios y Roles' => [
+                'asignar_roles', 'crear_roles', 'gestionar_usuarios',
+                'gestionar_docentes', 'gestionar_estudiantes', 'gestionar_auditorias',
+                'moodle_gestion', 'auditoria_ver',
+                'crear_usuarios', 'editar_usuarios', 'eliminar_usuarios', 'reenviar_credenciales',
+            ],
+            'Configuración' => [
+                'gestionar_configuracion',
+            ],
+            'Estructura Académica' => [
+                'gestionar_periodos', 'gestionar_carreras', 'gestionar_semestres',
+                'gestionar_materias', 'gestionar_paralelos', 'gestionar_horarios',
+                'gestionar_modulos_academicos',
+            ],
+            'Matrícula y Finanzas' => [
+                'gestionar_matriculas', 'gestionar_pagos', 'gestionar_obligaciones_financieras',
+                'ver_reportes_financieros',
+                'crear_matriculas', 'editar_matriculas', 'cancelar_matriculas',
+                'crear_obligaciones_manuales', 'registrar_pagos', 'verificar_pagos',
+            ],
+            'Procesos Académicos' => [
+                'gestionar_practicas_preprofesionales', 'gestionar_practicas_comunitarias',
+                'gestionar_titulacion', 'ver_reportes_academicos', 'ver_consolidado_cohortes',
+            ],
+            'Documentación Institucional' => [
+                'gestionar_actas_colegiado', 'gestionar_normas', 'gestionar_documentacion_personal',
+            ],
+            'Tickets de Soporte' => [
+                'ver_tickets', 'ver_todos_tickets', 'crear_tickets', 'responder_tickets',
+                'asignar_tickets', 'cambiar_estado_tickets', 'cerrar_tickets',
+            ],
+            'Solicitudes' => [
+                'gestionar_solicitudes', 'aprobar_solicitudes', 'rechazar_solicitudes',
+                'avanzar_solicitudes', 'gestionar_tipos_solicitudes',
+            ],
+            'Docencia' => [
+                'ver_notas_estudiantes', 'ingresar_notas_estudiantes', 'gestionar_asistencias',
+            ],
+            'Portal Estudiantil' => [
+                'ver_calificaciones', 'matricularse', 'ver_horarios',
+                'ver_obligaciones_financieras', 'ver_acta_calificaciones',
+            ],
+        ];
 
-        // =====================================================================
-        // ADMINISTRADOR — acceso total: recibe TODOS los permisos
-        // Los demás roles se configuran desde la UI de Roles y Permisos
-        // =====================================================================
-        $admin->syncPermissions($permissions);
-
-        // =====================================================================
-        // DOCENTE — solo portal de docencia (no se gestiona por UI de roles)
-        // =====================================================================
-        $docente->syncPermissions([
-            'acceso_docencia',
-            'ver_notas_estudiantes',
-            'ingresar_notas_estudiantes',
-            'gestionar_asistencias',
-        ]);
-
-        // =====================================================================
-        // ESTUDIANTE — solo portal estudiantil (no se gestiona por UI de roles)
-        // =====================================================================
-        $estudiante->syncPermissions([
-            'acceso_estudiantil',
-            'ver_calificaciones',
-            'matricularse',
-            'ver_horarios',
-            'ver_obligaciones_financieras',
-            'ver_acta_calificaciones',
-        ]);
-
-        // =====================================================================
-        // TODOS LOS DEMÁS ROLES ADMINISTRATIVOS
-        // Solo tienen acceso al portal; los permisos específicos los asigna
-        // el Administrador desde la pantalla de Roles y Permisos.
-        // =====================================================================
-        foreach ([$secretaria, $admision, $rector, $vicerrectora,
-                  $coordAcademica, $coordGeneral, $secretariaGeneral, $procuraduria] as $role) {
-            $role->syncPermissions(['acceso_administrativo']);
+        foreach ($categorias as $categoria => $nombres) {
+            Permission::whereIn('name', $nombres)->update(['category' => $categoria]);
         }
+
+        // =====================================================================
+        // ROLES — solo se crean si no existen (firstOrCreate).
+        // No se asignan permisos a ningún rol desde aquí, excepto Administrador.
+        // Los permisos de cada usuario se gestionan directamente desde la UI.
+        // Re-ejecutar este seeder en producción es completamente seguro:
+        // solo crea permisos nuevos, actualiza categorías, y garantiza que
+        // el rol Administrador tenga acceso total.
+        // =====================================================================
+        $admin = Role::firstOrCreate(['name' => 'Administrador',         'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Secretaria',             'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Docente',                'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Estudiante',             'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Admision',               'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Rector',                 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Vicerrectora',           'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Coordinadora Academica', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Coordinador General',    'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Secretaria General',     'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'Procuraduria',           'guard_name' => 'web']);
+
+        // El rol Administrador siempre recibe TODOS los permisos del sistema.
+        // Todos los demás roles no reciben permisos por seeder — se asignan
+        // directamente a los usuarios desde la UI de gestión de permisos.
+        $admin->syncPermissions($permissions);
     }
 }

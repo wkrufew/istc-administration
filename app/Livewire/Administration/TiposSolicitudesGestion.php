@@ -19,11 +19,13 @@ class TiposSolicitudesGestion extends Component
     public bool $showModal = false;
     public ?int  $tipoId   = null;
 
-    public string $nombre       = '';
-    public string $descripcion  = '';
-    public float  $precio       = 0.00;
+    public string $nombre            = '';
+    public string $descripcion       = '';
+    public float  $precio            = 0.00;
     public bool   $requiereDocumento = true;
-    public bool   $isActive     = true;
+    public string $tipoCertificado   = '';
+    public bool   $notificaDocente   = false;
+    public bool   $isActive          = true;
 
     public function mount(): void
     {
@@ -51,6 +53,8 @@ class TiposSolicitudesGestion extends Component
         $this->reset(['tipoId', 'nombre', 'descripcion']);
         $this->precio            = 0.00;
         $this->requiereDocumento = true;
+        $this->tipoCertificado   = '';
+        $this->notificaDocente   = false;
         $this->isActive          = true;
         $this->showModal         = true;
     }
@@ -63,6 +67,8 @@ class TiposSolicitudesGestion extends Component
         $this->descripcion       = $tipo->descripcion ?? '';
         $this->precio            = (float) $tipo->precio;
         $this->requiereDocumento = $tipo->requiere_documento;
+        $this->tipoCertificado   = $tipo->tipo_certificado ?? '';
+        $this->notificaDocente   = $tipo->notifica_docente;
         $this->isActive          = $tipo->is_active;
         $this->showModal         = true;
     }
@@ -70,7 +76,7 @@ class TiposSolicitudesGestion extends Component
     public function cerrarModal(): void
     {
         $this->showModal = false;
-        $this->reset(['tipoId', 'nombre', 'descripcion', 'precio', 'requiereDocumento', 'isActive']);
+        $this->reset(['tipoId', 'nombre', 'descripcion', 'precio', 'requiereDocumento', 'tipoCertificado', 'notificaDocente', 'isActive']);
         $this->precio = 0.00;
     }
 
@@ -89,6 +95,8 @@ class TiposSolicitudesGestion extends Component
             'descripcion'        => trim($this->descripcion) ?: null,
             'precio'             => $this->precio,
             'requiere_documento' => $this->requiereDocumento,
+            'tipo_certificado'   => $this->tipoCertificado ?: null,
+            'notifica_docente'   => $this->notificaDocente,
             'is_active'          => $this->isActive,
         ];
 

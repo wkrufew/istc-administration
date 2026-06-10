@@ -48,7 +48,9 @@
                         <th class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">Nombre</th>
                         <th class="px-4 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">Descripción</th>
                         <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-28">Precio</th>
-                        <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-32">Req. Doc.</th>
+                        <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-24">Req. Doc.</th>
+                        <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-36">Certificado</th>
+                        <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-28">Notif. Doc.</th>
                         <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-28">Estado</th>
                         <th class="px-4 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 w-28">Acciones</th>
                     </tr>
@@ -80,6 +82,31 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-center">
+                                @if ($tipo->tipo_certificado === 'cna')
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-600">
+                                        <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                        No Adeudar
+                                    </span>
+                                @elseif ($tipo->tipo_certificado === 'matricula')
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-sky-500/10 border border-sky-500/20 text-sky-600">
+                                        <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                        Matrícula
+                                    </span>
+                                @else
+                                    <span class="text-xs text-slate-400 dark:text-slate-500">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                @if ($tipo->notifica_docente)
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                                        <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                                        Sí
+                                    </span>
+                                @else
+                                    <span class="text-xs text-slate-400 dark:text-slate-500">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
                                 <label class="relative inline-flex cursor-pointer items-center">
                                     <input type="checkbox" class="peer sr-only"
                                         @if ($tipo->is_active) checked @endif
@@ -103,7 +130,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-16 text-center">
+                            <td colspan="8" class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center gap-3 text-slate-400">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     <p class="text-sm">No hay tipos de solicitudes configurados.</p>
@@ -171,7 +198,7 @@
                     </div>
 
                     {{-- Checkboxes --}}
-                    <div class="grid grid-cols-2 gap-4 pt-1">
+                    <div class="grid grid-cols-2 gap-3 pt-1">
                         <label class="flex items-center gap-2.5 cursor-pointer group">
                             <input type="checkbox" wire:model="requiereDocumento"
                                 class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-lime-500 focus:ring-lime-500/20">
@@ -181,6 +208,23 @@
                             <input type="checkbox" wire:model="isActive"
                                 class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-lime-500 focus:ring-lime-500/20">
                             <span class="text-xs text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white transition">Activo</span>
+                        </label>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Genera certificado</label>
+                            <select wire:model="tipoCertificado"
+                                class="w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-white/80 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition">
+                                <option value="">Sin certificado</option>
+                                <option value="cna">Certificado de No Adeudar</option>
+                                <option value="matricula">Certificado de Matrícula</option>
+                            </select>
+                        </div>
+                        <label class="flex items-start gap-2.5 cursor-pointer group">
+                            <input type="checkbox" wire:model="notificaDocente"
+                                class="w-4 h-4 mt-0.5 rounded border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500/20">
+                            <div>
+                                <span class="text-xs text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white transition block">Notificación por correo al docente</span>
+                                <span class="text-[0.65rem] text-slate-400 dark:text-slate-500">Pide seleccionar docente al procesar</span>
+                            </div>
                         </label>
                     </div>
                 </div>

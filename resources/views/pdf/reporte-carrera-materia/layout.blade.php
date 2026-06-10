@@ -467,6 +467,7 @@
     $rptNombreLargo  = SettingService::get('instituto.nombre_largo', 'Instituto Superior Tecnológico Cumandá');
     $rptNombreCorto  = SettingService::get('instituto.nombre_corto', 'ISTC');
     $rptRuc          = SettingService::get('instituto.ruc', '—');
+    $rptSenescyt     = SettingService::get('instituto.senescyt', '');
     $rptDireccion    = SettingService::get('instituto.direccion', '—');
     $rptTelefono     = SettingService::get('instituto.telefono', '—');
     $rptEmail        = SettingService::get('instituto.email', '—');
@@ -497,10 +498,18 @@
                     <table class="inst-badge-table">
                         <tr>
                             <td>
-                                <div class="inst-badge-label">Cód. SENESCYT / RUC</div>
+                                <div class="inst-badge-label">RUC</div>
                                 <div class="inst-badge-value">{{ $rptRuc }}</div>
                             </td>
                         </tr>
+                        @if($rptSenescyt)
+                        <tr>
+                            <td>
+                                <div class="inst-badge-label">Cód. SENESCYT</div>
+                                <div class="inst-badge-value">{{ $rptSenescyt }}</div>
+                            </td>
+                        </tr>
+                        @endif
                         <tr>
                             <td>
                                 <div class="inst-badge-label">Fecha de emisión</div>

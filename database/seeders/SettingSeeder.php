@@ -16,7 +16,8 @@ class SettingSeeder extends Seeder
             // ----------------------------------------------------------------
             ['group' => 'instituto', 'key' => 'instituto.nombre_largo',  'type' => 'text',     'label' => 'Nombre largo',            'value' => 'Instituto Superior Tecnológico Cumandá',            'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.nombre_corto',  'type' => 'text',     'label' => 'Nombre abreviado',        'value' => 'ISTC',                                              'is_encrypted' => false],
-            ['group' => 'instituto', 'key' => 'instituto.ruc',           'type' => 'text',     'label' => 'RUC / Cod. SENESCYT',     'value' => '0660012345001',                                    'is_encrypted' => false],
+            ['group' => 'instituto', 'key' => 'instituto.ruc',           'type' => 'text',     'label' => 'RUC',                     'value' => '0660012345001',                                    'is_encrypted' => false],
+            ['group' => 'instituto', 'key' => 'instituto.senescyt',       'type' => 'text',     'label' => 'Código SENESCYT',         'value' => '',                                                 'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.direccion',     'type' => 'text',     'label' => 'Dirección',               'value' => 'Av. Principal s/n, Cumandá, Chimborazo',           'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.telefono',      'type' => 'text',     'label' => 'Teléfono',                'value' => '+593 999 000 111',                                  'is_encrypted' => false],
             ['group' => 'instituto', 'key' => 'instituto.email',         'type' => 'email',    'label' => 'Email institucional',     'value' => 'institutosuperiortecnologicocu@gmail.com',          'is_encrypted' => false],
