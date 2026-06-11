@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'permisos' => \App\Http\Middleware\CheckPermission::class,
+            'active'   => \App\Http\Middleware\EnsureUserIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -71,7 +72,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Request $request
         ) use ($swalDenied, $safeRedirect) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => 'Sin permisos.'], 403);
+                return response()->json(['success' => false, 'message' => 'No tienes permiso para acceder a esta sección.'], 403);
             }
             return redirect($safeRedirect())->with('swal', $swalDenied());
         });
@@ -85,7 +86,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null; // dejar que Laravel maneje otros códigos normalmente
             }
             if ($request->expectsJson()) {
-                return response()->json(['message' => $e->getMessage() ?: 'Sin permisos.'], 403);
+                return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Sin permisos.'], 403);
             }
             return redirect($safeRedirect())->with('swal', $swalDenied($e->getMessage()));
         });
@@ -96,7 +97,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Request $request
         ) use ($swalDenied, $safeRedirect) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => $e->getMessage() ?: 'Sin permisos.'], 403);
+                return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Sin permisos.'], 403);
             }
             return redirect($safeRedirect())->with('swal', $swalDenied($e->getMessage()));
         });
