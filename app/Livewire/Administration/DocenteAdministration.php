@@ -14,9 +14,7 @@ class DocenteAdministration extends Component
 
     public function render()
     {
-        $users = User::whereHas('roles', function ($query) {
-            $query->where('name', 'Docente');
-        })
+        $users = User::permission('acceso_docencia')
             ->where(function ($query) {
                 $query->where('name', 'LIKE', '%' . $this->search . '%')
                     ->orWhere('email', 'LIKE', '%' . $this->search . '%');
@@ -24,7 +22,13 @@ class DocenteAdministration extends Component
             ->with('roles')
             ->paginate(10);
 
-        return view('livewire.administration.docente-administration', compact('users'));
+        $totalDocentes  = User::permission('acceso_docencia')->count();
+        $totalActivos   = User::permission('acceso_docencia')->where('is_active', true)->count();
+        $totalInactivos = User::permission('acceso_docencia')->where('is_active', false)->count();
+
+        return view('livewire.administration.docente-administration', compact(
+            'users', 'totalDocentes', 'totalActivos', 'totalInactivos'
+        ));
     }
 
     public function toggleStatus(User $user)

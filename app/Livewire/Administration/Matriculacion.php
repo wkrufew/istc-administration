@@ -99,7 +99,7 @@ class Matriculacion extends Component
     #[Computed]
     public function estudiantes()
     {
-        return User::role('estudiante')
+        return User::permission('acceso_estudiantil')
             ->when(
                 $this->search,
                 fn($q) => $q->where(

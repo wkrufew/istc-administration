@@ -862,6 +862,7 @@
                         <li>core_user_create_users</li>
                         <li>core_user_update_users</li>
                         <li>core_user_get_users_by_field</li>
+                        <li>core_calendar_get_calendar_events</li>
                     </ul>
                 </div>
 

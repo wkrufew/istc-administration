@@ -110,7 +110,52 @@
 
 
     {{-- ═══════════════════════════════════════
-         BLOQUE 1.5 — FILTROS
+         BLOQUE 1.5 — MÉTRICAS
+    ═══════════════════════════════════════ --}}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04] shadow-lg shadow-slate-200 dark:shadow-black/20">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Total Usuarios</p>
+                <p class="text-2xl font-semibold text-slate-800 dark:text-white/90 leading-none">{{ $users->total() }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04] shadow-lg shadow-slate-200 dark:shadow-black/20">
+            <div class="w-10 h-10 rounded-xl bg-lime-500/10 border border-lime-500/20 flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-lime-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Activos</p>
+                <p class="text-2xl font-semibold text-lime-400 leading-none">{{ $users->where('is_active', true)->count() }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/[0.06] rounded-xl px-5 py-4 flex items-center gap-4 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04] shadow-lg shadow-slate-200 dark:shadow-black/20">
+            <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6" /><path d="M9 9l6 6" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Inactivos</p>
+                <p class="text-2xl font-semibold text-red-400 leading-none">{{ $users->where('is_active', false)->count() }}</p>
+            </div>
+        </div>
+
+    </div>
+
+
+    {{-- ═══════════════════════════════════════
+         BLOQUE 2 — FILTROS
     ═══════════════════════════════════════ --}}
     <div class="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/[0.06] rounded-xl px-5 py-3.5 flex flex-wrap items-center gap-3">
 
@@ -269,7 +314,7 @@
                                     <div>
                                         <span class="text-sm text-slate-800 dark:text-white/75 font-medium leading-tight">{{ $user->name }}</span>
                                         @if($user->cedula)
-                                            <p class="text-[0.65rem] text-slate-400 dark:text-slate-500 font-mono mt-0.5">{{ $user->cedula }}</p>
+                                            <p class="text-[0.65rem] text-slate-400 dark:text-slate-500 font-mono mt-0.5">C.I.: {{ $user->cedula }}</p>
                                         @endif
                                         @if($user->moodle_id && (int) env('MOODLE_MODE', 0) === 1)
                                             <span class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[0.6rem] font-bold
@@ -285,6 +330,7 @@
                             {{-- Correo --}}
                             <td class="px-4 py-3 text-left">
                                 <span class="text-xs text-slate-500 dark:text-slate-400">{{ $user->email }}</span>
+                                <p class="text-[0.65rem] text-slate-400 dark:text-slate-500 mt-0.5">Registrado: {{ $user->created_at->format('d M Y') }}</p>
 
                                 @if($esCumple)
                                     <div class="flex items-center gap-1 mt-1">
@@ -361,7 +407,7 @@
                                     {{-- Moodle --}}
                                     @can('moodle_gestion')
                                     @if((int) env('MOODLE_MODE', 0) === 1)
-                                    <a href="{{ route('administracion.administrativa.users.moodle', $user) }}"
+                                    <a href="{{ route('administracion.administrativa.users.moodle', $user) }}?from=users"
                                         title="Gestión Moodle"
                                         class="inline-flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-150
                                                {{ $user->moodle_id

@@ -17,11 +17,18 @@ class MoodleGestion extends Component
     use WithAuthorization;
 
     public User $usuario;
+    public string $volverRuta;
 
     public function mount(User $usuario): void
     {
         $this->requierePermiso('moodle_gestion');
         $this->usuario = $usuario;
+
+        $this->volverRuta = match(request()->query('from')) {
+            'docentes'    => route('administracion.administrativa.docentes.index'),
+            'estudiantes' => route('administracion.administrativa.estudiantes.index'),
+            default       => route('administracion.administrativa.users.index'),
+        };
     }
 
     // =========================================================================
@@ -70,21 +77,24 @@ class MoodleGestion extends Component
             return;
         }
 
-        $tieneAcceso = $this->usuario->hasAnyPermission([
-            'acceso_administrativo',
-            'acceso_docencia',
-            'acceso_estudiantil',
-        ]);
+        // Docente = tiene permiso acceso_docencia O tiene el rol Spatie "Docente"
+        $esDocente = $this->usuario->hasPermissionTo('acceso_docencia')
+            || $this->usuario->hasRole('Docente');
+
+        $tieneAcceso = $esDocente
+            || $this->usuario->hasAnyPermission(['acceso_administrativo', 'acceso_estudiantil']);
 
         if (! $tieneAcceso) {
             $this->toastError('Sin rol de acceso', 'Asigne un rol con acceso al campus virtual antes de registrar en Moodle.');
             return;
         }
 
-        $soloEstudiantil = $this->usuario->hasPermissionTo('acceso_estudiantil')
-            && ! $this->usuario->hasAnyPermission(['acceso_administrativo', 'acceso_docencia']);
+        // Solo los estudiantes puros (sin rol ni permiso de docente/admin) necesitan matrícula
+        $esEstudiantePuro = ! $esDocente
+            && ! $this->usuario->hasPermissionTo('acceso_administrativo')
+            && $this->usuario->hasPermissionTo('acceso_estudiantil');
 
-        if ($soloEstudiantil && ! $this->usuario->matriculas()->where('estado', 'Habilitada')->exists()) {
+        if ($esEstudiantePuro && ! $this->usuario->matriculas()->where('estado', 'Habilitada')->exists()) {
             $this->toastError('Sin matrícula activa', 'El estudiante no tiene matrícula habilitada. Habilite su matrícula antes de registrarlo en Moodle.');
             return;
         }
@@ -162,13 +172,20 @@ class MoodleGestion extends Component
             (new MoodleService())->restablecerPassword($this->usuario);
 
             if (SettingService::get('smtp.activo', '0') === '1') {
+                $rolNombre = match(true) {
+                    $this->usuario->hasPermissionTo('acceso_administrativo') => 'Administrativo',
+                    $this->usuario->hasPermissionTo('acceso_docencia')       => 'Docente',
+                    $this->usuario->hasPermissionTo('acceso_estudiantil')    => 'Estudiante',
+                    default                                                   => 'Usuario',
+                };
+
                 $mailer = SettingService::buildMailer();
                 $mailer->to($this->usuario->email)->send(
                     new ReenvioCredencialesAcceso(
                         usuario: $this->usuario,
                         plainPassword: $this->usuario->cedula,
                         tipoAcceso: 'moodle',
-                        nombreRol: 'Campus Virtual',
+                        nombreRol: $rolNombre,
                     )
                 );
             }

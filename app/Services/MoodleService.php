@@ -157,6 +157,7 @@ class MoodleService
             'users' => [
                 [
                     'id'       => $user->moodle_id,
+                    'username' => $user->cedula,
                     'password' => $user->cedula,
                 ],
             ],
@@ -167,6 +168,97 @@ class MoodleService
         if ($response->failed() || isset($data['exception'])) {
             $this->lanzarError('core_user_update_users (reset password)', $data, $user);
         }
+    }
+
+    // =========================================================================
+    // CALENDARIO DE ACTIVIDADES MOODLE
+    // Retorna los eventos del calendario para el estudiante (15 días pasados → 90 futuros)
+    // =========================================================================
+    public function obtenerEventosCalendario(int $moodleUserId): array
+    {
+        // 1. Obtener cursos en los que está matriculado el estudiante
+        $respCursos = $this->call('core_enrol_get_users_courses', [
+            'userid' => $moodleUserId,
+        ]);
+
+        if ($respCursos->failed()) {
+            return [];
+        }
+
+        $cursos = $respCursos->json();
+
+        if (! is_array($cursos) || isset($cursos['exception']) || empty($cursos)) {
+            return [];
+        }
+
+        $courseIds = array_column($cursos, 'id');
+        $cursosMap = array_column($cursos, 'fullname', 'id');
+
+        // 2. Obtener eventos del calendario para esos cursos
+        $ahora     = now();
+        $timestart = $ahora->copy()->subDays(15)->startOfDay()->timestamp;
+        $timeend   = $ahora->copy()->addDays(90)->endOfDay()->timestamp;
+
+        $respEventos = $this->call('core_calendar_get_calendar_events', [
+            'events' => [
+                'courseids' => $courseIds,
+            ],
+            'options' => [
+                'userevents' => 0,
+                'siteevents' => 0,
+                'timestart'  => $timestart,
+                'timeend'    => $timeend,
+            ],
+        ]);
+
+        if ($respEventos->failed()) {
+            return [];
+        }
+
+        $data = $respEventos->json();
+
+        if (isset($data['exception']) || ! isset($data['events'])) {
+            Log::warning('MoodleService: respuesta inesperada en core_calendar_get_calendar_events', [
+                'moodle_user_id' => $moodleUserId,
+                'data'           => $data,
+            ]);
+            return [];
+        }
+
+        $ahoraTs          = $ahora->timestamp;
+        $tiposPermitidos  = ['due', 'close', 'open', 'closeevent'];
+        $modulosPermitidos = ['assign', 'quiz', 'forum', 'scorm', 'lesson', 'workshop'];
+
+        return collect($data['events'])
+            ->filter(function ($e) use ($tiposPermitidos, $modulosPermitidos) {
+                if (empty($e['timestart'])) {
+                    return false;
+                }
+                return in_array($e['eventtype'] ?? '', $tiposPermitidos)
+                    || in_array($e['modulename'] ?? '', $modulosPermitidos);
+            })
+            ->map(function ($e) use ($ahoraTs, $cursosMap) {
+                $ts      = (int) ($e['timestart'] ?? 0);
+                $fecha   = \Carbon\Carbon::createFromTimestamp($ts);
+
+                return [
+                    'id'             => $e['id'],
+                    'nombre'         => $e['name'],
+                    'descripcion'    => strip_tags($e['description'] ?? ''),
+                    'curso'          => $cursosMap[$e['courseid']] ?? 'Curso desconocido',
+                    'courseid'       => $e['courseid'],
+                    'modulename'     => $e['modulename'] ?? '',
+                    'eventtype'      => $e['eventtype'] ?? '',
+                    'timestart'      => $ts,
+                    'fecha'          => $fecha->format('d/m/Y H:i'),
+                    'fecha_relativa' => $fecha->diffForHumans(),
+                    'vencido'        => $ts < $ahoraTs,
+                    'url'            => $e['url'] ?? null,
+                ];
+            })
+            ->sortBy('timestart')
+            ->values()
+            ->toArray();
     }
 
     // =========================================================================

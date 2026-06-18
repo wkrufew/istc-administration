@@ -80,6 +80,11 @@
                                 'icon' =>
                                     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
                             ],
+                            [
+                                'route' => 'administracion.estudiantil.calendario-moodle',
+                                'label' => 'Actividades Moodle',
+                                'icon'  => 'M13 10V3L4 14h7v7l9-11h-7z',
+                            ],
                         ];
                     @endphp
 
@@ -175,6 +180,31 @@
                                     Mi Perfil
                                 </x-dropdown-link>
                             </div>
+
+                            @canany(['acceso_administrativo', 'acceso_docencia'])
+                            <div class="border-t border-slate-100 py-1">
+                                <p class="px-4 pt-2 pb-1 text-xs text-slate-400 font-medium uppercase tracking-wider">Mis portales</p>
+                                @can('acceso_administrativo')
+                                <x-dropdown-link href="{{ route('administracion.administrativa.dashboard') }}"
+                                    class="flex items-center gap-2.5 text-sm text-slate-600 hover:text-slate-900">
+                                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    Panel Administrativo
+                                </x-dropdown-link>
+                                @endcan
+                                @can('acceso_docencia')
+                                <x-dropdown-link href="{{ route('administracion.docencia.dashboard') }}"
+                                    class="flex items-center gap-2.5 text-sm text-slate-600 hover:text-slate-900">
+                                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                    Portal Docente
+                                </x-dropdown-link>
+                                @endcan
+                            </div>
+                            @endcanany
+
                             <div class="border-t border-slate-100 py-1">
                                 <form method="POST" action="{{ route('logout') }}" x-data>
                                     @csrf
@@ -276,6 +306,29 @@
                         </svg>
                         Mi Perfil
                     </a>
+
+                    @canany(['acceso_administrativo', 'acceso_docencia'])
+                    <p class="px-3 pt-3 pb-0.5 text-xs text-slate-400 font-medium uppercase tracking-wider">Mis portales</p>
+                    @can('acceso_administrativo')
+                    <a href="{{ route('administracion.administrativa.dashboard') }}"
+                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-slate-600 hover:bg-white hover:text-slate-800 transition">
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Panel Administrativo
+                    </a>
+                    @endcan
+                    @can('acceso_docencia')
+                    <a href="{{ route('administracion.docencia.dashboard') }}"
+                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-slate-600 hover:bg-white hover:text-slate-800 transition">
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        Portal Docente
+                    </a>
+                    @endcan
+                    @endcanany
+
                     <form method="POST" action="{{ route('logout') }}" x-data>
                         @csrf
                         <button @click.prevent="$root.submit();"

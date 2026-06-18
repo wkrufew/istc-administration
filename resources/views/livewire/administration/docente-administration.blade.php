@@ -90,7 +90,7 @@
             <div>
                 <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Total Docentes
                 </p>
-                <p class="text-2xl font-semibold text-slate-800 dark:text-white/90 leading-none">{{ $users->count() }}</p>
+                <p class="text-2xl font-semibold text-slate-800 dark:text-white/90 leading-none">{{ $totalDocentes }}</p>
             </div>
         </div>
 
@@ -106,7 +106,7 @@
             <div>
                 <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Activos</p>
                 <p class="text-2xl font-semibold text-lime-400 leading-none">
-                    {{ $users->where('is_active', true)->count() }}</p>
+                    {{ $totalActivos }}</p>
             </div>
         </div>
 
@@ -124,7 +124,7 @@
             <div>
                 <p class="text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-0.5">Inactivos</p>
                 <p class="text-2xl font-semibold text-red-400 leading-none">
-                    {{ $users->where('is_active', false)->count() }}</p>
+                    {{ $totalInactivos }}</p>
             </div>
         </div>
 
@@ -388,25 +388,25 @@
                     rounded-2xl p-5 shadow-sm">
                 <p class="text-sm text-gray-500 dark:text-gray-400">Total Docentes</p>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">
-                    {{ $users->count() }}
+                    {{ $totalDocentes }}
                 </p>
             </div>
 
             <div
-                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
+                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800
                     rounded-2xl p-5 shadow-sm">
                 <p class="text-sm text-gray-500 dark:text-gray-400">Activos</p>
                 <p class="text-3xl font-bold text-emerald-600">
-                    {{ $users->where('is_active', true)->count() }}
+                    {{ $totalActivos }}
                 </p>
             </div>
 
             <div
-                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
+                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800
                     rounded-2xl p-5 shadow-sm">
                 <p class="text-sm text-gray-500 dark:text-gray-400">Inactivos</p>
                 <p class="text-3xl font-bold text-red-600">
-                    {{ $users->where('is_active', false)->count() }}
+                    {{ $totalInactivos }}
                 </p>
             </div>
 
@@ -521,11 +521,22 @@
 
                                         <a title="Asignacion de materias"
                                             href="{{ route('administracion.administrativa.docentes.asignar.form', $user) }}"
-                                            class="p-2 rounded-lg bg-violet-500/10 text-violet-600 
-                                              hover:bg-violet-500 hover:text-white 
+                                            class="p-2 rounded-lg bg-violet-500/10 text-violet-600
+                                              hover:bg-violet-500 hover:text-white
                                               transition shadow-sm">
                                             📚
                                         </a>
+
+                                        @can('moodle_gestion')
+                                        @if((int) env('MOODLE_MODE', 0) === 1)
+                                        <a title="Gestión Moodle"
+                                            href="{{ route('administracion.administrativa.users.moodle', $user) }}?from=docentes"
+                                            class="p-2 rounded-lg {{ $user->moodle_id ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500' : 'bg-slate-500/10 text-slate-400 hover:bg-slate-500' }}
+                                              hover:text-white transition shadow-sm">
+                                            🎓
+                                        </a>
+                                        @endif
+                                        @endcan
 
                                     </div>
                                 </td>

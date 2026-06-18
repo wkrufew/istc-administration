@@ -14,9 +14,7 @@ class EstudianteAdministration extends Component
 
     public function render()
     {
-        $users = User::whereHas('roles', function ($query) {
-            $query->where('name', 'Estudiante');
-        })
+        $users = User::permission('acceso_estudiantil')
             ->where(function ($query) {
                 $query->where('name', 'LIKE', '%' . $this->search . '%')
                     ->orWhere('email', 'LIKE', '%' . $this->search . '%');
@@ -24,7 +22,12 @@ class EstudianteAdministration extends Component
             ->with('roles')
             ->paginate(10);
 
-        return view('livewire.administration.estudiante-administration', compact('users'));
+        $totalActivos   = User::permission('acceso_estudiantil')->where('is_active', true)->count();
+        $totalInactivos = User::permission('acceso_estudiantil')->where('is_active', false)->count();
+
+        return view('livewire.administration.estudiante-administration', compact(
+            'users', 'totalActivos', 'totalInactivos'
+        ));
     }
 
     public function updatingSearch()
@@ -39,13 +42,13 @@ class EstudianteAdministration extends Component
             $user->save();
 
             $this->dispatch('alert', [
-                'message' => $user->is_active ? 'Docente habilitado con éxito.' : 'Docente inhabilitado con éxito.',
+                'message' => $user->is_active ? 'Estudiante habilitado con éxito.' : 'Estudiante inhabilitado con éxito.',
                 'type' => 'success',
                 'title' => 'Actualización exitosa'
             ]);
         } catch (\Exception $e) {
             $this->dispatch('alert', [
-                'message' => 'Error al actualizar el estado del Docente' . $e->getMessage(),
+                'message' => 'Error al actualizar el estado del Estudiante' . $e->getMessage(),
                 'type' => 'error',
                 'title' => 'Error'
             ]);

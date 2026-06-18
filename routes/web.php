@@ -84,7 +84,7 @@ Route::middleware([
 ])->group(function () {
 
     // Rutas específicas por rol
-    Route::middleware('permisos:acceso_administrativo')->prefix('administracion/administrativa')->name('administracion.administrativa.')->group(function () {
+    Route::middleware('permisos:acceso_administrativo')->prefix('admin')->name('administracion.administrativa.')->group(function () {
         Route::get('/', function () {
             return view('administracion.administrativa');
         })->name('dashboard');
@@ -202,7 +202,7 @@ Route::middleware([
         }); */
     });
 
-    Route::middleware('permisos:acceso_docencia')->prefix('administracion/docencia')->name('administracion.docencia.')->group(function () {
+    Route::middleware('permisos:acceso_docencia')->prefix('docencia')->name('administracion.docencia.')->group(function () {
         Route::get('/', function () {
             return view('docencia.dashboard-estudiantil');
         })->name('dashboard'); //administracion.docencia.dashboard
@@ -219,7 +219,7 @@ Route::middleware([
         Route::get('avisos', AvisosDocente::class)->name('avisos');
     });
 
-    Route::middleware('permisos:acceso_estudiantil')->prefix('administracion/estudiantil')->name('administracion.estudiantil.')->group(function () {
+    Route::middleware('permisos:acceso_estudiantil')->prefix('estudiantil')->name('administracion.estudiantil.')->group(function () {
         Route::get('/', function () {
             return view('estudiantil.dashboard-estudiantil');
         })->name('dashboard');
@@ -232,6 +232,7 @@ Route::middleware([
         Route::get('acta-calificaciones', [ActaCalificacionesController::class, 'index'])->name('acta-calificaciones.index');
         Route::get('avisos', AvisosEstudiante::class)->name('avisos');
         Route::get('solicitudes', \App\Livewire\Estudiante\SolicitudesEstudiante::class)->name('solicitudes');
+        Route::get('calendario-moodle', fn () => view('estudiantil.calendario-moodle'))->name('calendario-moodle');
     });
 
     Route::middleware('permisos:acceso_admision')->prefix('administracion/admision ')->name('administracion.admision.')->group(function () {

@@ -1043,10 +1043,10 @@
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 window.location.href =
-                                    `{{ url('administracion/administrativa/matriculas') }}/${data.matricula_id}/pago`;
+                                    '{{ route('administracion.administrativa.matriculas.pago', ['matricula' => '__ID__']) }}'.replace('__ID__', data.matricula_id);
                             } else if (result.dismiss === Swal.DismissReason.cancel) {
                                 window.location.href =
-                                    `{{ url('administracion/administrativa/obligaciones') }}`;
+                                    '{{ route('administracion.administrativa.obligaciones.index') }}';
                             }
                         });
                     } else {
@@ -1960,10 +1960,10 @@
                         }).then((result) => {
                             if (result.isConfirmed) {
                                 window.location.href =
-                                    `{{ url('administracion/administrativa/matriculas') }}/${data.matricula_id}/pago`;
+                                    '{{ route('administracion.administrativa.matriculas.pago', ['matricula' => '__ID__']) }}'.replace('__ID__', data.matricula_id);
                             } else if (result.dismiss === Swal.DismissReason.cancel) {
                                 window.location.href =
-                                    `{{ url('administracion/administrativa/obligaciones') }}`;
+                                    '{{ route('administracion.administrativa.obligaciones.index') }}';
                             }
                         });
                     } else {

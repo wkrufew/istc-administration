@@ -73,7 +73,7 @@
                 </div>
             </div>
 
-            <a href="{{ route('administracion.administrativa.users.index') }}"
+            <a href="{{ $volverRuta }}"
                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
                       text-slate-400 border border-white/[0.06] hover:text-white hover:border-white/20 transition-all duration-200">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

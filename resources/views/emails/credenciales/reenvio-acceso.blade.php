@@ -186,13 +186,13 @@
                                             <td bgcolor="{{ $accentLight }}"
                                                 style="background-color:{{ $accentLight }};padding:10px 0;border-bottom:1px solid {{ $accentBorder }};
                                                        font-size:13px;color:{{ $accentText }};width:42%;font-weight:600;">
-                                                Correo electrónico
+                                                @if($tipoAcceso === 'moodle') Usuario (Moodle) @else Correo electrónico @endif
                                             </td>
                                             <td bgcolor="{{ $accentLight }}"
                                                 style="background-color:{{ $accentLight }};padding:10px 0;border-bottom:1px solid {{ $accentBorder }};
                                                        font-size:13px;font-weight:700;color:{{ $accentDark }};
                                                        text-align:right;font-family:monospace;">
-                                                {{ $usuario->email }}
+                                                @if($tipoAcceso === 'moodle') {{ $usuario->cedula }} @else {{ $usuario->email }} @endif
                                             </td>
                                         </tr>
                                         <tr>
@@ -295,7 +295,8 @@
                                         Recomendación de seguridad
                                     </p>
                                     <p style="margin:0;color:#78350f;font-size:13px;line-height:1.6;">
-                                        Cambia tu contraseña inmediatamente al ingresar al sistema.
+                                        Cambia tu contraseña inmediatamente al ingresar
+                                        @if($tipoAcceso === 'moodle') al campus virtual @else al sistema @endif.
                                         Si no reconoces esta acción, contacta al administrador del sistema.
                                     </p>
                                 </td>
@@ -312,7 +313,7 @@
                            style="display:inline-block;background-color:{{ $accentColor }};color:#ffffff !important;
                                   text-decoration:none;padding:14px 36px;border-radius:8px;
                                   font-size:14px;font-weight:700;letter-spacing:0.02em;">
-                            Ingresar al Sistema
+                            @if($tipoAcceso === 'moodle') Ingresar al Campus Virtual @else Ingresar al Sistema @endif
                         </a>
                     </td>
                 </tr>
