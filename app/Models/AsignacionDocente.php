@@ -12,7 +12,8 @@ class AsignacionDocente extends Model
         'docente_id',
         'materia_id',
         'periodo_id',
-        'paralelo_id'
+        'paralelo_id',
+        'file_contrato',
     ];
 
     /**

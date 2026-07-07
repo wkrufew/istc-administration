@@ -1,5 +1,5 @@
 <div>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 space-y-6">
 
         {{-- HEADER --}}
         <div class="bg-white rounded-2xl border border-slate-200 shadow-lg p-5">

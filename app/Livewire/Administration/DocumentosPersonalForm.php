@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Administration;
 
+use App\Models\AsignacionDocente;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
@@ -18,10 +19,14 @@ class DocumentosPersonalForm extends Component
     public ?Document $document = null;
     public bool      $esEdicion = false;
 
+    // Documentos permanentes
     public $fileCurriculum = null;
     public $fileSenescyt   = null;
-    public $fileContrato   = null;
-    public $fileOtro       = null;
+    public $fileCedula     = null;
+
+    // Contratos por asignación
+    public ?int $asignacionContratoId = null;
+    public $contratoTemporal          = null;
 
     public function mount(User $user): void
     {
@@ -35,12 +40,10 @@ class DocumentosPersonalForm extends Component
         $this->validate([
             'fileCurriculum' => 'nullable|file|mimes:pdf|max:10240',
             'fileSenescyt'   => 'nullable|file|mimes:pdf|max:10240',
-            'fileContrato'   => 'nullable|file|mimes:pdf|max:10240',
-            'fileOtro'       => 'nullable|file|mimes:pdf|max:10240',
+            'fileCedula'     => 'nullable|file|mimes:pdf|max:10240',
         ]);
 
-        if (! $this->esEdicion && ! $this->fileCurriculum && ! $this->fileSenescyt
-            && ! $this->fileContrato && ! $this->fileOtro) {
+        if (! $this->esEdicion && ! $this->fileCurriculum && ! $this->fileSenescyt && ! $this->fileCedula) {
             $this->addError('files', 'Debe cargar al menos un archivo para continuar.');
             return;
         }
@@ -50,8 +53,7 @@ class DocumentosPersonalForm extends Component
         $slots = [
             'fileCurriculum' => ['column' => 'file_curriculum', 'dir' => 'documentos-personal/curriculum', 'suffix' => 'curriculum'],
             'fileSenescyt'   => ['column' => 'file_senescyt',   'dir' => 'documentos-personal/senescyt',   'suffix' => 'senescyt'],
-            'fileContrato'   => ['column' => 'file_contrato',   'dir' => 'documentos-personal/contrato',   'suffix' => 'contrato'],
-            'fileOtro'       => ['column' => 'file_otro',       'dir' => 'documentos-personal/otro',       'suffix' => 'otro'],
+            'fileCedula'     => ['column' => 'file_cedula',     'dir' => 'documentos-personal/cedula',     'suffix' => 'cedula'],
         ];
 
         $data = ['user_id' => $this->user->id];
@@ -73,21 +75,84 @@ class DocumentosPersonalForm extends Component
             $this->esEdicion = true;
         }
 
-        // Reset file inputs
         $this->fileCurriculum = null;
         $this->fileSenescyt   = null;
-        $this->fileContrato   = null;
-        $this->fileOtro       = null;
+        $this->fileCedula     = null;
 
-        // Refresh document from DB
         $this->document = Document::where('user_id', $this->user->id)->first();
 
         $this->dispatch('toast', message: 'Documentos guardados correctamente.', type: 'success');
     }
 
+    public function seleccionarAsignacion(int $id): void
+    {
+        $this->asignacionContratoId = $id;
+        $this->contratoTemporal     = null;
+        $this->resetErrorBag('contratoTemporal');
+    }
+
+    public function cancelarContratoUpload(): void
+    {
+        $this->asignacionContratoId = null;
+        $this->contratoTemporal     = null;
+    }
+
+    public function subirContrato(): void
+    {
+        $this->validate([
+            'contratoTemporal' => 'required|file|mimes:pdf|max:10240',
+        ], [
+            'contratoTemporal.required' => 'Selecciona un archivo PDF.',
+            'contratoTemporal.mimes'    => 'Solo se permiten archivos PDF.',
+            'contratoTemporal.max'      => 'El archivo no puede superar 10 MB.',
+        ]);
+
+        $asignacion = AsignacionDocente::where('id', $this->asignacionContratoId)
+            ->where('docente_id', $this->user->id)
+            ->first();
+
+        if (! $asignacion) {
+            $this->addError('contratoTemporal', 'Asignación no encontrada.');
+            return;
+        }
+
+        if ($asignacion->file_contrato) {
+            Storage::disk('public')->delete($asignacion->file_contrato);
+        }
+
+        $userSlug = Str::slug($this->user->name);
+        $filename = $userSlug . '-contrato-' . $asignacion->id . '-' . time() . '.' . $this->contratoTemporal->getClientOriginalExtension();
+        $path     = $this->contratoTemporal->storeAs('documentos-personal/contratos', $filename, 'public');
+
+        $asignacion->update(['file_contrato' => $path]);
+
+        $this->asignacionContratoId = null;
+        $this->contratoTemporal     = null;
+
+        $this->dispatch('toast', message: 'Contrato guardado correctamente.', type: 'success');
+    }
+
+    public function eliminarContrato(int $asignacionId): void
+    {
+        $asignacion = AsignacionDocente::where('id', $asignacionId)
+            ->where('docente_id', $this->user->id)
+            ->first();
+
+        if ($asignacion?->file_contrato) {
+            Storage::disk('public')->delete($asignacion->file_contrato);
+            $asignacion->update(['file_contrato' => null]);
+            $this->dispatch('toast', message: 'Contrato eliminado.', type: 'success');
+        }
+    }
+
     #[Layout('layouts.admin')]
     public function render()
     {
-        return view('livewire.administration.documentos-personal-form');
+        $asignaciones = AsignacionDocente::where('docente_id', $this->user->id)
+            ->with(['materia', 'paralelo', 'periodo'])
+            ->orderByDesc('periodo_id')
+            ->get();
+
+        return view('livewire.administration.documentos-personal-form', compact('asignaciones'));
     }
 }

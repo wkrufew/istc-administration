@@ -71,7 +71,7 @@ class HorarioEstudiante extends Component
         $horarios = Horario::query()
             ->with([
                 'materia:id,name,code',
-                'paralelo:id,name',
+                'paralelo:id,name,code',
             ])
             ->where('periodo_id', $this->periodo_id)
             ->where(function ($q) use ($detalles) {
@@ -110,7 +110,7 @@ class HorarioEstudiante extends Component
                 'aula'        => $h->aula ?? null,
                 'hora_inicio' => $h->hora_inicio,
                 'hora_fin'    => $h->hora_fin,
-                'paralelo'    => $h->paralelo?->name ?? null,
+                'paralelo'    => $h->paralelo?->code ?? null,
                 'modalidad'   => $h->modalidad_clase ?? null,
                 'color'       => $this->colorMateria($h->materia_id),
             ];

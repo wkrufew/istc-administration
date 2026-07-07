@@ -27,7 +27,7 @@ class DocumentosPersonalListado extends Component
             return;
         }
 
-        foreach (['file_curriculum', 'file_senescyt', 'file_contrato', 'file_otro'] as $field) {
+        foreach (['file_curriculum', 'file_senescyt', 'file_cedula'] as $field) {
             if ($doc->$field && Storage::disk('public')->exists($doc->$field)) {
                 Storage::disk('public')->delete($doc->$field);
             }
@@ -40,7 +40,7 @@ class DocumentosPersonalListado extends Component
 
     public function countFiles(Document $doc): int
     {
-        return collect(['file_curriculum', 'file_senescyt', 'file_contrato', 'file_otro'])
+        return collect(['file_curriculum', 'file_senescyt', 'file_cedula'])
             ->filter(fn($f) => (bool) $doc->$f)
             ->count();
     }

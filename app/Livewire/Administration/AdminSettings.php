@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Administration;
 
+use App\Models\DocumentoInstitucional;
 use App\Models\Setting;
 use App\Services\SettingService;
 use App\Traits\WithAuthorization;
@@ -79,6 +80,13 @@ class AdminSettings extends Component
     // =========================================================================
     public string $cedula_api_url   = '';
     public string $cedula_api_token = '';
+
+    // =========================================================================
+    // GRUPO: RECURSOS DOCENTES
+    // =========================================================================
+    public string $recursoTipoActivo  = '';  // tipo que está siendo subido
+    public string $recursoNombreOtro  = '';  // nombre libre para tipo 'otro'
+    public $recursoArchivo            = null;
 
     // =========================================================================
     // GRUPO: MOODLE (solo visible cuando MOODLE_MODE=1 en .env)
@@ -515,6 +523,75 @@ class AdminSettings extends Component
     }
 
     // =========================================================================
+    // RECURSOS DOCENTES — seleccionar tipo para subir
+    // =========================================================================
+    public function seleccionarRecurso(string $tipo): void
+    {
+        $this->recursoTipoActivo = $tipo;
+        $this->recursoArchivo    = null;
+        $this->recursoNombreOtro = '';
+        $this->resetErrorBag(['recursoArchivo', 'recursoNombreOtro']);
+    }
+
+    public function cancelarRecurso(): void
+    {
+        $this->recursoTipoActivo = '';
+        $this->recursoArchivo    = null;
+        $this->recursoNombreOtro = '';
+    }
+
+    public function subirRecurso(): void
+    {
+        $rules = ['recursoArchivo' => 'required|file|max:20480'];
+        $messages = [
+            'recursoArchivo.required' => 'Selecciona un archivo.',
+            'recursoArchivo.max'      => 'El archivo no puede superar 20 MB.',
+        ];
+
+        if ($this->recursoTipoActivo === 'otro') {
+            $rules['recursoNombreOtro'] = 'required|string|max:100';
+            $messages['recursoNombreOtro.required'] = 'Ingresa un nombre para el documento.';
+        }
+
+        $this->validate($rules, $messages);
+
+        $nombreMapa = DocumentoInstitucional::TIPOS;
+        $nombre = $this->recursoTipoActivo === 'otro'
+            ? trim($this->recursoNombreOtro)
+            : ($nombreMapa[$this->recursoTipoActivo] ?? $this->recursoTipoActivo);
+
+        $existing = DocumentoInstitucional::where('tipo', $this->recursoTipoActivo)->first();
+        if ($existing) {
+            Storage::disk('public')->delete($existing->path);
+        }
+
+        $ext      = $this->recursoArchivo->getClientOriginalExtension();
+        $filename = $this->recursoTipoActivo . '-' . time() . '.' . $ext;
+        $path     = $this->recursoArchivo->storeAs('docs-institucionales', $filename, 'public');
+
+        DocumentoInstitucional::updateOrCreate(
+            ['tipo' => $this->recursoTipoActivo],
+            ['nombre' => $nombre, 'path' => $path]
+        );
+
+        $this->recursoTipoActivo = '';
+        $this->recursoArchivo    = null;
+        $this->recursoNombreOtro = '';
+
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Documento subido correctamente.', 'timer' => 2000]);
+    }
+
+    public function eliminarRecurso(string $tipo): void
+    {
+        $doc = DocumentoInstitucional::where('tipo', $tipo)->first();
+        if ($doc) {
+            Storage::disk('public')->delete($doc->path);
+            $doc->delete();
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Documento eliminado.', 'timer' => 1800]);
+        }
+    }
+
+    // =========================================================================
     // HELPER PRIVADO — upsert de un grupo de settings + flush caché
     // =========================================================================
     private function upsertGroup(string $group, array $pairs, array $encryptedKeys = []): void
@@ -545,6 +622,8 @@ class AdminSettings extends Component
     #[Layout('layouts.admin')]
     public function render()
     {
-        return view('livewire.administration.admin-settings');
+        $documentosInstitucionales = DocumentoInstitucional::orderByRaw("FIELD(tipo,'silabo','rubrica','acta','guia','otro')")->get()->keyBy('tipo');
+
+        return view('livewire.administration.admin-settings', compact('documentosInstitucionales'));
     }
 }

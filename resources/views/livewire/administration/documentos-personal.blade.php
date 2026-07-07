@@ -8,8 +8,7 @@
                             <input wire:model.live="search" type="search" class="form-input flex-1 shadow-lg rounded-full"
                                 placeholder="Buscar por nombre o correo del docente...">
                             <a class="px-3 py-2 rounded-full bg-blue-600 text-white font-medium ml-2"
-                                href="{{ route('administracion.administrativa.documents.create') }}">Cargar
-                                Documentos</a>
+                                href="{{ route('administracion.administrativa.documents.create') }}">Cargar Documentos</a>
                         </div>
                         @if (session('notificacion'))
                             <div x-data="{ open: true }">
@@ -94,20 +93,12 @@
                                                                 <span>Senescyt</span>
                                                             </div>
                                                         @endif
-                                                        @if($document->file_contrato)
+                                                        @if($document->file_cedula)
                                                             <div class="flex items-center justify-center gap-1">
                                                                 <svg class="w-3 h-3 fill-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
                                                                     <path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/>
                                                                 </svg>
-                                                                <span>Contrato</span>
-                                                            </div>
-                                                        @endif
-                                                        @if($document->file_otro)
-                                                            <div class="flex items-center justify-center gap-1">
-                                                                <svg class="w-3 h-3 fill-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                                                                    <path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/>
-                                                                </svg>
-                                                                <span>Otro</span>
+                                                                <span>Cédula</span>
                                                             </div>
                                                         @endif
                                                     </div>

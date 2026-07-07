@@ -20,7 +20,8 @@
         'documentos' => ['label' => 'Documentos', 'icon' => 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z'],
         'notificaciones' => ['label' => 'Notificaciones', 'icon' => 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0'],
         'matricula'      => ['label' => 'Matrícula',      'icon' => 'M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z'],
-        'cedula_api'     => ['label' => 'API Cédula',     'icon' => 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 21Z'],
+        'cedula_api'      => ['label' => 'API Cédula',       'icon' => 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 21Z'],
+        'recursos_docentes' => ['label' => 'Recursos Docentes', 'icon' => 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3'],
         ...((int) env('MOODLE_MODE', 0) === 1 ? [
             'moodle' => ['label' => 'Moodle', 'icon' => 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'],
         ] : []),
@@ -872,6 +873,141 @@
                         <span wire:loading.remove wire:target="guardarMoodle">Guardar configuración</span>
                         <span wire:loading wire:target="guardarMoodle">Guardando...</span>
                     </button>
+                </div>
+            </div>
+        @endif
+
+        {{-- ================================================================
+             TAB: RECURSOS DOCENTES
+             ================================================================ --}}
+        @if ($tab === 'recursos_docentes')
+            @php
+                $tiposRecurso = \App\Models\DocumentoInstitucional::TIPOS;
+            @endphp
+            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                    <h3 class="text-base font-bold text-gray-800 dark:text-gray-100">Recursos para Docentes</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Sube documentos que los docentes podrán descargar desde su portal. Cada tipo mantiene solo la última versión.
+                    </p>
+                </div>
+
+                <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @foreach ($tiposRecurso as $tipo => $nombreDefecto)
+                        @php $doc = $documentosInstitucionales[$tipo] ?? null; @endphp
+                        <div class="px-6 py-4">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                {{-- Info --}}
+                                <div class="flex items-center gap-3">
+                                    <div @class([
+                                        'h-10 w-10 rounded-xl flex items-center justify-center shrink-0',
+                                        'bg-emerald-100 dark:bg-emerald-950' => $doc,
+                                        'bg-gray-100 dark:bg-gray-800'       => !$doc,
+                                    ])>
+                                        <svg class="w-5 h-5 {{ $doc ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400' }}"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                            {{ $doc ? $doc->nombre : $nombreDefecto }}
+                                        </p>
+                                        @if ($doc)
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                Actualizado {{ $doc->updated_at->diffForHumans() }}
+                                            </p>
+                                        @else
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Sin archivo cargado</p>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Acciones --}}
+                                <div class="flex items-center gap-2 shrink-0">
+                                    @if ($doc)
+                                        <a href="{{ asset('storage/' . $doc->path) }}" target="_blank"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                                                   bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800
+                                                   text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition">
+                                            <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                            </svg>
+                                            Ver
+                                        </a>
+                                        <button wire:click="eliminarRecurso('{{ $tipo }}')"
+                                            wire:confirm="¿Eliminar este documento? Los docentes ya no podrán descargarlo."
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded-lg
+                                                   bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800
+                                                   text-red-500 dark:text-red-400 hover:bg-red-100 transition">
+                                            <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                            </svg>
+                                        </button>
+                                    @endif
+                                    <button wire:click="seleccionarRecurso('{{ $tipo }}')"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                                               bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800
+                                               text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition">
+                                        <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                                        </svg>
+                                        {{ $doc ? 'Reemplazar' : 'Subir' }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Panel inline de subida --}}
+                            @if ($recursoTipoActivo === $tipo)
+                                <div class="mt-3 p-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 space-y-3">
+                                    @if ($tipo === 'otro')
+                                        <div>
+                                            <label class="block text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">Nombre del documento</label>
+                                            <input type="text" wire:model="recursoNombreOtro" placeholder="Ej: Reglamento Interno 2026"
+                                                class="w-full rounded-xl border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-900
+                                                       text-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition">
+                                            @error('recursoNombreOtro')
+                                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <label class="block text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">Archivo (PDF, Excel, Word — máx. 20 MB)</label>
+                                        <input type="file" wire:model="recursoArchivo"
+                                            class="block w-full text-sm text-gray-600 dark:text-gray-400
+                                                   file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                                                   file:text-xs file:font-bold file:cursor-pointer
+                                                   file:bg-blue-600 file:text-white hover:file:bg-blue-700
+                                                   cursor-pointer rounded-xl border border-blue-200 dark:border-blue-700
+                                                   bg-white dark:bg-gray-950 py-2 pr-3 focus:outline-none transition" />
+                                        <div wire:loading wire:target="recursoArchivo" class="mt-2">
+                                            <div class="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                                                <div class="h-full bg-blue-500 rounded-full animate-pulse w-3/4"></div>
+                                            </div>
+                                        </div>
+                                        @error('recursoArchivo')
+                                            <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button wire:click="subirRecurso" wire:loading.attr="disabled"
+                                            class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold
+                                                   bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition">
+                                            <span wire:loading.remove wire:target="subirRecurso">Guardar</span>
+                                            <span wire:loading wire:target="subirRecurso">Guardando…</span>
+                                        </button>
+                                        <button wire:click="cancelarRecurso"
+                                            class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold
+                                                   border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300
+                                                   hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
             </div>
         @endif

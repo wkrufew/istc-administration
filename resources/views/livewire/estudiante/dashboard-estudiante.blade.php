@@ -20,8 +20,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex items-center gap-4">
                     {{-- Avatar --}}
-                    <div
-                        class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600
+                    <div class="w-16 h-16 rounded-2xl bg-blue-600
                                 flex items-center justify-center text-white text-2xl font-bold shadow-md flex-shrink-0">
                         {{ strtoupper(substr($estudiante->name, 0, 1)) }}
                     </div>

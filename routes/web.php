@@ -181,25 +181,6 @@ Route::middleware([
         Route::get('solicitudes', SolicitudesGestion::class)->name('solicitudes.index');
         Route::get('tipos-solicitudes', TiposSolicitudesGestion::class)->name('tipos-solicitudes.index');
 
-        // Otras rutas administrativas (rutas de despliguegue) - Solo accesibles para usuarios con permisos específicos
-        //Rutas para despliegue
-        //deseo que estas rutas se accionen mediante un boton en el dashboard administrativo, y que solo sean accesibles para usuarios con permisos específicos
-        /* Route::middleware('permission:despliegue')->group(function () {
-            Route::get('/despliegue/clear-cache', function () {
-                Artisan::call('cache:clear');
-                return redirect()->back()->with('success', 'Cache limpiada correctamente.');
-            })->name('despliegue.clear-cache');
-
-            Route::get('/despliegue/optimize', function () {
-                Artisan::call('optimize');
-                return redirect()->back()->with('success', 'Aplicación optimizada correctamente.');
-            })->name('despliegue.optimize');
-
-            Route::get('/despliegue/migrate', function () {
-                Artisan::call('migrate', ['--force' => true]);
-                return redirect()->back()->with('success', 'Migraciones ejecutadas correctamente.');
-            })->name('despliegue.migrate');
-        }); */
     });
 
     Route::middleware('permisos:acceso_docencia')->prefix('docencia')->name('administracion.docencia.')->group(function () {
@@ -246,19 +227,4 @@ Route::middleware([
         // Ruta para que el estudiante pueda rellenar un formulario para el proceso de admision con sus datos personales y academico
         // Rutas para que el estudiante pueda subir documentos para el proceso de admision
     });
-});
-
-// Ruta para manejar accesos no autorizados
-/* Route::get('/acceso-denegado', function () {
-    return view('errors.403')->with('message', 'No tienes permisos para acceder a esta sección.');
-})->name('access.denied'); */
-
-Route::get('/optimize-clear', function () {
-    $exitCode = Artisan::call('optimize:clear');
-    return 'Depurada cache';
-});
-
-Route::get('storage-link', function () {
-    $exitCode = Artisan::call('storage:link');
-    return 'Simbolic Link establecido';
 });

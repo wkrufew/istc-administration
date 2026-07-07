@@ -7,7 +7,16 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ config('app.name', 'ISTC') }} — Portal Estudiantil</title>
-
+    @php
+        $nombreCorto = \App\Services\SettingService::get('instituto.nombre_corto') ?: config('app.name', 'ISTCumandá');
+        $faviconPath = \App\Services\SettingService::get('instituto.favicon_path');
+    @endphp
+    <title>{{ $nombreCorto }} — Portal Docente</title>
+    @if ($faviconPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($faviconPath))
+        <link rel="shortcut icon" href="{{ Storage::disk('public')->url($faviconPath) }}">
+    @else
+        <link rel="shortcut icon" href="{{ asset('../imagenes/icono.webp') }}">
+    @endif
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
@@ -180,7 +189,7 @@
     <div class="min-h-screen bg-gray-100">
         @livewire('estudiante.menu-estudiante')
 
-   
+
         @if (isset($header))
             <header class="bg-white shadow">
                 <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">

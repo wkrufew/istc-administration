@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Document extends Model
 {
-    //protected $fillable = ['file_curriculum', 'file_senescyt', 'file_contrato', 'file_otro', 'user_id'];
+    //protected $fillable = ['file_curriculum', 'file_senescyt', 'file_cedula', 'user_id'];
     protected $guarded = ['id'];
 
     public function user(): BelongsTo

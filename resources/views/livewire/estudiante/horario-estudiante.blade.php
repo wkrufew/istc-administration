@@ -23,7 +23,7 @@
 
             {{-- RESUMEN RÁPIDO --}}
             @php
-                $totalClases = collect($horariosPorDia)->flatten(1)->count();
+                $totalClases   = collect($horariosPorDia)->flatten(1)->count();
                 $diasConClases = collect($horariosPorDia)->filter(fn($c) => count($c) > 0)->count();
                 $materiasUnicas = collect($horariosPorDia)->flatten(1)->pluck('materia')->unique()->count();
             @endphp
@@ -60,37 +60,17 @@
             @else
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     @foreach ($horariosPorDia as $dia => $clases)
-                        @php
-                            $tieneClases = count($clases) > 0;
-                            $diaAbrev = [
-                                'Lunes' => 'LUN',
-                                'Martes' => 'MAR',
-                                'Miércoles' => 'MIÉ',
-                                'Jueves' => 'JUE',
-                                'Viernes' => 'VIE',
-                            ];
-                        @endphp
+                        @php $tieneClases = count($clases) > 0; @endphp
 
-                        <div
-                            class="bg-white rounded-2xl border {{ $tieneClases ? 'border-gray-200' : 'border-gray-100' }} shadow-sm overflow-hidden flex flex-col">
+                        <div class="bg-white rounded-2xl border {{ $tieneClases ? 'border-gray-200' : 'border-gray-100' }} shadow-sm overflow-hidden flex flex-col">
 
-                            {{-- Cabecera del día --}}
-                            <div
-                                class="px-4 py-3 {{ $tieneClases ? 'bg-gray-800' : 'bg-gray-50' }} flex items-center justify-between">
-                                <div>
-                                    <p
-                                        class="text-xs font-bold {{ $tieneClases ? 'text-gray-400' : 'text-gray-400' }} uppercase tracking-widest">
-                                        {{ $diaAbrev[$dia] ?? $dia }}
-                                    </p>
-                                    <p
-                                        class="text-sm font-bold {{ $tieneClases ? 'text-white' : 'text-gray-400' }} leading-tight">
-                                        {{ $dia }}
-                                    </p>
-                                </div>
+                            {{-- Cabecera del día: solo el nombre completo, centrado verticalmente --}}
+                            <div class="px-4 py-3.5 {{ $tieneClases ? 'bg-gray-800' : 'bg-gray-50' }} flex items-center justify-between min-h-[52px]">
+                                <p class="text-sm font-bold {{ $tieneClases ? 'text-white' : 'text-gray-400' }}">
+                                    {{ $dia }}
+                                </p>
                                 @if ($tieneClases)
-                                    <span
-                                        class="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center
-                                             text-xs font-bold text-white">
+                                    <span class="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center text-xs font-bold text-white">
                                         {{ count($clases) }}
                                     </span>
                                 @endif
@@ -100,106 +80,96 @@
                             <div class="p-3 space-y-2.5 flex-1">
                                 @if (!$tieneClases)
                                     <div class="flex flex-col items-center justify-center py-8 text-gray-300">
-                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                d="M20 12H4" />
+                                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 12H4" />
                                         </svg>
                                         <p class="text-xs">Libre</p>
                                     </div>
                                 @else
                                     @foreach ($clases as $c)
-                                        <div
-                                            class="rounded-xl overflow-hidden border border-gray-100 shadow-sm
-                                                hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                                        {{-- Tarjeta de clase --}}
+                                        <div class="relative rounded-xl overflow-hidden border border-gray-100 shadow-sm
+                                                    hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
 
-                                            {{-- Barra de color izquierda --}}
+                                            {{-- Badge paralelo — esquina superior derecha --}}
+                                            @if ($c['paralelo'])
+                                                <div class="absolute top-0 right-0 w-8 h-8 rounded-bl-xl
+                                                            flex items-center justify-center
+                                                            text-white text-xs font-bold z-10"
+                                                     style="background-color: {{ $c['color'] }}">
+                                                    {{ $c['paralelo'] }}
+                                                </div>
+                                            @endif
+
+                                            {{-- Barra de color izquierda + contenido --}}
                                             <div class="flex">
-                                                <div style="background-color: {{ $c['color'] }}; width: 4px;"
-                                                    class="flex-shrink-0"></div>
+                                                <div style="background-color: {{ $c['color'] }}; width: 4px;" class="flex-shrink-0"></div>
 
-                                                <div class="flex-1 p-3 space-y-2">
+                                                <div class="flex-1 p-3 space-y-2 min-w-0">
 
-                                                    {{-- Hora --}}
-                                                    <div class="flex items-center justify-between gap-1">
-                                                        <div class="flex items-center gap-1.5">
-                                                            <svg class="w-3 h-3 text-gray-400 flex-shrink-0"
-                                                                fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2"
-                                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                            </svg>
-                                                            <span class="text-xs font-bold text-gray-700 tabular-nums">
-                                                                {{ \Carbon\Carbon::parse($c['hora_inicio'])->format('H:i') }}
-                                                                <span class="text-gray-400 font-normal">–</span>
-                                                                {{ \Carbon\Carbon::parse($c['hora_fin'])->format('H:i') }}
-                                                            </span>
-                                                        </div>
-                                                        @if ($c['paralelo'])
-                                                            <span class="text-xs px-1.5 py-0.5 rounded-md font-semibold"
-                                                                style="background-color: {{ $c['color'] }}20; color: {{ $c['color'] }}">
-                                                                {{ $c['paralelo'] }}
-                                                            </span>
-                                                        @endif
+                                                    {{-- Hora (pr-8 para no solaparse con el badge del paralelo) --}}
+                                                    <div class="flex items-center gap-1.5 pr-8">
+                                                        <svg class="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span class="text-xs font-bold text-gray-700 tabular-nums">
+                                                            {{ \Carbon\Carbon::parse($c['hora_inicio'])->format('H:i') }}
+                                                            <span class="text-gray-400 font-normal">–</span>
+                                                            {{ \Carbon\Carbon::parse($c['hora_fin'])->format('H:i') }}
+                                                        </span>
                                                     </div>
 
-                                                    {{-- Materia --}}
+                                                    {{-- Materia: wrap completo, sin corte --}}
                                                     <div>
-                                                        <p class="text-xs font-bold text-gray-900 leading-snug">
+                                                        <p class="text-xs font-bold text-gray-900 leading-snug break-words">
                                                             {{ $c['materia'] }}
                                                         </p>
                                                         @if ($c['materia_code'])
-                                                            <p class="text-xs text-gray-400 font-mono mt-0.5">
-                                                                {{ $c['materia_code'] }}</p>
+                                                            <p class="text-xs text-gray-400 font-mono mt-0.5">{{ $c['materia_code'] }}</p>
                                                         @endif
                                                     </div>
 
-                                                    {{-- Docente --}}
-                                                    <div class="flex items-center gap-1.5">
+                                                    {{-- Docente: wrap completo, sin truncate --}}
+                                                    <div class="flex items-start gap-1.5">
                                                         <div class="w-5 h-5 rounded-full flex items-center justify-center
-                                                                text-white text-xs font-bold flex-shrink-0"
-                                                            style="background-color: {{ $c['color'] }}">
+                                                                    text-white text-xs font-bold flex-shrink-0 mt-0.5"
+                                                             style="background-color: {{ $c['color'] }}">
                                                             {{ strtoupper(substr($c['docente'], 0, 1)) }}
                                                         </div>
-                                                        <span class="text-xs text-gray-600 leading-tight truncate">
+                                                        <span class="text-xs text-gray-600 leading-snug break-words min-w-0">
                                                             {{ $c['docente'] }}
                                                         </span>
                                                     </div>
 
-                                                    {{-- Aula y Modalidad --}}
+                                                    {{-- Footer: aula a la izquierda, modalidad a la derecha --}}
                                                     @if ($c['aula'] || $c['modalidad'])
-                                                        <div
-                                                            class="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-100">
+                                                        @php
+                                                            $modalidadColor = [
+                                                                'Presencial'     => 'bg-green-100 text-green-700',
+                                                                'Virtual'        => 'bg-blue-100 text-blue-700',
+                                                                'Híbrida'        => 'bg-purple-100 text-purple-700',
+                                                                'Semipresencial' => 'bg-orange-100 text-orange-700',
+                                                            ][$c['modalidad']] ?? 'bg-gray-100 text-gray-600';
+                                                        @endphp
+                                                        <div class="flex items-center justify-between pt-1 border-t border-gray-100 gap-1">
+                                                            {{-- Aula (izquierda) --}}
                                                             @if ($c['aula'])
-                                                                <span
-                                                                    class="inline-flex items-center gap-1 text-xs text-gray-500">
-                                                                    <svg class="w-3 h-3" fill="none"
-                                                                        stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path stroke-linecap="round"
-                                                                            stroke-linejoin="round" stroke-width="2"
+                                                                <span class="inline-flex items-center gap-1 text-xs text-gray-500">
+                                                                    <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                                                     </svg>
                                                                     Aula {{ $c['aula'] }}
                                                                 </span>
+                                                            @else
+                                                                <span></span>
                                                             @endif
+
+                                                            {{-- Modalidad (derecha) --}}
                                                             @if ($c['modalidad'])
-                                                                @php
-                                                                    $modalidadColor =
-                                                                        [
-                                                                            'Presencial' =>
-                                                                                'bg-green-100 text-green-700',
-                                                                            'Virtual' => 'bg-blue-100 text-blue-700',
-                                                                            'Híbrida' =>
-                                                                                'bg-purple-100 text-purple-700',
-                                                                            'Semipresencial' =>
-                                                                                'bg-orange-100 text-orange-700',
-                                                                        ][$c['modalidad']] ??
-                                                                        'bg-gray-100 text-gray-600';
-                                                                @endphp
-                                                                <span
-                                                                    class="inline-flex items-center px-1.5 py-0.5 rounded-md
-                                                                         text-xs font-semibold {{ $modalidadColor }}">
+                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md
+                                                                             text-xs font-semibold {{ $modalidadColor }} flex-shrink-0">
                                                                     {{ $c['modalidad'] }}
                                                                 </span>
                                                             @endif

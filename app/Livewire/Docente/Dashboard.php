@@ -2,43 +2,41 @@
 
 namespace App\Livewire\Docente;
 
-use Livewire\Component;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Periodo;
+use App\Models\DocumentoInstitucional;
 use App\Models\DetalleMatricula;
+use App\Models\Periodo;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class Dashboard extends Component
 {
-    public $periodo_id;
-    public $periodos = [];
-    public $totalMaterias = 0;
-    public $totalEstudiantes = 0;
-    public $detalleMaterias = [];
+    public int|null $periodo_id = null;
+    public int $totalMaterias   = 0;
+    public int $totalEstudiantes = 0;
+    public array $detalleMaterias = [];
 
-    public function mount()
+    public function mount(): void
     {
-        $this->periodos = Periodo::orderByDesc('fecha_inicio')->get();
+        $periodos = Periodo::orderByDesc('fecha_inicio')->get();
+        $actual   = Periodo::periodoActivoGlobal();
 
-        // Seleccionar el periodo activo por defecto
-        $actual = Periodo::periodoActivoGlobal();
-        $this->periodo_id = $actual?->id ?? $this->periodos->first()?->id;
+        $this->periodo_id = $actual?->id ?? $periodos->first()?->id;
 
         $this->cargarDatos();
     }
 
-    public function updatedPeriodoId()
+    public function updatedPeriodoId(): void
     {
         $this->cargarDatos();
     }
 
-    public function cargarDatos()
+    public function cargarDatos(): void
     {
-        if (!$this->periodo_id) return;
+        if (! $this->periodo_id) return;
 
         $periodo = Periodo::find($this->periodo_id);
-        $user = Auth::user();
+        $user    = Auth::user();
 
-        // Asignaciones del docente en el periodo seleccionado
         $asignaciones = $user->asignacionesDocente()
             ->where('periodo_id', $periodo->id)
             ->with(['materia', 'paralelo'])
@@ -46,23 +44,18 @@ class Dashboard extends Component
 
         $this->totalMaterias = $asignaciones->unique('materia_id')->count();
 
-        $materiaIds = $asignaciones->pluck('materia_id');
+        $materiaIds  = $asignaciones->pluck('materia_id');
         $paraleloIds = $asignaciones->pluck('paralelo_id');
 
-        $this->totalEstudiantes = DetalleMatricula::whereHas('matricula', function ($q) use ($periodo) {
-            $q->where('periodo_id', $periodo->id);
-        })
+        $this->totalEstudiantes = DetalleMatricula::whereHas('matricula', fn($q) => $q->where('periodo_id', $periodo->id))
             ->whereIn('materia_id', $materiaIds)
             ->whereIn('paralelo_id', $paraleloIds)
             ->where('estado', 'Inscrito')
             ->distinct('user_id')
             ->count('user_id');
 
-        // Detalle por materia
         $this->detalleMaterias = $asignaciones->map(function ($asig) use ($periodo) {
-            $totalEst = DetalleMatricula::whereHas('matricula', function ($q) use ($periodo) {
-                $q->where('periodo_id', $periodo->id);
-            })
+            $totalEst = DetalleMatricula::whereHas('matricula', fn($q) => $q->where('periodo_id', $periodo->id))
                 ->where('materia_id', $asig->materia_id)
                 ->where('paralelo_id', $asig->paralelo_id)
                 ->where('estado', 'Inscrito')
@@ -70,17 +63,19 @@ class Dashboard extends Component
                 ->count('user_id');
 
             return [
-                'materia' => $asig->materia->name,
-                'codigo' => $asig->materia->code,
-                'paralelo' => $asig->paralelo->name,
-                'estudiantes' => $totalEst,
+                'materia'      => $asig->materia->name,
+                'codigo'       => $asig->materia->code,
+                'paralelo'     => $asig->paralelo->name,
+                'estudiantes'  => $totalEst,
             ];
-        });
+        })->values()->all();
     }
 
     public function render()
     {
-        //dd($this->detalleMaterias);
-        return view('livewire.docente.dashboard');
+        $periodos = Periodo::orderByDesc('fecha_inicio')->get();
+        $recursos = DocumentoInstitucional::orderByRaw("FIELD(tipo,'silabo','rubrica','acta','guia','otro')")->get();
+
+        return view('livewire.docente.dashboard', compact('periodos', 'recursos'));
     }
 }

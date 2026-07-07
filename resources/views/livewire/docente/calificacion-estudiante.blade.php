@@ -184,7 +184,7 @@
     @if ($mostrar_formulario && $estudiante_seleccionado)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             {{-- Backdrop --}}
-            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="cerrarFormulario"></div>
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
 
             {{-- Modal box: flex column, sticky header + footer --}}
             <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col animate-modal-in"
@@ -273,7 +273,7 @@
                             <span class="text-xs text-emerald-600">promedio</span>
                         </div>
                         <div class="p-5 grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {{-- Insumo 1 — Asistencia (readonly) --}}
+                            {{-- Insumo 1 — Asistencia --}}
                             <div class="space-y-1.5">
                                 <label class="flex items-center justify-between text-sm font-semibold text-slate-700">
                                     <span>Asistencia</span>
@@ -281,9 +281,21 @@
                                         {{ $asistencias_asistidas }}/{{ $asistencias_totales }}
                                     </span>
                                 </label>
-                                <input type="text" value="{{ number_format((float) $insumo1, 2) }}" readonly
-                                    class="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl px-3 py-2.5 text-indigo-800 font-bold text-center text-sm cursor-not-allowed">
-                                <p class="text-xs text-slate-400">Calculado automáticamente</p>
+                                @if($insumo1_manual)
+                                    <input type="number" step="0.01" min="0" max="10"
+                                        wire:model.live="insumo1"
+                                        class="w-full bg-white border-2 border-amber-400 rounded-xl px-3 py-2.5 text-slate-800 font-bold text-center text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                                    <p class="text-xs text-amber-600 font-medium">Nota ingresada manualmente</p>
+                                @else
+                                    <input type="text" value="{{ number_format((float) $insumo1, 2) }}" readonly
+                                        class="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl px-3 py-2.5 text-indigo-800 font-bold text-center text-sm cursor-not-allowed">
+                                    <p class="text-xs text-slate-400">Calculado automáticamente</p>
+                                @endif
+                                <label class="flex items-center gap-2 cursor-pointer select-none mt-1">
+                                    <input type="checkbox" wire:model.live="insumo1_manual"
+                                        class="w-3.5 h-3.5 rounded accent-amber-500 cursor-pointer">
+                                    <span class="text-xs text-slate-500">Ingresar nota directa</span>
+                                </label>
                                 @error('insumo1')<p class="text-red-500 text-xs">{{ $message }}</p>@enderror
                             </div>
 

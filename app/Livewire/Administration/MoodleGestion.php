@@ -181,7 +181,7 @@ class MoodleGestion extends Component
 
                 $mailer = SettingService::buildMailer();
                 $mailer->to($this->usuario->email)->send(
-                    new ReenvioCredencialesAcceso(
+                    new ReenvioCredencialesAcceso( 
                         usuario: $this->usuario,
                         plainPassword: $this->usuario->cedula,
                         tipoAcceso: 'moodle',

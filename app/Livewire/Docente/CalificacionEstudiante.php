@@ -73,6 +73,7 @@ class CalificacionEstudiante extends Component
     public $asistencias_asistidas = 0;
     public $asistencias_totales   = 0;
     public $nota_asistencia       = 0.00;
+    public $insumo1_manual        = false;
 
     protected $rules = [
         'insumo1'        => 'nullable|numeric|min:0|max:10',
@@ -121,10 +122,10 @@ class CalificacionEstudiante extends Component
     public function cargarAsistenciaDelEstudiante($detalle_matricula_id)
     {
         if (!$this->periodo_id || !$this->materia_id || !$this->paralelo_id) {
-            $this->asistencias_totales  = 0;
+            $this->asistencias_totales   = 0;
             $this->asistencias_asistidas = 0;
-            $this->nota_asistencia      = 0.00;
-            $this->insumo1              = number_format(0, 2, '.', '');
+            $this->nota_asistencia       = 0.00;
+            if (! $this->insumo1_manual) $this->insumo1 = number_format(0, 2, '.', '');
             return;
         }
 
@@ -135,10 +136,10 @@ class CalificacionEstudiante extends Component
             ->first();
 
         if (!$modulo) {
-            $this->asistencias_totales  = 0;
+            $this->asistencias_totales   = 0;
             $this->asistencias_asistidas = 0;
-            $this->nota_asistencia      = 0.00;
-            $this->insumo1              = number_format(0, 2, '.', '');
+            $this->nota_asistencia       = 0.00;
+            if (! $this->insumo1_manual) $this->insumo1 = number_format(0, 2, '.', '');
             return;
         }
 
@@ -154,10 +155,10 @@ class CalificacionEstudiante extends Component
             ->toArray();
 
         if (empty($diasHorario)) {
-            $this->asistencias_totales  = 0;
+            $this->asistencias_totales   = 0;
             $this->asistencias_asistidas = 0;
-            $this->nota_asistencia      = 0.00;
-            $this->insumo1              = number_format(0, 2, '.', '');
+            $this->nota_asistencia       = 0.00;
+            if (! $this->insumo1_manual) $this->insumo1 = number_format(0, 2, '.', '');
             return;
         }
 
@@ -197,7 +198,9 @@ class CalificacionEstudiante extends Component
             ? round(($asistidas_estudiante / $total_clases_modulo) * 10, 2)
             : 0.00;
 
-        $this->insumo1 = number_format($this->nota_asistencia, 2, '.', '');
+        if (! $this->insumo1_manual) {
+            $this->insumo1 = number_format($this->nota_asistencia, 2, '.', '');
+        }
     }
 
     public function cargarPeriodos()
@@ -379,6 +382,7 @@ class CalificacionEstudiante extends Component
         $this->es_borrador             = false;
         $this->suspenso                = false;
         $this->mostrar_formulario      = false;
+        $this->insumo1_manual          = false;
         $this->mensaje                 = '';
     }
 
@@ -433,6 +437,14 @@ class CalificacionEstudiante extends Component
             $this->estado_final = 'Reprobado';
         } else {
             $this->estado_final = 'Incompleto';
+        }
+    }
+
+    public function updatedInsumo1Manual()
+    {
+        if (! $this->insumo1_manual) {
+            $this->insumo1 = number_format($this->nota_asistencia, 2, '.', '');
+            $this->calcularPromedios();
         }
     }
 
