@@ -130,8 +130,8 @@
                                 <td class="px-5 py-3.5">
                                     @if ($est['nota_final'] !== null)
                                         <span class="inline-flex px-3 py-1 rounded-lg text-sm font-bold
-                                            @if ($est['nota_final'] >= 7) bg-emerald-100 text-emerald-800
-                                            @elseif($est['nota_final'] >= 4) bg-amber-100 text-amber-800
+                                            @if ($est['nota_final'] >= $nota_minima_aprobacion) bg-emerald-100 text-emerald-800
+                                            @elseif($est['nota_final'] >= $nota_minima_aprobacion - 3) bg-amber-100 text-amber-800
                                             @else bg-red-100 text-red-800 @endif">
                                             {{ number_format($est['nota_final'], 2) }}
                                         </span>
@@ -262,13 +262,13 @@
                 {{-- ── Cuerpo con scroll ────────────────────────────────────── --}}
                 <div class="flex-1 overflow-y-auto p-6 space-y-5 modal-scroll">
 
-                    {{-- Insumos (60%) --}}
+                    {{-- Insumos --}}
                     <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 overflow-hidden">
                         <div class="px-5 py-3 bg-emerald-100/70 border-b border-emerald-200 flex items-center gap-2">
                             <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                             </svg>
-                            <h4 class="text-sm font-semibold text-emerald-800">Insumos de Evaluación <span class="font-normal text-emerald-600">(60%)</span></h4>
+                            <h4 class="text-sm font-semibold text-emerald-800">Insumos de Evaluación <span class="font-normal text-emerald-600">({{ $nuevo_calculo ? '60%' : '30%' }})</span></h4>
                             <span class="ml-auto text-lg font-bold text-emerald-700">{{ number_format($promedio_insumos, 2) }}</span>
                             <span class="text-xs text-emerald-600">promedio</span>
                         </div>
@@ -324,17 +324,17 @@
                         </div>
                     </div>
 
-                    {{-- Exámenes (40%) --}}
+                    {{-- Exámenes --}}
                     <div class="rounded-xl border border-blue-200 bg-blue-50/50 overflow-hidden">
                         <div class="px-5 py-3 bg-blue-100/70 border-b border-blue-200 flex items-center gap-2">
                             <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
-                            <h4 class="text-sm font-semibold text-blue-800">Exámenes <span class="font-normal text-blue-600">(40%)</span></h4>
+                            <h4 class="text-sm font-semibold text-blue-800">Exámenes <span class="font-normal text-blue-600">({{ $nuevo_calculo ? '40%' : '70%' }})</span></h4>
                         </div>
                         <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div class="space-y-1.5">
-                                <label class="block text-sm font-semibold text-slate-700">Examen Parcial <span class="font-normal text-slate-500">(20%)</span></label>
+                                <label class="block text-sm font-semibold text-slate-700">Examen Parcial <span class="font-normal text-slate-500">({{ $nuevo_calculo ? '20%' : '30%' }})</span></label>
                                 <input type="number" step="0.01" min="0" max="10"
                                     wire:model.live="examen_parcial"
                                     oninput="var v=parseFloat(this.value);if(!isNaN(v)){if(v>10)this.value='10';if(v<0)this.value='0';}"
@@ -348,7 +348,7 @@
                                 @enderror
                             </div>
                             <div class="space-y-1.5">
-                                <label class="block text-sm font-semibold text-slate-700">Examen Final <span class="font-normal text-slate-500">(20%)</span></label>
+                                <label class="block text-sm font-semibold text-slate-700">Examen Final <span class="font-normal text-slate-500">({{ $nuevo_calculo ? '20%' : '40%' }})</span></label>
                                 <input type="number" step="0.01" min="0" max="10"
                                     wire:model.live="examen_final"
                                     oninput="var v=parseFloat(this.value);if(!isNaN(v)){if(v>10)this.value='10';if(v<0)this.value='0';}"
@@ -373,7 +373,7 @@
                                 </svg>
                                 <h4 class="text-sm font-semibold text-amber-800">
                                     Examen de Suspenso
-                                    <span class="font-normal text-amber-600">— nota base {{ number_format($nota_base, 2) }} (entre 4.00 y 6.99)</span>
+                                    <span class="font-normal text-amber-600">— nota base {{ number_format($nota_base, 2) }} (entre {{ number_format($nota_minima_aprobacion - 3, 2) }} y {{ number_format($nota_minima_aprobacion - 0.01, 2) }})</span>
                                 </h4>
                             </div>
                             <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -396,7 +396,7 @@
                                     <label class="block text-sm font-semibold text-slate-700">Nota Final con Suspenso</label>
                                     <input type="text" value="{{ number_format($nota_final, 2) }}" readonly
                                         class="w-full border-0 rounded-xl px-4 py-2.5 font-bold text-xl text-center shadow-sm
-                                            @if ($nota_final >= 7) bg-gradient-to-r from-emerald-500 to-green-600 text-white
+                                            @if ($nota_final >= $nota_minima_aprobacion) bg-gradient-to-r from-emerald-500 to-green-600 text-white
                                             @else bg-gradient-to-r from-red-500 to-rose-600 text-white @endif">
                                 </div>
                             </div>
@@ -409,22 +409,22 @@
                         <div class="bg-slate-50 rounded-xl border border-slate-200 p-4 text-center">
                             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nota Base</p>
                             <p class="text-3xl font-extrabold text-slate-800">{{ number_format($nota_base, 2) }}</p>
-                            <p class="text-xs text-slate-400 mt-1">60% + 20% + 20%</p>
+                            <p class="text-xs text-slate-400 mt-1">{{ $nuevo_calculo ? '60% + 20% + 20%' : '30% + 30% + 40%' }}</p>
                         </div>
                         {{-- Nota final --}}
                         <div class="rounded-xl border p-4 text-center
-                            @if ($nota_final >= 7) bg-emerald-50 border-emerald-200
-                            @elseif($nota_final >= 4) bg-amber-50 border-amber-200
+                            @if ($nota_final >= $nota_minima_aprobacion) bg-emerald-50 border-emerald-200
+                            @elseif($nota_final >= $nota_minima_aprobacion - 3) bg-amber-50 border-amber-200
                             @elseif($nota_final > 0) bg-red-50 border-red-200
                             @else bg-slate-50 border-slate-200 @endif">
                             <p class="text-xs font-semibold uppercase tracking-wide mb-1.5
-                                @if ($nota_final >= 7) text-emerald-600
-                                @elseif($nota_final >= 4) text-amber-600
+                                @if ($nota_final >= $nota_minima_aprobacion) text-emerald-600
+                                @elseif($nota_final >= $nota_minima_aprobacion - 3) text-amber-600
                                 @elseif($nota_final > 0) text-red-600
                                 @else text-slate-500 @endif">Nota Final</p>
                             <p class="text-3xl font-extrabold
-                                @if ($nota_final >= 7) text-emerald-700
-                                @elseif($nota_final >= 4) text-amber-700
+                                @if ($nota_final >= $nota_minima_aprobacion) text-emerald-700
+                                @elseif($nota_final >= $nota_minima_aprobacion - 3) text-amber-700
                                 @elseif($nota_final > 0) text-red-700
                                 @else text-slate-400 @endif">{{ number_format($nota_final, 2) }}</p>
                             @if ($suspenso && $nota_suspenso)
@@ -448,17 +448,30 @@
 
                     {{-- Fórmula detalle --}}
                     <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-4 text-sm text-indigo-800">
-                        <p class="font-semibold mb-1">Cálculo:</p>
-                        <p class="text-indigo-700">
-                            ({{ number_format($promedio_insumos, 2) }} × 0.6) +
-                            ({{ $examen_parcial ?: '0' }} × 0.2) +
-                            ({{ $examen_final ?: '0' }} × 0.2) =
-                            <strong>{{ number_format($nota_base, 2) }}</strong>
-                            @if ($suspenso && $nota_suspenso)
-                                + ({{ $nota_suspenso }} ÷ 10 × 2.99) =
-                                <strong>{{ number_format($nota_final, 2) }}</strong>
-                            @endif
-                        </p>
+                        <p class="font-semibold mb-1">Cálculo {{ $nuevo_calculo ? '(nuevo sistema)' : '(sistema antiguo)' }}:</p>
+                        @if ($nuevo_calculo)
+                            <p class="text-indigo-700">
+                                ({{ number_format($promedio_insumos, 2) }} × 0.6) +
+                                ({{ $examen_parcial ?: '0' }} × 0.2) +
+                                ({{ $examen_final ?: '0' }} × 0.2) =
+                                <strong>{{ number_format($nota_base, 2) }}</strong>
+                                @if ($suspenso && $nota_suspenso)
+                                    + ({{ $nota_suspenso }} ÷ 10 × 2.99) =
+                                    <strong>{{ number_format($nota_final, 2) }}</strong>
+                                @endif
+                            </p>
+                        @else
+                            <p class="text-indigo-700">
+                                ({{ number_format($promedio_insumos, 2) }} × 0.3) +
+                                ({{ $examen_parcial ?: '0' }} × 0.3) +
+                                ({{ $examen_final ?: '0' }} × 0.4) =
+                                <strong>{{ number_format($nota_base, 2) }}</strong>
+                                @if ($suspenso && $nota_suspenso)
+                                    + ({{ $nota_suspenso }} ÷ 10 × 2.99) =
+                                    <strong>{{ number_format($nota_final, 2) }}</strong>
+                                @endif
+                            </p>
+                        @endif
                     </div>
 
                 </div>

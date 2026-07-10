@@ -59,3 +59,27 @@
             value="{{ old('fecha_limite_pago', $periodo->fecha_limite_pago?->format('Y-m-d') ?? '') }}" required>
     </div>
 </div>
+
+{{-- Fórmula de calificación --}}
+@php $esNuevo = old('nuevo_calculo', $periodo->nuevo_calculo ?? true); @endphp
+<div x-data="{ activo: {{ $esNuevo ? 'true' : 'false' }} }"
+     class="mb-5 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+    <input type="hidden" name="nuevo_calculo" :value="activo ? '1' : '0'">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Fórmula de calificación</p>
+            <p x-show="activo" class="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                Nuevo sistema: Insumos 60% + Parcial 20% + Final 20%
+            </p>
+            <p x-show="!activo" class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                Sistema antiguo: Insumos 30% + Parcial 30% + Final 40%
+            </p>
+        </div>
+        <button type="button" @click="activo = !activo"
+            :class="activo ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'"
+            class="relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors duration-200">
+            <span :class="activo ? 'translate-x-6' : 'translate-x-1'"
+                class="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"></span>
+        </button>
+    </div>
+</div>

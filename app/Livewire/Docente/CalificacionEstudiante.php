@@ -24,9 +24,7 @@ use App\Traits\WithAuthorization;
 class CalificacionEstudiante extends Component
 {
     use WithAuthorization;
-    const NOTA_MINIMA_APROBACION   = 7;
-    const NOTA_MINIMA_ARRASTRE     = 4;
-    const MAX_INTENTOS_PERMITIDOS  = 3;
+    const MAX_INTENTOS_PERMITIDOS = 3;
 
     // Filtros
     public $periodo_id  = '';
@@ -45,6 +43,10 @@ class CalificacionEstudiante extends Component
     public $calificacion_actual   = null;
     public $es_borrador           = false;
     public $suspenso              = false;
+
+    // Fórmula del periodo seleccionado
+    public bool  $nuevo_calculo          = true;
+    public float $nota_minima_aprobacion = 7.00;
 
     // Campos de calificación
     public $insumo1 = '';
@@ -205,8 +207,10 @@ class CalificacionEstudiante extends Component
 
     public function cargarPeriodos()
     {
-        $this->periodos   = Periodo::orderBy('fecha_inicio', 'desc')->get();
-        $this->periodo_id = Periodo::periodoActivoGlobal()?->id ?? '';
+        $this->periodos      = Periodo::orderBy('fecha_inicio', 'desc')->get();
+        $periodoActivo       = Periodo::periodoActivoGlobal();
+        $this->periodo_id    = $periodoActivo?->id ?? '';
+        $this->nuevo_calculo = $periodoActivo?->nuevo_calculo ?? true;
     }
 
     public function cargarMateriasAsignadas()
@@ -235,6 +239,11 @@ class CalificacionEstudiante extends Component
         $this->estudiantes = [];
         $this->mostrar_formulario = false;
         $this->cargarMateriasAsignadas();
+
+        if ($this->periodo_id) {
+            $periodo             = Periodo::find($this->periodo_id);
+            $this->nuevo_calculo = $periodo?->nuevo_calculo ?? true;
+        }
     }
 
     public function updatedMateriaId()
@@ -242,6 +251,14 @@ class CalificacionEstudiante extends Component
         $this->paralelo_id = '';
         $this->estudiantes = [];
         $this->mostrar_formulario = false;
+
+        if ($this->materia_id) {
+            $materia = Materia::find($this->materia_id);
+            $this->nota_minima_aprobacion = floatval($materia?->nota_minima_aprobacion ?? 7.00);
+        } else {
+            $this->nota_minima_aprobacion = 7.00;
+        }
+
         $this->cargarParalelos();
     }
 
@@ -402,17 +419,26 @@ class CalificacionEstudiante extends Component
         $parcial  = ($this->examen_parcial !== '' && $this->examen_parcial !== null) ? floatval($this->examen_parcial) : 0;
         $final    = ($this->examen_final   !== '' && $this->examen_final   !== null) ? floatval($this->examen_final)   : 0;
 
-        $this->nota_base = ($promedio > 0 || $parcial > 0 || $final > 0)
-            ? round(($promedio * 0.6) + ($parcial * 0.2) + ($final * 0.2), 2)
-            : 0;
+        if ($this->nuevo_calculo) {
+            $this->nota_base = ($promedio > 0 || $parcial > 0 || $final > 0)
+                ? round(($promedio * 0.6) + ($parcial * 0.2) + ($final * 0.2), 2)
+                : 0;
+        } else {
+            $this->nota_base = ($promedio > 0 || $parcial > 0 || $final > 0)
+                ? round(($promedio * 0.3) + ($parcial * 0.3) + ($final * 0.4), 2)
+                : 0;
+        }
+
+        $nota_minima_arrastre = $this->nota_minima_aprobacion - 3;
 
         $this->nota_final = $this->nota_base;
 
-        if ($this->nota_base >= self::NOTA_MINIMA_ARRASTRE && $this->nota_base < self::NOTA_MINIMA_APROBACION) {
+        if ($this->nota_base >= $nota_minima_arrastre && $this->nota_base < $this->nota_minima_aprobacion) {
             $this->suspenso = true;
 
             if ($this->nota_suspenso !== '' && $this->nota_suspenso !== null) {
-                $incremento       = (floatval($this->nota_suspenso) / 10) * 2.99;
+                $brecha           = $this->nota_minima_aprobacion - $nota_minima_arrastre;
+                $incremento       = (floatval($this->nota_suspenso) / 10) * $brecha;
                 $this->nota_final = round($this->nota_base + $incremento, 2);
             }
         } else {
@@ -425,15 +451,17 @@ class CalificacionEstudiante extends Component
 
     public function determinarEstadoFinal()
     {
-        if ($this->nota_final >= self::NOTA_MINIMA_APROBACION) {
+        $nota_minima_arrastre = $this->nota_minima_aprobacion - 3;
+
+        if ($this->nota_final >= $this->nota_minima_aprobacion) {
             $this->estado_final = 'Aprobado';
-        } elseif ($this->nota_base >= self::NOTA_MINIMA_ARRASTRE && $this->nota_base < self::NOTA_MINIMA_APROBACION) {
+        } elseif ($this->nota_base >= $nota_minima_arrastre && $this->nota_base < $this->nota_minima_aprobacion) {
             if ($this->nota_suspenso !== null && $this->nota_suspenso !== '') {
-                $this->estado_final = $this->nota_final >= self::NOTA_MINIMA_APROBACION ? 'Aprobado' : 'Reprobado';
+                $this->estado_final = $this->nota_final >= $this->nota_minima_aprobacion ? 'Aprobado' : 'Reprobado';
             } else {
                 $this->estado_final = 'Incompleto';
             }
-        } elseif ($this->nota_base < self::NOTA_MINIMA_ARRASTRE) {
+        } elseif ($this->nota_base < $nota_minima_arrastre) {
             $this->estado_final = 'Reprobado';
         } else {
             $this->estado_final = 'Incompleto';
@@ -465,8 +493,10 @@ class CalificacionEstudiante extends Component
         if ($this->insumo3 === '' || $this->insumo3 === null) $faltantes[] = 'Actividades Prácticas';
         if ($this->insumo4 === '' || $this->insumo4 === null) $faltantes[] = 'Actividades con Docente';
         if ($this->insumo5 === '' || $this->insumo5 === null) $faltantes[] = 'Ética';
-        if ($this->examen_parcial === '' || $this->examen_parcial === null) $faltantes[] = 'Examen Parcial (20%)';
-        if ($this->examen_final   === '' || $this->examen_final   === null) $faltantes[] = 'Examen Final (20%)';
+        if ($this->examen_parcial === '' || $this->examen_parcial === null)
+            $faltantes[] = $this->nuevo_calculo ? 'Examen Parcial (20%)' : 'Examen Parcial (30%)';
+        if ($this->examen_final === '' || $this->examen_final === null)
+            $faltantes[] = $this->nuevo_calculo ? 'Examen Final (20%)' : 'Examen Final (40%)';
         if ($this->suspenso && ($this->nota_suspenso === '' || $this->nota_suspenso === null)) {
             $faltantes[] = 'Nota de Suspenso';
         }
@@ -485,7 +515,9 @@ class CalificacionEstudiante extends Component
         $tiene_parcial = $this->examen_parcial !== '' && $this->examen_parcial !== null;
         $tiene_final   = $this->examen_final   !== '' && $this->examen_final   !== null;
 
-        if ($this->nota_base >= self::NOTA_MINIMA_ARRASTRE && $this->nota_base < self::NOTA_MINIMA_APROBACION) {
+        $nota_minima_arrastre = $this->nota_minima_aprobacion - 3;
+
+        if ($this->nota_base >= $nota_minima_arrastre && $this->nota_base < $this->nota_minima_aprobacion) {
             $tiene_suspenso = $this->nota_suspenso !== '' && $this->nota_suspenso !== null;
             return $insumos_completos && $tiene_parcial && $tiene_final && $tiene_suspenso;
         }
@@ -682,10 +714,12 @@ class CalificacionEstudiante extends Component
             ->where('periodo_reprobado_id', $periodo_id)
             ->first();
 
+        $nota_minima_arrastre = $this->nota_minima_aprobacion - 3;
+
         if ($this->calificacionCompleta()) {
-            if ($this->nota_final >= self::NOTA_MINIMA_APROBACION) {
+            if ($this->nota_final >= $this->nota_minima_aprobacion) {
                 $arrastre_existente?->delete();
-            } elseif ($this->nota_final < self::NOTA_MINIMA_ARRASTRE) {
+            } elseif ($this->nota_final < $nota_minima_arrastre) {
                 $numero_intento  = $arrastre_existente?->numero_intento ?? $this->numero_intento;
                 $costo_adicional = $this->calcularCostoAdicional($materia_id);
 
@@ -694,7 +728,7 @@ class CalificacionEstudiante extends Component
                     'materia_id'            => $materia_id,
                     'periodo_reprobado_id'  => $periodo_id,
                     'nota_obtenida'         => $this->nota_final,
-                    'nota_minima_requerida' => self::NOTA_MINIMA_APROBACION,
+                    'nota_minima_requerida' => $this->nota_minima_aprobacion,
                     'porcentaje_penalizacion' => floatval(SettingService::get('matricula.porcentaje_arrastre', 5)),
                     'numero_intento'        => $numero_intento,
                     'estado'                => 'Perdida_Definitiva',
@@ -704,7 +738,7 @@ class CalificacionEstudiante extends Component
                 $arrastre_existente
                     ? $arrastre_existente->update($datos_arrastre)
                     : MateriasArrastrada::create($datos_arrastre);
-            } elseif ($this->nota_final >= self::NOTA_MINIMA_ARRASTRE && $this->nota_final < self::NOTA_MINIMA_APROBACION) {
+            } elseif ($this->nota_final >= $nota_minima_arrastre && $this->nota_final < $this->nota_minima_aprobacion) {
                 $tiene_suspenso = $this->nota_suspenso !== '' && $this->nota_suspenso !== null;
 
                 if ($tiene_suspenso) {
@@ -716,7 +750,7 @@ class CalificacionEstudiante extends Component
                         'materia_id'            => $materia_id,
                         'periodo_reprobado_id'  => $periodo_id,
                         'nota_obtenida'         => $this->nota_final,
-                        'nota_minima_requerida' => self::NOTA_MINIMA_APROBACION,
+                        'nota_minima_requerida' => $this->nota_minima_aprobacion,
                         'porcentaje_penalizacion' => floatval(SettingService::get('matricula.porcentaje_arrastre', 5)),
                         'numero_intento'        => $numero_intento,
                         'estado'                => 'Arrastrada',

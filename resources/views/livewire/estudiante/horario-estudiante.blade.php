@@ -91,13 +91,21 @@
                                         <div class="relative rounded-xl overflow-hidden border border-gray-100 shadow-sm
                                                     hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
 
-                                            {{-- Badge paralelo — esquina superior derecha --}}
-                                            @if ($c['paralelo'])
-                                                <div class="absolute top-0 right-0 w-8 h-8 rounded-bl-xl
-                                                            flex items-center justify-center
-                                                            text-white text-xs font-bold z-10"
-                                                     style="background-color: {{ $c['color'] }}">
-                                                    {{ $c['paralelo'] }}
+                                            {{-- Badge modalidad — esquina superior derecha --}}
+                                            @if ($c['modalidad'])
+                                                @php
+                                                    $badgeModalidad = [
+                                                        'Presencial'     => ['bg' => '#16a34a', 'label' => 'Presencial'],
+                                                        'Virtual'        => ['bg' => '#2563eb', 'label' => 'Virtual'],
+                                                        'Híbrida'        => ['bg' => '#7c3aed', 'label' => 'Híbrida'],
+                                                        'Semipresencial' => ['bg' => '#ea580c', 'label' => 'Semi'],
+                                                    ][$c['modalidad']] ?? ['bg' => '#6b7280', 'label' => $c['modalidad']];
+                                                @endphp
+                                                <div class="absolute top-0 right-0 rounded-bl-xl z-10
+                                                            px-2 py-1 flex items-center justify-center
+                                                            text-white text-xs font-bold leading-none"
+                                                     style="background-color: {{ $badgeModalidad['bg'] }}">
+                                                    {{ $badgeModalidad['label'] }}
                                                 </div>
                                             @endif
 
@@ -107,8 +115,8 @@
 
                                                 <div class="flex-1 p-3 space-y-2 min-w-0">
 
-                                                    {{-- Hora (pr-8 para no solaparse con el badge del paralelo) --}}
-                                                    <div class="flex items-center gap-1.5 pr-8">
+                                                    {{-- Hora (pr-16 para no solaparse con el badge de modalidad) --}}
+                                                    <div class="flex items-center gap-1.5 pr-16">
                                                         <svg class="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -142,16 +150,8 @@
                                                         </span>
                                                     </div>
 
-                                                    {{-- Footer: aula a la izquierda, modalidad a la derecha --}}
-                                                    @if ($c['aula'] || $c['modalidad'])
-                                                        @php
-                                                            $modalidadColor = [
-                                                                'Presencial'     => 'bg-green-100 text-green-700',
-                                                                'Virtual'        => 'bg-blue-100 text-blue-700',
-                                                                'Híbrida'        => 'bg-purple-100 text-purple-700',
-                                                                'Semipresencial' => 'bg-orange-100 text-orange-700',
-                                                            ][$c['modalidad']] ?? 'bg-gray-100 text-gray-600';
-                                                        @endphp
+                                                    {{-- Footer: aula izquierda, paralelo derecha --}}
+                                                    @if ($c['aula'] || $c['paralelo'])
                                                         <div class="flex items-center justify-between pt-1 border-t border-gray-100 gap-1">
                                                             {{-- Aula (izquierda) --}}
                                                             @if ($c['aula'])
@@ -166,11 +166,10 @@
                                                                 <span></span>
                                                             @endif
 
-                                                            {{-- Modalidad (derecha) --}}
-                                                            @if ($c['modalidad'])
-                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md
-                                                                             text-xs font-semibold {{ $modalidadColor }} flex-shrink-0">
-                                                                    {{ $c['modalidad'] }}
+                                                            {{-- Paralelo (derecha) --}}
+                                                            @if ($c['paralelo'])
+                                                                <span class="text-xs font-semibold text-gray-500 flex-shrink-0">
+                                                                    Paralelo: {{ $c['paralelo'] }}
                                                                 </span>
                                                             @endif
                                                         </div>

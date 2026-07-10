@@ -35,11 +35,14 @@ class PeriodoController extends Controller
             'fecha_limite_pago'      => 'required|date|after_or_equal:fecha_inicio',
         ]);
 
-        Periodo::create($request->only([
-            'description', 'code',
-            'fecha_inicio', 'fecha_fin',
-            'fecha_limite_matricula', 'fecha_limite_pago',
-        ]));
+        Periodo::create(array_merge(
+            $request->only([
+                'description', 'code',
+                'fecha_inicio', 'fecha_fin',
+                'fecha_limite_matricula', 'fecha_limite_pago',
+            ]),
+            ['nuevo_calculo' => $request->boolean('nuevo_calculo', true)]
+        ));
 
         return redirect()
             ->route('administracion.administrativa.periodos.index')
@@ -67,11 +70,14 @@ class PeriodoController extends Controller
             'fecha_limite_pago'      => 'required|date|after_or_equal:fecha_inicio',
         ]);
 
-        $periodo->update($request->only([
-            'description', 'code',
-            'fecha_inicio', 'fecha_fin',
-            'fecha_limite_matricula', 'fecha_limite_pago',
-        ]));
+        $periodo->update(array_merge(
+            $request->only([
+                'description', 'code',
+                'fecha_inicio', 'fecha_fin',
+                'fecha_limite_matricula', 'fecha_limite_pago',
+            ]),
+            ['nuevo_calculo' => $request->boolean('nuevo_calculo', true)]
+        ));
 
         return redirect()
             ->route('administracion.administrativa.periodos.index')

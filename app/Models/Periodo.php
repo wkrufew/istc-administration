@@ -13,6 +13,7 @@ class Periodo extends Model
         'fecha_fin',
         'fecha_limite_matricula',
         'fecha_limite_pago',
+        'nuevo_calculo',
     ];
 
     protected $casts = [
@@ -20,6 +21,7 @@ class Periodo extends Model
         'fecha_fin'              => 'date',
         'fecha_limite_matricula' => 'date',
         'fecha_limite_pago'      => 'date',
+        'nuevo_calculo'          => 'boolean',
     ];
 
     // -------------------------------------------------------
