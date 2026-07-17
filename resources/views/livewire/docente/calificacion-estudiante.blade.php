@@ -89,8 +89,34 @@
                     </h2>
                     <p class="text-xs text-slate-500 mt-0.5">
                         {{ count($estudiantes) }} estudiantes · {{ collect($estudiantes)->where('tipo', 'Arrastre')->count() }} arrastres
+                        @if (collect($estudiantes)->where('es_borrador', true)->count() > 0)
+                            · <span class="text-amber-600 font-medium">{{ collect($estudiantes)->where('es_borrador', true)->count() }} borradores</span>
+                        @endif
                     </p>
                 </div>
+
+                {{-- Botón Descargar Acta --}}
+                <button wire:click="exportarActaPDF"
+                        wire:loading.attr="disabled"
+                        wire:target="exportarActaPDF"
+                        class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800
+                               disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl
+                               text-sm transition-all shadow-sm hover:shadow-md">
+                    <svg wire:loading.remove wire:target="exportarActaPDF"
+                         class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M10 11v6m4-6v6m-6-3h8"/>
+                    </svg>
+                    <svg wire:loading wire:target="exportarActaPDF"
+                         class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span wire:loading.remove wire:target="exportarActaPDF">Descargar Acta</span>
+                    <span wire:loading wire:target="exportarActaPDF">Generando PDF…</span>
+                </button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">

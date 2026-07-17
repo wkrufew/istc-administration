@@ -45,6 +45,28 @@
                 </div>
             @endif
 
+            {{-- BANNER DÍAS NO LECTIVOS DE HOY --}}
+            @if ($suspensionesHoy->isNotEmpty())
+                <div class="space-y-2">
+                    @foreach ($suspensionesHoy as $susp)
+                        <div class="flex items-center gap-3 px-4 py-3 rounded-2xl border-2
+                            {{ $susp->tipo === 'feriado'
+                                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                                : 'bg-red-50 border-red-300 text-red-800' }}">
+                            <span class="text-xl flex-shrink-0">
+                                {{ $susp->tipo === 'feriado' ? '🎉' : '🚫' }}
+                            </span>
+                            <div class="text-sm">
+                                <span class="font-bold">
+                                    {{ $susp->alcance === 'global' ? 'Hoy no hay clases' : 'Clase suspendida hoy' }}:
+                                </span>
+                                {{ $susp->nombre }}
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
             {{-- GRILLA DE HORARIO --}}
             @if ($totalClases === 0)
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-14 text-center">
@@ -87,9 +109,29 @@
                                     </div>
                                 @else
                                     @foreach ($clases as $c)
+                                        @php
+                                            $suspHoy = ($dia === $diaHoy)
+                                                ? $suspensionesHoy->first(fn($s) =>
+                                                    $s->alcance === 'global' || $s->horario_id === $c['id'])
+                                                : null;
+                                        @endphp
                                         {{-- Tarjeta de clase --}}
-                                        <div class="relative rounded-xl overflow-hidden border border-gray-100 shadow-sm
-                                                    hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                                        <div class="relative rounded-xl overflow-hidden border shadow-sm
+                                                    hover:shadow-md hover:-translate-y-0.5 transition-all duration-200
+                                                    {{ $suspHoy ? 'border-red-200 opacity-70' : 'border-gray-100' }}">
+
+                                            {{-- Badge suspensión/feriado (hoy) --}}
+                                            @if ($suspHoy)
+                                                <div class="absolute inset-0 z-20 flex items-center justify-center
+                                                            bg-white/80 dark:bg-gray-900/80 rounded-xl">
+                                                    <div class="text-center px-2">
+                                                        <div class="text-xl">{{ $suspHoy->tipo === 'feriado' ? '🎉' : '🚫' }}</div>
+                                                        <p class="text-xs font-bold text-red-600 dark:text-red-400 mt-0.5 leading-tight">
+                                                            {{ $suspHoy->tipo === 'feriado' ? 'Feriado' : 'Suspendida' }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            @endif
 
                                             {{-- Badge modalidad — esquina superior derecha --}}
                                             @if ($c['modalidad'])

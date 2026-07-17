@@ -78,6 +78,7 @@ class Matriculacion extends Component
     public $montoMatricula  = 0; // (costo_carrera * 10%) / duracion_semestres
     public $montoArancel    = 0; // costo_carrera / duracion_semestres
     public $montoCostoTotal = 0; // montoMatricula + costoArrastres
+    public $costoArrastres  = 0; // suma de costo_adicional de arrastres incluidos
     public $valorInscripcion = 0; // solo primera matrícula — leído de settings
 
     protected $listeners = [
@@ -289,12 +290,14 @@ class Matriculacion extends Component
                 if (in_array($materia->id, $materiasAprobadas)) continue;
 
                 $prerequisitosCumplidos = $this->verificarPrerequisitos($materia, $materiasAprobadas);
+                $creditosCalculados     = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
 
                 $materiasSemestre[] = [
                     'id'                     => $materia->id,
                     'name'                   => $materia->name,
                     'code'                   => $materia->code,
-                    'credits'                => ($materia->horas_teoricas + $materia->horas_practicas) / 48,
+                    'credits'                => $creditosCalculados,
+                    'credits_inconsistente'  => abs((float) $materia->credits - $creditosCalculados) > 0.01,
                     'tipo'                   => $materia->tipo,
                     'puede_inscribir'        => $prerequisitosCumplidos,
                     'prerequisitos_faltantes' => $prerequisitosCumplidos
@@ -446,8 +449,9 @@ class Matriculacion extends Component
 
             // Fallback para registros legacy sin costo guardado
             if ($costoAdicional <= 0) {
-                $porcentaje     = floatval($materiaArrastrada['porcentaje_penalizacion'] ?? SettingService::get('matricula.porcentaje_arrastre', 5)) / 100;
-                $costoAdicional = round($materia->credits * $carrera->costo_credito * $porcentaje, 2);
+                $porcentaje     = floatval($materiaArrastrada['porcentaje_penalizacion'] ?? SettingService::get('matricula.porcentaje_arrastre', 30)) / 100;
+                $creditosVivos  = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
+                $costoAdicional = round($creditosVivos * $carrera->costo_credito * $porcentaje, 2);
                 $materiaArrastrada['costo_adicional'] = $costoAdicional;
             }
 
@@ -459,7 +463,8 @@ class Matriculacion extends Component
         $this->totalCreditos = $totalHoras / 48;
 
         // El total que aparece en el resumen = matrícula + arrastres
-        $this->costoTotal  = $this->montoMatricula + $costoArrastres;
+        $this->costoArrastres = $costoArrastres;
+        $this->costoTotal     = $this->montoMatricula + $costoArrastres;
         $this->totalPagar  = max(0, $this->costoTotal - $this->descuento);
 
         // Inscripción solo primera matrícula (Nueva, sin editar)
@@ -612,7 +617,7 @@ class Matriculacion extends Component
                     'code'          => $this->generarCodigoDetalle($matricula->code, $materia->code),
                     'tipo'          => 'Normal',
                     'estado'        => 'Inscrito',
-                    'costo_materia' => $materia->credits * $carrera->costo_credito,
+                    'costo_materia' => (($materia->horas_teoricas + $materia->horas_practicas) / 48) * $carrera->costo_credito,
                     'es_repeticion' => false,
                     'matricula_id'  => $matricula->id,
                     'materia_id'    => $materiaId,
@@ -760,6 +765,7 @@ class Matriculacion extends Component
             'totalPagar',
             'montoMatricula',
             'montoArancel',
+            'costoArrastres',
             'valorInscripcion',
         ]);
     }

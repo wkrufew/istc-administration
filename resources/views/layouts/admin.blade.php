@@ -61,7 +61,7 @@
     <div
         x-data
         :class="{ 'md:ml-64': $store.sidebar.open, 'md:ml-14': !$store.sidebar.open }"
-        class="flex flex-col justify-between ml-0 transition-all duration-300 ease-in-out pt-20 px-2 md:px-5 pb-4">
+        class="flex flex-col justify-between ml-0 transition-all duration-300 ease-in-out pt-14 px-2 md:px-5 pb-4">
 
         {{--  @include('layouts.includes.navigation') --}}
 

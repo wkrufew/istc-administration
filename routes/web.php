@@ -16,6 +16,7 @@ use App\Http\Controllers\Administration\PeriodoController;
 use App\Http\Controllers\Administration\PracticasPreProfesionalesController;
 use App\Http\Controllers\Administration\ProcesoTitulacionController;
 use App\Http\Controllers\Administration\ReporteCarreraMateriaController;
+use App\Http\Controllers\Administration\ReporteHorariosController;
 use App\Http\Controllers\Administration\ReportesFinancierosController;
 use App\Http\Controllers\Administration\RoleController;
 use App\Http\Controllers\Administration\SemestreController;
@@ -132,6 +133,8 @@ Route::middleware([
         // Horarios
         Route::get('horarios', \App\Livewire\Administration\HorariosIndex::class)->name('horarios.index');
         Route::resource('horarios', HorarioController::class)->names('horarios')->only('create', 'edit', 'destroy');
+        // Días no lectivos (feriados y suspensiones)
+        Route::get('dias-no-lectivos', \App\Livewire\Administration\DiasNoLectivosIndex::class)->name('dias_no_lectivos.index');
         //MODULOS POR MATERIA
         Route::resource('materia-periodo-paralelo', MateriaPeriodoParaleloController::class)
             ->names('materia_periodo_paralelo')
@@ -161,6 +164,7 @@ Route::middleware([
         Route::get('documentacion-personal', [DocumentacionPersonalController::class, 'index'])->name('documentacion-personal.index');
 
         Route::get('reportes-carrera-materia', [ReporteCarreraMateriaController::class, 'index'])->name('reportes.carrera-materia');
+        Route::get('reportes-horarios', [ReporteHorariosController::class, 'index'])->name('reportes.horarios');
         Route::get('consolidado-cohortes', fn() => view('administracion.consolidado-cohortes.index'))->name('consolidado-cohortes');
 
         // Tickets de soporte

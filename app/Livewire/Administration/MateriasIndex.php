@@ -163,7 +163,7 @@ class MateriasIndex extends Component
         $this->tipo                    = $materia->tipo;
         $this->semestre_id             = (string) $materia->semestre_id;
         $this->is_active               = $materia->is_active;
-        $this->creditosOverride        = true; // respetar créditos guardados
+        $this->creditosOverride        = false; // recalcular si cambian las horas
 
         if ($materia->semestre) {
             $this->carreraIdForm = (string) $materia->semestre->carrera_id;

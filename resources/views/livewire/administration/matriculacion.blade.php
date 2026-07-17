@@ -529,16 +529,36 @@
                                             <h5 class="text-xs font-medium text-amber-400 mb-2">Materias Arrastradas</h5>
                                             <div class="space-y-2">
                                                 @foreach ($materiasArrastradas as $index => $materiaArrastrada)
-                                                    <label class="flex items-center gap-2.5 cursor-pointer">
-                                                        <input type="checkbox" class="w-4 h-4 rounded accent-lime-500"
+                                                    @php
+                                                        $intento      = $materiaArrastrada['numero_intento'] ?? 1;
+                                                        $sigIntento   = $intento + 1;
+                                                        $porcentaje   = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
+                                                        $costoExtra   = $materiaArrastrada['costo_adicional'] ?? 0;
+                                                        $esUltimo     = $sigIntento >= 3;
+                                                    @endphp
+                                                    <label class="flex items-start gap-2.5 cursor-pointer group">
+                                                        <input type="checkbox" class="w-4 h-4 rounded accent-amber-500 mt-0.5 flex-shrink-0"
                                                             wire:model="materiasArrastradas.{{ $index }}.incluir"
                                                             id="arrastre_{{ $index }}">
-                                                        <span class="text-xs text-slate-600 dark:text-white/70">
-                                                            <strong
-                                                                class="text-slate-700 dark:text-white/85">{{ $materiaArrastrada['materia']['name'] }}</strong>
-                                                            <span class="text-slate-500 dark:text-slate-400"> — Nota:
-                                                                {{ $materiaArrastrada['nota_obtenida'] }}</span>
-                                                        </span>
+                                                        <div class="flex-1 border-l-2 {{ $esUltimo ? 'border-red-500/60' : 'border-amber-500/50' }} pl-2">
+                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                <strong class="text-xs text-slate-700 dark:text-white/85">
+                                                                    {{ $materiaArrastrada['materia']['name'] }}
+                                                                </strong>
+                                                                <span class="px-1.5 py-0.5 rounded text-[0.6rem] font-bold
+                                                                    {{ $esUltimo ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400' }}">
+                                                                    {{ $sigIntento }}° intento{{ $esUltimo ? ' (último)' : '' }}
+                                                                </span>
+                                                                <span class="px-1.5 py-0.5 rounded text-[0.6rem] font-semibold bg-orange-500/15 text-orange-400">
+                                                                    +{{ number_format($porcentaje, 0) }}%
+                                                                </span>
+                                                            </div>
+                                                            <p class="text-[0.65rem] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                                Nota obtenida: {{ $materiaArrastrada['nota_obtenida'] }}
+                                                                &nbsp;·&nbsp;
+                                                                Costo extra: <span class="text-amber-400 font-semibold">${{ number_format($costoExtra, 2) }}</span>
+                                                            </p>
+                                                        </div>
                                                     </label>
                                                 @endforeach
                                             </div>
@@ -601,6 +621,14 @@
                                                                         {{ $materia['tipo'] }}
                                                                     </span>
                                                                 </div>
+                                                                @if ($materia['credits_inconsistente'])
+                                                                    <div class="mt-1.5 flex items-center gap-1 text-[0.6rem] text-amber-400">
+                                                                        <svg class="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                                        </svg>
+                                                                        Créditos desactualizados — corregir en Materias
+                                                                    </div>
+                                                                @endif
                                                                 @if (!$materia['puede_inscribir'] && !empty($materia['prerequisitos_faltantes']))
                                                                     <div class="mt-2 pt-2 border-t border-white/[0.05]">
                                                                         <p
@@ -743,7 +771,8 @@
                                                                         $paralelosSeleccionados[$materiaId],
                                                                     )
                                                                     : null;
-                                                                $costo = $materia->credits * $carrera->costo_credito;
+                                                                $creditosVivos = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
+                                                                $costo = $creditosVivos * $carrera->costo_credito;
                                                             @endphp
                                                             <tr>
                                                                 <td class="px-4 py-2.5">
@@ -798,37 +827,37 @@
                                                     <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                                                         @foreach ($materiasArrastradasIncluidas as $materiaArrastrada)
                                                             @php
-                                                                $materia = \App\Models\Materia::find(
-                                                                    $materiaArrastrada['materia_id'],
-                                                                );
-                                                                $paralelo = isset(
-                                                                    $paralelosSeleccionados[
-                                                                        $materiaArrastrada['materia_id']
-                                                                    ],
-                                                                )
-                                                                    ? \App\Models\Paralelo::find(
-                                                                        $paralelosSeleccionados[
-                                                                            $materiaArrastrada['materia_id']
-                                                                        ],
-                                                                    )
+                                                                $materia    = \App\Models\Materia::find($materiaArrastrada['materia_id']);
+                                                                $paralelo   = isset($paralelosSeleccionados[$materiaArrastrada['materia_id']])
+                                                                    ? \App\Models\Paralelo::find($paralelosSeleccionados[$materiaArrastrada['materia_id']])
                                                                     : null;
-                                                                $costo = $materiaArrastrada['costo_adicional'] ?? 0;
+                                                                $costo      = $materiaArrastrada['costo_adicional'] ?? 0;
+                                                                $intento    = $materiaArrastrada['numero_intento'] ?? 1;
+                                                                $sigIntento = $intento + 1;
+                                                                $porcentaje = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
+                                                                $esUltimo   = $sigIntento >= 3;
                                                             @endphp
                                                             <tr>
                                                                 <td class="px-4 py-2.5">
-                                                                    <p class="text-xs text-slate-700 dark:text-white/75">{{ $materia->name }}
-                                                                    </p>
-                                                                    <p class="text-[0.65rem] text-slate-500">
-                                                                        {{ $materia->code }}</p>
+                                                                    <p class="text-xs text-slate-700 dark:text-white/75">{{ $materia->name }}</p>
+                                                                    <p class="text-[0.65rem] text-slate-500">{{ $materia->code }}</p>
+                                                                    <div class="flex items-center gap-1 mt-0.5">
+                                                                        <span class="px-1.5 py-0.5 rounded text-[0.58rem] font-bold
+                                                                            {{ $esUltimo ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400' }}">
+                                                                            {{ $sigIntento }}° intento{{ $esUltimo ? ' (último)' : '' }}
+                                                                        </span>
+                                                                        <span class="px-1.5 py-0.5 rounded text-[0.58rem] font-semibold bg-orange-500/15 text-orange-400">
+                                                                            +{{ number_format($porcentaje, 0) }}%
+                                                                        </span>
+                                                                    </div>
                                                                 </td>
                                                                 <td class="px-4 py-2.5 text-center text-xs text-slate-400">
                                                                     {{ number_format(($materia->horas_teoricas + $materia->horas_practicas) / 48, 2) }}
                                                                 </td>
                                                                 <td class="px-4 py-2.5 text-center text-xs text-slate-400">
                                                                     {{ $paralelo ? $paralelo->name : '—' }}</td>
-                                                                <td
-                                                                    class="px-4 py-2.5 text-right text-xs font-medium text-white/70">
-                                                                    ${{ number_format($costo, 2) }}</td>
+                                                                <td class="px-4 py-2.5 text-right text-xs font-medium text-amber-400">
+                                                                    +${{ number_format($costo, 2) }}</td>
                                                             </tr>
                                                         @endforeach
                                                     </tbody>
@@ -899,6 +928,23 @@
                                                             ${{ number_format($montoMatricula, 2) }}
                                                         </span>
                                                     </div>
+                                                    @if ($costoArrastres > 0)
+                                                        <div class="flex justify-between items-center">
+                                                            <span class="text-xs text-amber-400/80">Costo Arrastres</span>
+                                                            <span class="text-xs font-medium text-amber-400">
+                                                                +${{ number_format($costoArrastres, 2) }}
+                                                            </span>
+                                                        </div>
+                                                        @foreach (collect($materiasArrastradas)->where('incluir', true) as $ma)
+                                                            <div class="flex justify-between items-center pl-3 border-l border-amber-500/20">
+                                                                <span class="text-[0.6rem] text-slate-500 dark:text-slate-400 truncate max-w-[110px]">
+                                                                    {{ $ma['materia']['name'] }}
+                                                                    <span class="text-orange-400">(+{{ number_format($ma['porcentaje_penalizacion'] ?? 30, 0) }}%)</span>
+                                                                </span>
+                                                                <span class="text-[0.6rem] text-amber-400/70">+${{ number_format($ma['costo_adicional'] ?? 0, 2) }}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    @endif
                                                     @if ($valorInscripcion > 0)
                                                         <div class="flex justify-between items-center">
                                                             <span class="text-xs text-amber-300/80">Inscripción (1ª matrícula)</span>
@@ -1473,19 +1519,39 @@
                                                     <div class="mt-2 text-sm text-yellow-700">
                                                         <p class="mb-2">Este estudiante tiene las siguientes materias
                                                             arrastradas:</p>
-                                                        <div class="space-y-2">
+                                                        <div class="space-y-3">
                                                             @foreach ($materiasArrastradas as $index => $materiaArrastrada)
-                                                                <div class="flex items-center">
+                                                                @php
+                                                                    $intento    = $materiaArrastrada['numero_intento'] ?? 1;
+                                                                    $sigIntento = $intento + 1;
+                                                                    $porcentaje = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
+                                                                    $costoExtra = $materiaArrastrada['costo_adicional'] ?? 0;
+                                                                    $esUltimo   = $sigIntento >= 3;
+                                                                @endphp
+                                                                <div class="flex items-start gap-2">
                                                                     <input type="checkbox"
-                                                                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                                        class="h-4 w-4 text-amber-500 focus:ring-amber-500 border-gray-300 rounded mt-0.5 flex-shrink-0"
                                                                         wire:model="materiasArrastradas.{{ $index }}.incluir"
                                                                         id="arrastre_{{ $index }}">
-                                                                    <label class="ml-2 text-sm"
-                                                                        for="arrastre_{{ $index }}">
-                                                                        <strong>{{ $materiaArrastrada['materia']['name'] }}</strong>
-                                                                        - Nota obtenida:
-                                                                        {{ $materiaArrastrada['nota_obtenida'] }}
-                                                                    </label>
+                                                                    <div class="border-l-2 {{ $esUltimo ? 'border-red-400' : 'border-amber-400' }} pl-2 flex-1">
+                                                                        <label for="arrastre_{{ $index }}" class="cursor-pointer">
+                                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                                <strong class="text-sm text-gray-900">{{ $materiaArrastrada['materia']['name'] }}</strong>
+                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-bold
+                                                                                    {{ $esUltimo ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700' }}">
+                                                                                    {{ $sigIntento }}° intento{{ $esUltimo ? ' (último)' : '' }}
+                                                                                </span>
+                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">
+                                                                                    +{{ number_format($porcentaje, 0) }}%
+                                                                                </span>
+                                                                            </div>
+                                                                            <p class="text-xs text-gray-500 mt-0.5">
+                                                                                Nota: {{ $materiaArrastrada['nota_obtenida'] }}
+                                                                                &nbsp;·&nbsp;
+                                                                                Extra: <span class="text-amber-600 font-semibold">${{ number_format($costoExtra, 2) }}</span>
+                                                                            </p>
+                                                                        </label>
+                                                                    </div>
                                                                 </div>
                                                             @endforeach
                                                         </div>
@@ -1548,14 +1614,22 @@
                                                                                 <div
                                                                                     class="flex justify-between items-center">
                                                                                     <span
-                                                                                        class="text-xs text-gray-500">{{ $materia['credits'] }}
+                                                                                        class="text-xs text-gray-500">{{ number_format($materia['credits'], 2) }}
                                                                                         créditos</span>
                                                                                     <span
-                                                                                        class="px-2 py-1 text-xs rounded-full 
+                                                                                        class="px-2 py-1 text-xs rounded-full
                                                                                     {{ $materia['tipo'] == 'Obligatoria' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800' }}">
                                                                                         {{ $materia['tipo'] }}
                                                                                     </span>
                                                                                 </div>
+                                                                                @if ($materia['credits_inconsistente'])
+                                                                                    <div class="mt-1.5 flex items-center gap-1 text-xs text-amber-600">
+                                                                                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                                                        </svg>
+                                                                                        Créditos desactualizados — corregir en Materias
+                                                                                    </div>
+                                                                                @endif
                                                                                 @if (!$materia['puede_inscribir'] && !empty($materia['prerequisitos_faltantes']))
                                                                                     <div
                                                                                         class="mt-2 p-2 bg-red-50 rounded text-xs">
@@ -1718,8 +1792,8 @@
                                                                                 $paralelosSeleccionados[$materiaId],
                                                                             )
                                                                             : null;
-                                                                        $costo =
-                                                                            $materia->credits * $carrera->costo_credito;
+                                                                        $creditosVivos = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
+                                                                        $costo = $creditosVivos * $carrera->costo_credito;
                                                                     @endphp
                                                                     <tr>
                                                                         <td class="px-4 py-3 text-sm text-gray-900">
@@ -1728,7 +1802,7 @@
                                                                             {{ $materia->code }}</td>
                                                                         <td
                                                                             class="px-4 py-3 text-sm text-center text-gray-900">
-                                                                            {{ $materia->credits }}</td>
+                                                                            {{ number_format($creditosVivos, 2) }}</td>
                                                                         <td
                                                                             class="px-4 py-3 text-sm text-center text-gray-500">
                                                                             {{ $paralelo ? $paralelo->name : 'No asignado' }}
@@ -1780,38 +1854,36 @@
                                                             <tbody class="bg-white divide-y divide-gray-200">
                                                                 @foreach ($materiasArrastradasIncluidas as $materiaArrastrada)
                                                                     @php
-                                                                        $materia = \App\Models\Materia::find(
-                                                                            $materiaArrastrada['materia_id'],
-                                                                        );
-                                                                        $paralelo = isset(
-                                                                            $paralelosSeleccionados[
-                                                                                $materiaArrastrada['materia_id']
-                                                                            ],
-                                                                        )
-                                                                            ? \App\Models\Paralelo::find(
-                                                                                $paralelosSeleccionados[
-                                                                                    $materiaArrastrada['materia_id']
-                                                                                ],
-                                                                            )
+                                                                        $materia    = \App\Models\Materia::find($materiaArrastrada['materia_id']);
+                                                                        $paralelo   = isset($paralelosSeleccionados[$materiaArrastrada['materia_id']])
+                                                                            ? \App\Models\Paralelo::find($paralelosSeleccionados[$materiaArrastrada['materia_id']])
                                                                             : null;
-                                                                        $costo =
-                                                                            $materiaArrastrada['costo_adicional'] ?? 0;
+                                                                        $costo      = $materiaArrastrada['costo_adicional'] ?? 0;
+                                                                        $intento    = $materiaArrastrada['numero_intento'] ?? 1;
+                                                                        $sigIntento = $intento + 1;
+                                                                        $porcentaje = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
+                                                                        $esUltimo   = $sigIntento >= 3;
                                                                     @endphp
                                                                     <tr>
-                                                                        <td class="px-4 py-3 text-sm text-gray-900">
-                                                                            {{ $materia->name }}</td>
-                                                                        <td class="px-4 py-3 text-sm text-gray-500">
-                                                                            {{ $materia->code }}</td>
-                                                                        <td
-                                                                            class="px-4 py-3 text-sm text-center text-gray-900">
-                                                                            {{ $materia->credits }}</td>
-                                                                        <td
-                                                                            class="px-4 py-3 text-sm text-center text-gray-500">
-                                                                            {{ $paralelo ? $paralelo->name : 'No asignado' }}
+                                                                        <td class="px-4 py-3">
+                                                                            <p class="text-sm text-gray-900">{{ $materia->name }}</p>
+                                                                            <div class="flex items-center gap-1 mt-0.5">
+                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-bold
+                                                                                    {{ $esUltimo ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700' }}">
+                                                                                    {{ $sigIntento }}° intento{{ $esUltimo ? ' (último)' : '' }}
+                                                                                </span>
+                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">
+                                                                                    +{{ number_format($porcentaje, 0) }}%
+                                                                                </span>
+                                                                            </div>
                                                                         </td>
-                                                                        <td
-                                                                            class="px-4 py-3 text-sm text-right font-medium text-gray-900">
-                                                                            ${{ number_format($costo, 2) }}</td>
+                                                                        <td class="px-4 py-3 text-sm text-gray-500">{{ $materia->code }}</td>
+                                                                        <td class="px-4 py-3 text-sm text-center text-gray-900">
+                                                                            {{ number_format(($materia->horas_teoricas + $materia->horas_practicas) / 48, 2) }}</td>
+                                                                        <td class="px-4 py-3 text-sm text-center text-gray-500">
+                                                                            {{ $paralelo ? $paralelo->name : 'No asignado' }}</td>
+                                                                        <td class="px-4 py-3 text-sm text-right font-medium text-amber-600">
+                                                                            +${{ number_format($costo, 2) }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             </tbody>
@@ -1845,14 +1917,27 @@
                                                     <div class="space-y-3">
                                                         <div class="flex justify-between items-center">
                                                             <span class="text-sm text-gray-600">Total Créditos:</span>
-                                                            <span
-                                                                class="font-medium text-gray-900">{{ $totalCreditos }}</span>
+                                                            <span class="font-medium text-gray-900">{{ number_format($totalCreditos, 2) }}</span>
                                                         </div>
                                                         <div class="flex justify-between items-center">
-                                                            <span class="text-sm text-gray-600">Costo Total:</span>
-                                                            <span
-                                                                class="font-medium text-gray-900">${{ number_format($costoTotal, 2) }}</span>
+                                                            <span class="text-sm text-gray-600">Costo Matrícula:</span>
+                                                            <span class="font-medium text-gray-900">${{ number_format($montoMatricula, 2) }}</span>
                                                         </div>
+                                                        @if ($costoArrastres > 0)
+                                                            <div class="flex justify-between items-center">
+                                                                <span class="text-sm text-amber-600">Costo Arrastres:</span>
+                                                                <span class="font-medium text-amber-600">+${{ number_format($costoArrastres, 2) }}</span>
+                                                            </div>
+                                                            @foreach (collect($materiasArrastradas)->where('incluir', true) as $ma)
+                                                                <div class="flex justify-between items-center pl-3 border-l-2 border-amber-200">
+                                                                    <span class="text-xs text-gray-500 truncate max-w-[160px]">
+                                                                        {{ $ma['materia']['name'] }}
+                                                                        <span class="text-orange-500">(+{{ number_format($ma['porcentaje_penalizacion'] ?? 30, 0) }}%)</span>
+                                                                    </span>
+                                                                    <span class="text-xs text-amber-600 font-medium">+${{ number_format($ma['costo_adicional'] ?? 0, 2) }}</span>
+                                                                </div>
+                                                            @endforeach
+                                                        @endif
                                                         @if ($valorInscripcion > 0)
                                                             <div class="flex justify-between items-center">
                                                                 <span class="text-sm text-amber-600">Inscripción (1ª matrícula):</span>
@@ -1862,8 +1947,7 @@
                                                         @if ($descuento > 0)
                                                             <div class="flex justify-between items-center text-green-600">
                                                                 <span class="text-sm">Descuento:</span>
-                                                                <span
-                                                                    class="font-medium">-${{ number_format($descuento, 2) }}</span>
+                                                                <span class="font-medium">-${{ number_format($descuento, 2) }}</span>
                                                             </div>
                                                         @endif
                                                     </div>

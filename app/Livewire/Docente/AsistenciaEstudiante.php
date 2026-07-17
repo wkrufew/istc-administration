@@ -3,6 +3,7 @@
 namespace App\Livewire\Docente;
 
 use App\Models\Asistencia;
+use App\Models\DiaNoLectivo;
 use App\Models\Horario;
 use App\Models\Materia;
 use App\Models\DetalleMatricula;
@@ -45,6 +46,21 @@ class AsistenciaEstudiante extends Component
     public bool    $yaRegistrada     = false;   // ya existe asistencia para este horario+fecha
     public bool    $modoEdicion      = false;   // docente desbloqueó edición
     public int     $totalMarcados    = 0;
+
+    // =========================================================================
+    // CLASE NO DICTADA
+    // =========================================================================
+    public bool    $mostrarModalNoDictada  = false;
+    public string  $motivoNoDictada        = '';
+    public ?int    $claseNoDictadaId       = null;
+    public string  $claseNoDictadaNombre   = '';
+
+    // =========================================================================
+    // HISTORIAL
+    // =========================================================================
+    public bool  $mostrarHistorial     = false;
+    public array $historialEstudiantes = [];
+    public array $historialFechas      = [];
 
     // =========================================================================
     // MENSAJES
@@ -213,6 +229,8 @@ class AsistenciaEstudiante extends Component
         $this->totalMarcados = 0;
 
         if (! $this->horario_id || ! $this->fecha) return;
+
+        $this->cargarEstadoNoDictada();
 
         $horario = Horario::with(['materia', 'paralelo', 'asignacionDocente'])
             ->find($this->horario_id);
@@ -461,20 +479,34 @@ class AsistenciaEstudiante extends Component
         $inicio = Carbon::parse($this->modulo->fecha_inicio);
         $fin    = Carbon::parse($this->modulo->fecha_fin);
 
-        $mapaInverso = [
-            'Lunes'     => 'Monday',
-            'Martes'    => 'Tuesday',
-            'Miércoles' => 'Wednesday',
-            'Jueves'    => 'Thursday',
-            'Viernes'   => 'Friday',
-            'Sábado'    => 'Saturday',
-            'Domingo'   => 'Sunday',
-        ];
+        // Días no lectivos globales en el rango del módulo
+        $diasGlobalesNoLectivos = DiaNoLectivo::where('periodo_id', $this->modulo->periodo_id)
+            ->where('alcance', 'global')
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->pluck('fecha')
+            ->map(fn($f) => $f instanceof \Carbon\Carbon ? $f->toDateString() : (string) $f)
+            ->flip(); // usar como lookup O(1)
+
+        // Días no lectivos específicos de este horario
+        $diasHorarioNoLectivos = $this->horario_id
+            ? DiaNoLectivo::where('horario_id', $this->horario_id)
+                ->where('alcance', 'horario')
+                ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+                ->pluck('fecha')
+                ->map(fn($f) => $f instanceof \Carbon\Carbon ? $f->toDateString() : (string) $f)
+                ->flip()
+            : collect();
 
         $count = 0;
         foreach (CarbonPeriod::create($inicio, $fin) as $dia) {
-            $nombreDia = $this->mapaDia($dia->format('l'));
-            if (in_array($nombreDia, $this->dias_horario)) $count++;
+            $nombreDia  = $this->mapaDia($dia->format('l'));
+            $fechaStr   = $dia->toDateString();
+
+            if (! in_array($nombreDia, $this->dias_horario)) continue;
+            if (isset($diasGlobalesNoLectivos[$fechaStr]))   continue;
+            if (isset($diasHorarioNoLectivos[$fechaStr]))    continue;
+
+            $count++;
         }
 
         $this->total_clases = $count;
@@ -556,6 +588,216 @@ class AsistenciaEstudiante extends Component
     {
         $this->mensaje      = null;
         $this->tipo_mensaje = 'success';
+    }
+
+    // =========================================================================
+    // HISTORIAL DE ASISTENCIAS
+    // =========================================================================
+    public function verHistorial(): void
+    {
+        if (! $this->horario_id) return;
+
+        $horario = Horario::find($this->horario_id);
+        if (! $horario) return;
+
+        $detalles = DetalleMatricula::with('estudiante')
+            ->whereHas('matricula', fn($q) => $q->where('periodo_id', $horario->periodo_id))
+            ->where('materia_id',  $horario->materia_id)
+            ->where('paralelo_id', $horario->paralelo_id)
+            ->where('estado', 'Inscrito')
+            ->orderBy('id')
+            ->get();
+
+        // ── 1. Todas las asistencias del grupo, keyed por fecha → detalle_id ──
+        $todasAsistencias = Asistencia::whereHas(
+                'horario',
+                fn($q) => $q->where('materia_id',  $horario->materia_id)
+                            ->where('paralelo_id', $horario->paralelo_id)
+                            ->where('periodo_id',  $horario->periodo_id)
+            )
+            ->whereIn('detalle_matricula_id', $detalles->pluck('id'))
+            ->get();
+
+        $byStudent = $todasAsistencias->groupBy('detalle_matricula_id');
+
+        // ── 2. Días no lectivos del módulo (globales + específicos del horario) ──
+        $diasNoLectivos = DiaNoLectivo::where('periodo_id', $horario->periodo_id)
+            ->where(fn($q) => $q->where('alcance', 'global')
+                ->orWhere(fn($s) => $s->where('alcance', 'horario')
+                                      ->where('horario_id', $this->horario_id)))
+            ->get(['fecha', 'tipo', 'nombre', 'alcance'])
+            ->keyBy(fn($d) => $d->fecha instanceof \Carbon\Carbon
+                ? $d->fecha->toDateString()
+                : (string) $d->fecha);
+
+        // ── 3. Días de clase del horario (todos los días del módulo que corresponden) ──
+        $this->cargarModulo();
+        $this->calcularDiasHorario();
+
+        $todasFechas = collect();
+
+        if ($this->modulo && ! empty($this->dias_horario)) {
+            $inicio = Carbon::parse($this->modulo->fecha_inicio);
+            $fin    = Carbon::parse($this->modulo->fecha_fin);
+
+            foreach (CarbonPeriod::create($inicio, min($fin, Carbon::today())) as $dia) {
+                $nombreDia = $this->mapaDia($dia->format('l'));
+                if (! in_array($nombreDia, $this->dias_horario)) continue;
+
+                $fechaStr   = $dia->toDateString();
+                $noLectivo  = $diasNoLectivos->get($fechaStr);
+
+                $todasFechas->push([
+                    'fecha'    => $fechaStr,
+                    'tipo_dia' => $noLectivo ? $noLectivo->tipo : 'clase',
+                    'motivo'   => $noLectivo?->nombre,
+                ]);
+            }
+        }
+
+        // Fallback: si no hay módulo, usar solo las fechas con asistencia registrada
+        if ($todasFechas->isEmpty()) {
+            $todasAsistencias->pluck('fecha')
+                ->map(fn($f) => $f instanceof \Carbon\Carbon ? $f->toDateString() : (string) $f)
+                ->unique()->sort()->each(fn($f) => $todasFechas->push([
+                    'fecha' => $f, 'tipo_dia' => 'clase', 'motivo' => null,
+                ]));
+        }
+
+        // ── 4. Construir historialFechas ──
+        $this->historialFechas = $todasFechas->map(fn($item) => [
+            'fecha'    => $item['fecha'],
+            'display'  => Carbon::parse($item['fecha'])->format('d/m'),
+            'dia'      => mb_strtolower(mb_substr($this->mapaDia(Carbon::parse($item['fecha'])->format('l')), 0, 2)),
+            'tipo_dia' => $item['tipo_dia'],
+            'motivo'   => $item['motivo'],
+        ])->toArray();
+
+        // ── 5. Denominador = solo días de clase reales ──
+        $totalClases = max($todasFechas->where('tipo_dia', 'clase')->count(), 1);
+
+        // ── 6. Construir filas por estudiante ──
+        $this->historialEstudiantes = $detalles->map(function ($detalle) use ($todasFechas, $byStudent, $totalClases) {
+            $studentMap = $byStudent->get($detalle->id, collect())
+                ->keyBy(fn($a) => $a->fecha instanceof \Carbon\Carbon
+                    ? $a->fecha->toDateString()
+                    : (string) $a->fecha);
+
+            $celdas = $todasFechas->map(function ($item) use ($studentMap) {
+                if ($item['tipo_dia'] !== 'clase') {
+                    return $item['tipo_dia']; // 'feriado' | 'suspension'
+                }
+                return $studentMap->get($item['fecha'])?->estado ?? null;
+            })->toArray();
+
+            $asistidas = collect($celdas)
+                ->filter(fn($e) => in_array($e, ['Presente', 'Justificado', 'Tardanza']))
+                ->count();
+            $pct = round(($asistidas / $totalClases) * 100);
+
+            return [
+                'nombre'    => $detalle->estudiante?->nombre_completo ?? $detalle->estudiante?->name ?? '—',
+                'celdas'    => $celdas,
+                'asistidas' => $asistidas,
+                'total'     => $totalClases,
+                'pct'       => $pct,
+                'nota'      => round(($asistidas / $totalClases) * 10, 2),
+            ];
+        })->toArray();
+
+        $this->mostrarHistorial = true;
+    }
+
+    public function cerrarHistorial(): void
+    {
+        $this->mostrarHistorial = false;
+    }
+
+    // =========================================================================
+    // CLASE NO DICTADA
+    // =========================================================================
+    public function abrirModalNoDictada(): void
+    {
+        $this->motivoNoDictada       = '';
+        $this->mostrarModalNoDictada = true;
+    }
+
+    public function cerrarModalNoDictada(): void
+    {
+        $this->mostrarModalNoDictada = false;
+        $this->motivoNoDictada       = '';
+    }
+
+    public function confirmarNoDictada(): void
+    {
+        $this->validate(
+            ['motivoNoDictada' => 'required|string|min:3|max:255'],
+            ['motivoNoDictada.required' => 'Escribe el motivo de la suspensión.',
+             'motivoNoDictada.min'      => 'El motivo debe tener al menos 3 caracteres.']
+        );
+
+        if (! $this->horario_id || ! $this->fecha) return;
+
+        $horario = Horario::find($this->horario_id);
+        if (! $horario) return;
+
+        // Bloquear si ya existe un feriado global para esta fecha en el período
+        $feriadoGlobal = DiaNoLectivo::where('fecha', $this->fecha)
+            ->where('alcance', 'global')
+            ->where('periodo_id', $horario->periodo_id)
+            ->exists();
+
+        if ($feriadoGlobal) {
+            $this->cerrarModalNoDictada();
+            $this->tipo_mensaje = 'error';
+            $this->mensaje      = 'Este día ya está marcado como feriado institucional. No es necesario registrarlo como clase no dictada.';
+            return;
+        }
+
+        $registro = DiaNoLectivo::updateOrCreate(
+            [
+                'horario_id' => $this->horario_id,
+                'fecha'      => $this->fecha,
+                'alcance'    => 'horario',
+            ],
+            [
+                'periodo_id'    => $horario->periodo_id,
+                'nombre'        => $this->motivoNoDictada,
+                'tipo'          => 'suspension',
+                'creado_por_id' => Auth::id(),
+            ]
+        );
+
+        $this->cerrarModalNoDictada();
+        $this->cargarFormulario();
+        $this->tipo_mensaje = 'success';
+        $this->mensaje      = '✓ Clase marcada como no dictada. Se descontará del total de clases.';
+    }
+
+    public function deshacerNoDictada(): void
+    {
+        DiaNoLectivo::where('horario_id', $this->horario_id)
+            ->where('fecha', $this->fecha)
+            ->where('alcance', 'horario')
+            ->where('creado_por_id', Auth::id())
+            ->delete();
+
+        $this->cargarFormulario();
+        $this->tipo_mensaje = 'success';
+        $this->mensaje      = 'Suspensión eliminada. La clase vuelve a contabilizarse.';
+    }
+
+    private function cargarEstadoNoDictada(): void
+    {
+        $registro = ($this->horario_id && $this->fecha)
+            ? DiaNoLectivo::where('horario_id', $this->horario_id)
+                ->where('fecha', $this->fecha)
+                ->where('alcance', 'horario')
+                ->first()
+            : null;
+
+        $this->claseNoDictadaId     = $registro?->id;
+        $this->claseNoDictadaNombre = $registro?->nombre ?? '';
     }
 
     // =========================================================================

@@ -276,12 +276,58 @@
                                 {{ $total_clases }} clases totales del módulo
                             </p>
                         </div>
-                        <button wire:click="$set('estudiantes', [])"
-                            class="flex-shrink-0 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
-                            ← Volver
-                        </button>
+                        <div class="flex flex-col items-end gap-1.5">
+                            <button wire:click="$set('estudiantes', [])"
+                                class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                                ← Volver
+                            </button>
+                            <button wire:click="verHistorial"
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg
+                                   bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400
+                                   hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition">
+                                📋 Ver historial
+                            </button>
+                            @if (!$claseNoDictadaId)
+                                <button wire:click="abrirModalNoDictada"
+                                    class="text-xs font-semibold px-2.5 py-1 rounded-lg
+                                       bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400
+                                       hover:bg-red-100 dark:hover:bg-red-900/50 transition">
+                                    🚫 Clase no dictada
+                                </button>
+                            @endif
+                        </div>
                     </div>
                 </div>
+
+                {{-- BANNER CLASE NO DICTADA --}}
+                @if ($claseNoDictadaId)
+                    <div class="rounded-2xl border-2 border-red-400 bg-red-50 dark:bg-red-900/20
+                                dark:border-red-700 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/40
+                                            flex items-center justify-center flex-shrink-0 text-lg">
+                                    🚫
+                                </div>
+                                <div>
+                                    <p class="font-bold text-red-800 dark:text-red-300 text-sm">
+                                        Clase marcada como no dictada
+                                    </p>
+                                    <p class="text-xs text-red-700 dark:text-red-400 mt-0.5">
+                                        {{ $claseNoDictadaNombre }}
+                                    </p>
+                                </div>
+                            </div>
+                            <button wire:click="deshacerNoDictada"
+                                class="flex-shrink-0 text-xs font-bold px-3 py-2 rounded-xl
+                                       bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700
+                                       text-red-700 dark:text-red-400
+                                       hover:bg-red-100 dark:hover:bg-red-900/40 transition">
+                                Deshacer
+                            </button>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- BANNER YA REGISTRADA --}}
                 @if ($yaRegistrada && !$modoEdicion)
@@ -520,4 +566,247 @@
 
         </div>
     </div>
+
+    {{-- ================================================================
+     MODAL — CLASE NO DICTADA
+     ================================================================ --}}
+    @if ($mostrarModalNoDictada)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             x-data x-on:keydown.escape.window="$wire.cerrarModalNoDictada()">
+
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                 wire:click="cerrarModalNoDictada"></div>
+
+            <div class="relative z-10 w-full max-w-sm bg-white dark:bg-gray-900
+                        rounded-2xl shadow-2xl p-6">
+
+                <div class="text-center mb-5">
+                    <div class="text-4xl mb-3">🚫</div>
+                    <h3 class="font-bold text-slate-900 dark:text-white text-lg">
+                        ¿Clase no dictada?
+                    </h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                        Esta fecha se descontará del total de clases del módulo.
+                    </p>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 uppercase tracking-wide">
+                        Motivo
+                    </label>
+                    <input type="text" wire:model="motivoNoDictada"
+                        placeholder="Ej: Docente enfermo, evento institucional..."
+                        class="w-full rounded-xl border-2 border-slate-200 dark:border-gray-600
+                               px-3 py-2.5 text-sm dark:bg-gray-800 dark:text-white
+                               focus:border-red-400 focus:ring-0"
+                        x-ref="motivoInput"
+                        x-init="$nextTick(() => $refs.motivoInput.focus())">
+                    @error('motivoNoDictada')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="flex gap-3">
+                    <button wire:click="cerrarModalNoDictada"
+                        class="flex-1 py-2.5 rounded-xl text-sm font-semibold
+                               text-slate-600 dark:text-slate-300
+                               bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 transition">
+                        Cancelar
+                    </button>
+                    <button wire:click="confirmarNoDictada" wire:loading.attr="disabled"
+                        class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white
+                               bg-red-500 hover:bg-red-600 transition disabled:opacity-60">
+                        <span wire:loading.remove>Confirmar</span>
+                        <span wire:loading>Guardando...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ================================================================
+     MODAL — HISTORIAL DE ASISTENCIAS
+     ================================================================ --}}
+    @if ($mostrarHistorial)
+        <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+             x-data x-on:keydown.escape.window="$wire.cerrarHistorial()">
+
+            {{-- Backdrop --}}
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                 wire:click="cerrarHistorial"></div>
+
+            {{-- Panel --}}
+            <div class="relative z-10 w-full sm:max-w-5xl bg-white dark:bg-gray-900
+                        rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col">
+
+                {{-- Header del modal --}}
+                <div class="flex items-center justify-between px-5 py-4
+                            border-b border-slate-200 dark:border-gray-700 flex-shrink-0">
+                    <div>
+                        <h3 class="font-bold text-slate-900 dark:text-white text-base">
+                            Historial de asistencias
+                        </h3>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                            {{ $horarioActual?->materia?->name ?? '—' }}
+                            · {{ $horarioActual?->paralelo?->name }}
+                            · {{ $total_clases }} clases del módulo
+                        </p>
+                    </div>
+                    <button wire:click="cerrarHistorial"
+                        class="w-8 h-8 rounded-xl flex items-center justify-center
+                               text-slate-400 hover:text-slate-700 dark:hover:text-slate-200
+                               hover:bg-slate-100 dark:hover:bg-gray-800 transition text-lg font-bold">
+                        ✕
+                    </button>
+                </div>
+
+                {{-- Leyenda --}}
+                <div class="flex items-center gap-4 flex-wrap px-5 py-2.5
+                            border-b border-slate-100 dark:border-gray-800 flex-shrink-0 text-xs
+                            text-slate-500 dark:text-slate-400">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Presente
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> Tardanza
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Justificado
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Ausente
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-slate-200 dark:bg-gray-700 inline-block"></span> Sin registro
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-sm bg-amber-300 dark:bg-amber-600 inline-block"></span> Feriado
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-sm bg-violet-300 dark:bg-violet-700 inline-block"></span> Suspendido
+                    </span>
+                </div>
+
+                {{-- Tabla (doble scroll) --}}
+                <div class="overflow-auto flex-1 p-4">
+                    @if (empty($historialFechas))
+                        <div class="flex flex-col items-center justify-center py-16 gap-3 text-slate-400 dark:text-slate-500">
+                            <svg class="w-12 h-12 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <p class="text-sm font-medium">No hay registros de asistencia aún para esta clase.</p>
+                        </div>
+                    @else
+                        <table class="w-full text-xs border-separate border-spacing-0">
+                            <thead>
+                                <tr>
+                                    <th class="sticky left-0 bg-white dark:bg-gray-900 z-10
+                                               text-left px-3 py-2 font-semibold text-slate-600 dark:text-slate-300
+                                               min-w-[180px] border-b border-r border-slate-200 dark:border-gray-700">
+                                        Estudiante
+                                    </th>
+                                    @foreach ($historialFechas as $col)
+                                        @php
+                                            $thBg = match($col['tipo_dia']) {
+                                                'feriado'    => 'bg-amber-50 dark:bg-amber-900/20',
+                                                'suspension' => 'bg-violet-50 dark:bg-violet-900/20',
+                                                default      => '',
+                                            };
+                                        @endphp
+                                        <th class="px-1 py-2 text-center min-w-[38px]
+                                                   font-medium text-slate-500 dark:text-slate-400
+                                                   border-b border-slate-200 dark:border-gray-700 {{ $thBg }}"
+                                            title="{{ $col['motivo'] ?? '' }}">
+                                            <div class="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{{ $col['dia'] }}</div>
+                                            <div>{{ $col['display'] }}</div>
+                                            @if ($col['tipo_dia'] === 'feriado')
+                                                <div class="text-[9px] text-amber-500 font-bold leading-none mt-0.5">🎉</div>
+                                            @elseif ($col['tipo_dia'] === 'suspension')
+                                                <div class="text-[9px] text-violet-500 font-bold leading-none mt-0.5">🚫</div>
+                                            @endif
+                                        </th>
+                                    @endforeach
+                                    <th class="px-2 py-2 text-center min-w-[60px]
+                                               font-semibold text-slate-600 dark:text-slate-300
+                                               border-b border-l border-slate-200 dark:border-gray-700">
+                                        Clases
+                                    </th>
+                                    <th class="px-2 py-2 text-center min-w-[44px]
+                                               font-semibold text-slate-600 dark:text-slate-300
+                                               border-b border-slate-200 dark:border-gray-700">
+                                        %
+                                    </th>
+                                    <th class="px-2 py-2 text-center min-w-[44px]
+                                               font-semibold text-slate-600 dark:text-slate-300
+                                               border-b border-slate-200 dark:border-gray-700">
+                                        Nota
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($historialEstudiantes as $est)
+                                    <tr class="group hover:bg-slate-50 dark:hover:bg-gray-800/50 transition">
+                                        <td class="sticky left-0 bg-white dark:bg-gray-900 z-10
+                                                   group-hover:bg-slate-50 dark:group-hover:bg-gray-800/50
+                                                   px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200
+                                                   border-b border-r border-slate-100 dark:border-gray-800 transition">
+                                            {{ $est['nombre'] }}
+                                        </td>
+                                        @foreach ($est['celdas'] as $idx => $estado)
+                                            @php
+                                                $esFeriado    = $estado === 'feriado';
+                                                $esSuspension = $estado === 'suspension';
+                                                $esNoLectivo  = $esFeriado || $esSuspension;
+
+                                                $dotClass = match($estado) {
+                                                    'Presente'    => 'w-3 h-3 rounded-full bg-emerald-500',
+                                                    'Tardanza'    => 'w-3 h-3 rounded-full bg-amber-400',
+                                                    'Justificado' => 'w-3 h-3 rounded-full bg-blue-500',
+                                                    'Ausente'     => 'w-3 h-3 rounded-full bg-red-500',
+                                                    'feriado'     => 'w-3 h-3 rounded-sm bg-amber-300 dark:bg-amber-600',
+                                                    'suspension'  => 'w-3 h-3 rounded-sm bg-violet-300 dark:bg-violet-700',
+                                                    default       => 'w-3 h-3 rounded-full bg-slate-200 dark:bg-gray-700',
+                                                };
+
+                                                $colBg = $esNoLectivo
+                                                    ? ($esFeriado
+                                                        ? 'bg-amber-50/60 dark:bg-amber-900/10'
+                                                        : 'bg-violet-50/60 dark:bg-violet-900/10')
+                                                    : '';
+
+                                                $titulo = match($estado) {
+                                                    'feriado'    => 'Feriado: ' . ($historialFechas[$idx]['motivo'] ?? ''),
+                                                    'suspension' => 'Suspendido: ' . ($historialFechas[$idx]['motivo'] ?? ''),
+                                                    null         => 'Sin registro',
+                                                    default      => $estado,
+                                                };
+                                            @endphp
+                                            <td class="px-1 py-2.5 text-center border-b border-slate-100 dark:border-gray-800 {{ $colBg }}">
+                                                <span class="inline-block {{ $dotClass }}"
+                                                      title="{{ $titulo }}"></span>
+                                            </td>
+                                        @endforeach
+                                        <td class="px-2 py-2.5 text-center font-semibold text-slate-700 dark:text-slate-300
+                                                   border-b border-l border-slate-100 dark:border-gray-800">
+                                            {{ $est['asistidas'] }}/{{ $est['total'] }}
+                                        </td>
+                                        <td class="px-2 py-2.5 text-center font-bold border-b border-slate-100 dark:border-gray-800
+                                                   {{ $est['pct'] >= 80 ? 'text-emerald-600 dark:text-emerald-400' : ($est['pct'] >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400') }}">
+                                            {{ $est['pct'] }}%
+                                        </td>
+                                        <td class="px-2 py-2.5 text-center font-bold border-b border-slate-100 dark:border-gray-800
+                                                   {{ $est['nota'] >= 7 ? 'text-emerald-600 dark:text-emerald-400' : ($est['nota'] >= 5 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400') }}">
+                                            {{ number_format($est['nota'], 2) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
 </div>

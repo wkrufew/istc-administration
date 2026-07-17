@@ -3,6 +3,8 @@
 namespace App\Livewire\Estudiante;
 
 use App\Models\AsignacionDocente;
+use App\Models\DiaNoLectivo;
+use Carbon\Carbon;
 use Livewire\Component;
 use App\Models\DetalleMatricula;
 use App\Models\Horario;
@@ -160,6 +162,29 @@ class HorarioEstudiante extends Component
 
     public function render()
     {
-        return view('livewire.estudiante.horario-estudiante');
+        $hoy = Carbon::today()->toDateString();
+
+        $mapaIngles = [
+            'Monday' => 'Lunes', 'Tuesday' => 'Martes', 'Wednesday' => 'Miércoles',
+            'Thursday' => 'Jueves', 'Friday' => 'Viernes',
+        ];
+        $diaHoy = $mapaIngles[Carbon::now()->format('l')] ?? '';
+
+        // IDs de horarios del estudiante que caen hoy
+        $idsHoy = collect($this->horariosPorDia[$diaHoy] ?? [])->pluck('id');
+
+        // Días no lectivos de hoy: globales del período activo O específicos de sus horarios
+        $suspensionesHoy = DiaNoLectivo::where('fecha', $hoy)
+            ->where(function ($q) use ($idsHoy) {
+                $q->where(fn($g) => $g->where('alcance', 'global')->where('periodo_id', $this->periodo_id))
+                  ->orWhere(fn($s) => $s->where('alcance', 'horario')->whereIn('horario_id', $idsHoy));
+            })
+            ->get(['id', 'nombre', 'tipo', 'alcance', 'horario_id']);
+
+        return view('livewire.estudiante.horario-estudiante', [
+            'suspensionesHoy' => $suspensionesHoy,
+            'diaHoy'          => $diaHoy,
+            'hoy'             => $hoy,
+        ]);
     }
 }

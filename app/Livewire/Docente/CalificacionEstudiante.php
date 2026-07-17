@@ -20,6 +20,8 @@ use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Log;
 use App\Services\SettingService;
 use App\Traits\WithAuthorization;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class CalificacionEstudiante extends Component
 {
@@ -675,7 +677,7 @@ class CalificacionEstudiante extends Component
         }
     }
 
-    protected function calcularCostoAdicional($materia_id)
+    protected function calcularCostoAdicional($materia_id, int $numero_intento = 1)
     {
         try {
             $materia = Materia::find($materia_id);
@@ -687,8 +689,14 @@ class CalificacionEstudiante extends Component
             $carrera = \App\Models\Carrera::find($semestre->carrera_id);
             if (!$carrera) return 0;
 
-            $porcentaje      = floatval(SettingService::get('matricula.porcentaje_arrastre', 5));
-            $costo_normal    = $materia->credits * $carrera->costo_credito;
+            $porcentaje    = floatval(SettingService::get('matricula.porcentaje_arrastre', 30));
+            // Intento 2 = falla por 2da vez → siguiente inscripción (intento 3) cuesta el doble
+            if ($numero_intento >= 2) {
+                $porcentaje *= 2;
+            }
+
+            $creditosVivos   = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
+            $costo_normal    = $creditosVivos * $carrera->costo_credito;
             $costo_adicional = $costo_normal * ($porcentaje / 100);
 
             return round($costo_adicional, 2);
@@ -721,7 +729,9 @@ class CalificacionEstudiante extends Component
                 $arrastre_existente?->delete();
             } elseif ($this->nota_final < $nota_minima_arrastre) {
                 $numero_intento  = $arrastre_existente?->numero_intento ?? $this->numero_intento;
-                $costo_adicional = $this->calcularCostoAdicional($materia_id);
+                $porcentaje_base = floatval(SettingService::get('matricula.porcentaje_arrastre', 30));
+                $porcentaje_real = $numero_intento >= 2 ? $porcentaje_base * 2 : $porcentaje_base;
+                $costo_adicional = $this->calcularCostoAdicional($materia_id, $numero_intento);
 
                 $datos_arrastre = [
                     'user_id'               => $estudiante_id,
@@ -729,7 +739,7 @@ class CalificacionEstudiante extends Component
                     'periodo_reprobado_id'  => $periodo_id,
                     'nota_obtenida'         => $this->nota_final,
                     'nota_minima_requerida' => $this->nota_minima_aprobacion,
-                    'porcentaje_penalizacion' => floatval(SettingService::get('matricula.porcentaje_arrastre', 5)),
+                    'porcentaje_penalizacion' => $porcentaje_real,
                     'numero_intento'        => $numero_intento,
                     'estado'                => 'Perdida_Definitiva',
                     'costo_adicional'       => $costo_adicional,
@@ -743,7 +753,9 @@ class CalificacionEstudiante extends Component
 
                 if ($tiene_suspenso) {
                     $numero_intento  = $arrastre_existente?->numero_intento ?? $this->numero_intento;
-                    $costo_adicional = $this->calcularCostoAdicional($materia_id);
+                    $porcentaje_base = floatval(SettingService::get('matricula.porcentaje_arrastre', 30));
+                    $porcentaje_real = $numero_intento >= 2 ? $porcentaje_base * 2 : $porcentaje_base;
+                    $costo_adicional = $this->calcularCostoAdicional($materia_id, $numero_intento);
 
                     $datos_arrastre = [
                         'user_id'               => $estudiante_id,
@@ -751,7 +763,7 @@ class CalificacionEstudiante extends Component
                         'periodo_reprobado_id'  => $periodo_id,
                         'nota_obtenida'         => $this->nota_final,
                         'nota_minima_requerida' => $this->nota_minima_aprobacion,
-                        'porcentaje_penalizacion' => floatval(SettingService::get('matricula.porcentaje_arrastre', 5)),
+                        'porcentaje_penalizacion' => $porcentaje_real,
                         'numero_intento'        => $numero_intento,
                         'estado'                => 'Arrastrada',
                         'costo_adicional'       => $costo_adicional,
@@ -793,6 +805,167 @@ class CalificacionEstudiante extends Component
     public function cerrarFormulario()
     {
         $this->resetearFormulario();
+    }
+
+    // ── Exportar Acta de Calificaciones ──────────────────────────────────────
+    public function exportarActaPDF()
+    {
+        if (!$this->periodo_id || !$this->materia_id || !$this->paralelo_id) return;
+
+        $materia  = Materia::with('semestre.carrera')->find($this->materia_id);
+        $paralelo = Paralelo::find($this->paralelo_id);
+        $periodo  = Periodo::find($this->periodo_id);
+        $docente  = Auth::user();
+
+        if (!$materia || !$paralelo || !$periodo) return;
+
+        // Cargar estudiantes con calificaciones frescas desde BD
+        $detalles = DetalleMatricula::with([
+            'estudiante',
+            'matricula',
+            'calificaciones' => fn($q) => $q->where('docente_id', $docente->id)->latest(),
+        ])
+            ->whereHas('matricula', fn($q) => $q->where('periodo_id', $this->periodo_id))
+            ->where('materia_id', $this->materia_id)
+            ->where('paralelo_id', $this->paralelo_id)
+            ->where('estado', 'Inscrito')
+            ->get()
+            ->sortBy('estudiante.name')
+            ->values();
+
+        // Pesos según fórmula del período
+        $pct_pi = $this->nuevo_calculo ? 0.60 : 0.30;
+        $pct_ep = $this->nuevo_calculo ? 0.20 : 0.30;
+        $pct_ef = $this->nuevo_calculo ? 0.20 : 0.40;
+
+        $nota_minima = $materia->nota_minima_aprobacion ?? 7.00;
+
+        $filas = $detalles->map(function ($det, $idx) use ($pct_pi, $pct_ep, $pct_ef, $nota_minima) {
+            $cal = $det->calificaciones->first();
+
+            $i1  = $cal ? floatval($cal->insumo1 ?? 0) : null;
+            $i2  = $cal ? floatval($cal->insumo2 ?? 0) : null;
+            $i3  = $cal ? floatval($cal->insumo3 ?? 0) : null;
+            $i4  = $cal ? floatval($cal->insumo4 ?? 0) : null;
+            $i5  = $cal ? floatval($cal->insumo5 ?? 0) : null;
+
+            $prom_ins  = $cal ? floatval($cal->promedio_insumos ?? 0) : null;
+            $ep        = $cal ? floatval($cal->examen_parcial ?? 0) : null;
+            $ef        = $cal ? floatval($cal->examen_final ?? 0) : null;
+            $nota_susp = ($cal && $cal->nota_suspenso !== null) ? floatval($cal->nota_suspenso) : null;
+            $nota_fin  = $cal ? floatval($cal->nota_final ?? 0) : null;
+
+            // Columnas calculadas
+            $col_pi  = $prom_ins !== null ? round($prom_ins * $pct_pi, 2) : null;
+            $col_ep  = $ep       !== null ? round($ep * $pct_ep, 2)       : null;
+            $col_ef  = $ef       !== null ? round($ef * $pct_ef, 2)       : null;
+
+            // Nota base (sin suspenso)
+            $nota_base = ($col_pi !== null && $col_ep !== null && $col_ef !== null)
+                ? round($col_pi + $col_ep + $col_ef, 2)
+                : null;
+
+            // Porcentaje del suspenso (incremento que otorgó)
+            $nota_minima_arr = $nota_minima - 3;
+            $pct_susp = null;
+            if ($nota_susp !== null && $nota_base !== null
+                && $nota_base >= $nota_minima_arr && $nota_base < $nota_minima) {
+                $brecha   = $nota_minima - $nota_minima_arr;
+                $pct_susp = round(($nota_susp / 10) * $brecha, 2);
+            }
+
+            return [
+                'num'         => $idx + 1,
+                'nombre'      => $det->estudiante?->name ?? '—',
+                'cedula'      => $det->estudiante?->cedula ?? '—',
+                'matricula'   => $det->matricula?->code ?? '—',
+                'tipo'        => $det->tipo,
+                'i1'          => $i1,
+                'i2'          => $i2,
+                'i3'          => $i3,
+                'i4'          => $i4,
+                'i5'          => $i5,
+                'prom_ins'    => $prom_ins,
+                'col_pi'      => $col_pi,
+                'ep'          => $ep,
+                'col_ep'      => $col_ep,
+                'ef'          => $ef,
+                'col_ef'      => $col_ef,
+                'nota_base'   => $nota_base,
+                'nota_susp'   => $nota_susp,
+                'pct_susp'    => $pct_susp,
+                'nota_fin'    => $nota_fin,
+                'estado'      => $cal?->estado_final ?? 'Pendiente',
+                'es_borrador' => $cal?->es_borrador ?? false,
+                'sin_notas'   => $cal === null,
+            ];
+        });
+
+        // Logo
+        $logoPath = SettingService::get('instituto.logo_path');
+        $logoFile = $logoPath
+            ? storage_path('app/public/' . $logoPath)
+            : public_path('imagenes/icono.webp');
+        $ext    = strtolower(pathinfo($logoFile, PATHINFO_EXTENSION));
+        $mime   = match($ext) { 'png' => 'png', 'gif' => 'gif', 'webp' => 'webp', default => 'jpeg' };
+        $logo64 = file_exists($logoFile)
+            ? "data:image/{$mime};base64," . base64_encode(file_get_contents($logoFile))
+            : null;
+
+        $data = [
+            'filas'         => $filas,
+            'materia'       => $materia,
+            'paralelo'      => $paralelo,
+            'periodo'       => $periodo,
+            'docente'       => $docente,
+            'nuevo_calculo' => $this->nuevo_calculo,
+            'pct_pi'        => (int) ($pct_pi * 100),
+            'pct_ep'        => (int) ($pct_ep * 100),
+            'pct_ef'        => (int) ($pct_ef * 100),
+            'nota_minima'   => $nota_minima,
+            'logo64'        => $logo64,
+            'instituto' => [
+                'nombre_largo'  => SettingService::get('instituto.nombre_largo', 'Instituto Superior Tecnológico'),
+                'nombre_corto'  => SettingService::get('instituto.nombre_corto', 'ISTC'),
+                'ruc'           => SettingService::get('instituto.ruc', ''),
+                'senescyt'      => SettingService::get('instituto.senescyt', ''),
+                'direccion'     => SettingService::get('instituto.direccion', ''),
+                'telefono'      => SettingService::get('instituto.telefono', ''),
+                'ciudad'        => SettingService::get('documentos.ciudad', 'Ecuador'),
+                'rector'        => SettingService::get('documentos.rector', ''),
+                'pie_pagina'    => SettingService::get('documentos.pie_pagina',
+                    'Documento generado por el Sistema Académico. Válido solo con firma y sello institucional.'),
+            ],
+        ];
+
+        $pdf = Pdf::loadView('pdf.acta-calificaciones', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('defaultFont', 'DejaVu Sans')
+            ->setOption('dpi', 96);
+
+        $pdf->render();
+        $canvas = $pdf->getDomPDF()->getCanvas();
+        $this->agregarFooterActa($canvas, $data['instituto']['pie_pagina']);
+
+        $slug   = Str::slug($materia->name ?? 'materia');
+        $nombre = "acta_{$slug}_{$paralelo->code}_{$periodo->code}.pdf";
+
+        return response()->streamDownload(fn() => print($pdf->output()), $nombre);
+    }
+
+    private function agregarFooterActa(\Dompdf\Canvas $canvas, string $piePagina): void
+    {
+        $font  = $canvas->get_dompdf()->getFontMetrics()->getFont('DejaVu Sans', 'normal');
+        $w     = $canvas->get_width();
+        $h     = $canvas->get_height();
+        $yLine = $h - 26;
+        $yTxt  = $h - 18;
+
+        $canvas->page_line(10, $yLine, $w - 10, $yLine, [0.08, 0.27, 0.10], 0.5);
+        $canvas->page_text(10, $yTxt, $piePagina, $font, 5.5, [0.58, 0.64, 0.71]);
+        $canvas->page_text($w - 68, $yTxt, 'Pág. {PAGE_NUM} / {PAGE_COUNT}', $font, 7, [0.08, 0.27, 0.10]);
     }
 
     public function render()

@@ -93,6 +93,10 @@
          'active' => 'administracion.administrativa.horarios.*',    'permission' => 'gestionar_horarios', 'viewBox' => '0 0 640 640',
          'svg' => '<path d="M320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320C64 178.6 178.6 64 320 64zM296 184L296 320C296 328 300 335.5 306.7 340L402.7 404C413.7 411.4 428.6 408.4 436 397.3C443.4 386.2 440.4 371.4 429.3 364L344 307.2L344 184C344 170.7 333.3 160 320 160C306.7 160 296 170.7 296 184z"/>'],
 
+        ['route' => 'administracion.administrativa.dias_no_lectivos.index', 'label' => 'Días no lectivos',
+         'active' => 'administracion.administrativa.dias_no_lectivos.*', 'permission' => 'gestionar_horarios', 'viewBox' => '0 0 448 512',
+         'svg' => '<path d="M128 0c17.7 0 32 14.3 32 32l0 32 128 0 0-32c0-17.7 14.3-32 32-32s32 14.3 32 32l0 32 48 0c26.5 0 48 21.5 48 48l0 48L0 160l0-48C0 85.5 21.5 64 48 64l48 0 0-32c0-17.7 14.3-32 32-32zM0 192l448 0 0 272c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 192zm80 96c-8.8 0-16 7.2-16 16l0 96c0 8.8 7.2 16 16 16l288 0c8.8 0 16-7.2 16-16l0-96c0-8.8-7.2-16-16-16L80 288z"/>'],
+
         ['route' => 'administracion.administrativa.materia_periodo_paralelo.index', 'label' => 'Módulos · Periodos',
          'active' => 'administracion.administrativa.materia_periodo_paralelo.*', 'permission' => 'gestionar_modulos_academicos', 'viewBox' => '0 0 640 640',
          'svg' => '<path d="M64 144C64 117.5 85.5 96 112 96L208 96C234.5 96 256 117.5 256 144L256 160L384 160L384 144C384 117.5 405.5 96 432 96L528 96C554.5 96 576 117.5 576 144L576 240C576 266.5 554.5 288 528 288L432 288C405.5 288 384 266.5 384 240L384 224L256 224L256 240C256 247.3 254.3 254.3 251.4 260.5L320 352L400 352C426.5 352 448 373.5 448 400L448 496C448 522.5 426.5 544 400 544L304 544C277.5 544 256 522.5 256 496L256 400C256 392.7 257.7 385.7 260.6 379.5L192 288L112 288C85.5 288 64 266.5 64 240L64 144z"/>'],
@@ -135,8 +139,12 @@
         ['type' => 'section', 'label' => 'Reportes y Docs.'],
 
         ['route' => 'administracion.administrativa.reportes.carrera-materia', 'label' => 'Reportes Carreras',
-         'active' => 'administracion.administrativa.reportes.*',              'permission' => 'ver_reportes_academicos', 'viewBox' => '0 0 640 640',
+         'active' => 'administracion.administrativa.reportes.carrera-materia', 'permission' => 'ver_reportes_academicos', 'viewBox' => '0 0 640 640',
          'svg' => '<path d="M96 96C113.7 96 128 110.3 128 128L128 464C128 472.8 135.2 480 144 480L544 480C561.7 480 576 494.3 576 512C576 529.7 561.7 544 544 544L144 544C99.8 544 64 508.2 64 464L64 128C64 110.3 78.3 96 96 96zM304 160C310.7 160 317.1 162.8 321.7 167.8L392.8 245.3L439 199C448.4 189.6 463.6 189.6 472.9 199L536.9 263C541.4 267.5 543.9 273.6 543.9 280L543.9 392C543.9 405.3 533.2 416 519.9 416L215.9 416C202.6 416 191.9 405.3 191.9 392L191.9 280C191.9 274 194.2 268.2 198.2 263.8L286.2 167.8C290.7 162.8 297.2 160 303.9 160z"/>'],
+
+        ['route' => 'administracion.administrativa.reportes.horarios', 'label' => 'Reporte Horarios',
+         'active' => 'administracion.administrativa.reportes.horarios', 'permission' => 'ver_reportes_academicos', 'viewBox' => '0 0 640 640',
+         'svg' => '<path d="M128 0C110.3 0 96 14.3 96 32L96 64L48 64C21.5 64 0 85.5 0 112L0 192L640 192L640 112C640 85.5 618.5 64 592 64L544 64L544 32C544 14.3 529.7 0 512 0C494.3 0 480 14.3 480 32L480 64L160 64L160 32C160 14.3 145.7 0 128 0zM640 224L0 224L0 560C0 586.5 21.5 608 48 608L592 608C618.5 608 640 586.5 640 560L640 224zM320 320L448 320C465.7 320 480 334.3 480 352C480 369.7 465.7 384 448 384L320 384C302.3 384 288 369.7 288 352C288 334.3 302.3 320 320 320zM192 416C209.7 416 224 430.3 224 448L224 480C224 497.7 209.7 512 192 512C174.3 512 160 497.7 160 480L160 448C160 430.3 174.3 416 192 416zM320 448C320 430.3 334.3 416 352 416L448 416C465.7 416 480 430.3 480 448C480 465.7 465.7 480 448 480L352 480C334.3 480 320 465.7 320 448z"/>'],
 
         ['route' => 'administracion.administrativa.reportes-financieros', 'label' => 'Reportes Financieros',
          'active' => 'administracion.administrativa.reportes-financieros',  'permission' => 'ver_reportes_financieros', 'viewBox' => '0 0 640 640',
