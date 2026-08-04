@@ -439,7 +439,7 @@
                                 {{-- Info estudiante --}}
                                 <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl p-4">
                                     <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 mb-3">
-                                        Información del Estudiante
+                                        Datos del Estudiante
                                     </h4>
                                     <div class="space-y-2">
                                         @foreach ([['Nombre', $estudiante->name], ['Email', $estudiante->email], ['Cédula', $estudiante->cedula], ['Celular', $estudiante->phone], ['Matrícula', $estudiante->matricula_numero]] as [$key, $val])

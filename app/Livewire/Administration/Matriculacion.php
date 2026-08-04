@@ -7,7 +7,6 @@ use App\Models\Carrera;
 use App\Models\Periodo;
 use App\Models\Semestre;
 use App\Models\Materia;
-use App\Models\Paralelo;
 use App\Models\Matricula;
 use App\Models\DetalleMatricula;
 use App\Models\AsignacionDocente;
@@ -773,11 +772,6 @@ class Matriculacion extends Component
 
                 $paralelosUsados->push($this->paralelosSeleccionados[$materiaArrastrada['materia_id']]);
             }
-
-            // Incrementar cupo una sola vez por paralelo único (no una vez por materia)
-            $paralelosUsados->unique()->each(
-                fn($paraleloId) => Paralelo::find($paraleloId)?->increment('cupo_actual')
-            );
 
             DB::commit();
 
