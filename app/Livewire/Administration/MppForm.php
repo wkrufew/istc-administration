@@ -15,6 +15,7 @@ class MppForm extends Component
     public ?int $periodoId   = null;
     public ?int $materiaId   = null;
     public ?int $paraleloId  = null;
+    public int  $cupoMaximo  = 30;
     public string $fechaInicio = '';
     public string $fechaFin    = '';
     public bool $isActive      = true;
@@ -27,6 +28,7 @@ class MppForm extends Component
             $this->periodoId   = $mpp->periodo_id;
             $this->materiaId   = $mpp->materia_id;
             $this->paraleloId  = $mpp->paralelo_id;
+            $this->cupoMaximo  = $mpp->cupo_maximo;
             $this->fechaInicio = $mpp->fecha_inicio->format('Y-m-d');
             $this->fechaFin    = $mpp->fecha_fin->format('Y-m-d');
             $this->isActive    = $mpp->is_active;
@@ -43,6 +45,14 @@ class MppForm extends Component
             $this->periodoId   = $activo->id;
             $this->fechaInicio = $activo->fecha_inicio->format('Y-m-d');
             $this->fechaFin    = $activo->fecha_fin->format('Y-m-d');
+        }
+    }
+
+    public function updatedParaleloId(): void
+    {
+        $paralelo = Paralelo::find($this->paraleloId);
+        if ($paralelo) {
+            $this->cupoMaximo = $paralelo->cupo_maximo;
         }
     }
 
@@ -72,12 +82,15 @@ class MppForm extends Component
             'periodoId'   => 'required|exists:periodos,id',
             'materiaId'   => 'required|exists:materias,id',
             'paraleloId'  => 'required|exists:paralelos,id',
+            'cupoMaximo'  => 'required|integer|min:1|max:500',
             'fechaInicio' => 'required|date',
             'fechaFin'    => 'required|date',
         ], [
             'periodoId.required'   => 'Selecciona un período.',
             'materiaId.required'   => 'Selecciona una materia.',
             'paraleloId.required'  => 'Selecciona un paralelo.',
+            'cupoMaximo.required'  => 'Ingresa el cupo máximo.',
+            'cupoMaximo.min'       => 'El cupo mínimo es 1.',
             'fechaInicio.required' => 'Ingresa la fecha de inicio.',
             'fechaFin.required'    => 'Ingresa la fecha de fin.',
         ]);
@@ -117,6 +130,7 @@ class MppForm extends Component
             'materia_id'  => $this->materiaId,
             'periodo_id'  => $this->periodoId,
             'paralelo_id' => $this->paraleloId,
+            'cupo_maximo' => $this->cupoMaximo,
             'fecha_inicio'=> $this->fechaInicio,
             'fecha_fin'   => $this->fechaFin,
             'is_active'   => $this->isActive,

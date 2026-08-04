@@ -116,7 +116,7 @@
 
 
     {{-- ═══════════════════════════════════════
-         BLOQUE 3 — TABLA
+         BLOQUE 3 — TABLA DE ESTUDIANTES
     ═══════════════════════════════════════ --}}
     <div
         class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/[0.06] overflow-hidden shadow-xl shadow-slate-200/80 dark:shadow-2xl dark:shadow-black/40 ring-1 ring-inset ring-slate-100 dark:ring-white/[0.04]">
@@ -1642,7 +1642,7 @@
                                                                                 wire:model="materiasSeleccionadas"
                                                                                 {{ !$materia['puede_inscribir'] ? 'disabled' : '' }}>
                                                                             <div
-                                                                                class="border-2 rounded-lg p-3 transition-all duration-200 
+                                                                                class="border-2 rounded-lg p-3 transition-all duration-200
                                                                             {{ !$materia['puede_inscribir'] ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500' }}
                                                                             peer-checked:border-blue-500 peer-checked:bg-blue-50">
                                                                                 <h6
@@ -1749,7 +1749,7 @@
                                                                                 wire:model="paralelosSeleccionados.{{ $materiaId }}"
                                                                                 {{ !$paralelo['tiene_cupo'] ? 'disabled' : '' }}>
                                                                             <div
-                                                                                class="border-2 rounded-lg p-3 transition-all duration-200 
+                                                                                class="border-2 rounded-lg p-3 transition-all duration-200
                                                                             {{ !$paralelo['tiene_cupo'] ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500' }}
                                                                             peer-checked:border-blue-500 peer-checked:bg-blue-50">
                                                                                 <h6

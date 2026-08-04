@@ -219,13 +219,34 @@
                            focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition">
                     <option value="">— Selecciona un paralelo —</option>
                     @foreach ($paralelos as $p)
-                        <option value="{{ $p->id }}">{{ $p->name }}</option>
+                        <option value="{{ $p->id }}">{{ $p->name }} (cupo: {{ $p->cupo_maximo }})</option>
                     @endforeach
                 </select>
                 @error('paraleloId')
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
                 @enderror
             </div>
+
+            @if ($paraleloId)
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Cupo máximo de esta sección
+                </label>
+                <input type="number"
+                       wire:model.live="cupoMaximo"
+                       min="1" max="500"
+                       class="w-full rounded-xl border border-gray-300 dark:border-gray-700
+                              bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm
+                              text-gray-900 dark:text-gray-100
+                              focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition">
+                @error('cupoMaximo')
+                    <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                @enderror
+                <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    Pre-llenado con el cupo del paralelo. Ajústalo si esta sección necesita un límite distinto.
+                </p>
+            </div>
+            @endif
         @endif
     </div>
 
