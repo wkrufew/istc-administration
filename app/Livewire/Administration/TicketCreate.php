@@ -75,7 +75,7 @@ class TicketCreate extends Component
             'titulo'        => $this->titulo,
             'descripcion'   => $this->descripcion,
             'prioridad'     => $this->prioridad,
-            'estado'        => 'abierto',
+            'estado'        => 'pendiente',
             'created_by'    => Auth::id(),
             'assigned_at'   => now(),
             'fecha_limite'  => $this->fecha_limite ?: null,

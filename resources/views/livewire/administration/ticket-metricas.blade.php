@@ -46,12 +46,11 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         @php
         $tiles = [
-            ['label' => 'Total',       'value' => $this->resumen['total'],      'color' => 'text-gray-800 dark:text-gray-100',   'icon_bg' => 'bg-gray-100 dark:bg-gray-800',    'icon_color' => 'text-gray-500 dark:text-gray-400'],
-            ['label' => 'Abiertos',    'value' => $this->resumen['abiertos'],   'color' => 'text-lime-700 dark:text-lime-400',   'icon_bg' => 'bg-lime-100 dark:bg-lime-900/30', 'icon_color' => 'text-lime-600 dark:text-lime-400'],
-            ['label' => 'En proceso',  'value' => $this->resumen['en_proceso'], 'color' => 'text-blue-700 dark:text-blue-400',   'icon_bg' => 'bg-blue-100 dark:bg-blue-900/30', 'icon_color' => 'text-blue-600 dark:text-blue-400'],
-            ['label' => 'Esperando',   'value' => $this->resumen['esperando'],  'color' => 'text-yellow-700 dark:text-yellow-400','icon_bg' => 'bg-yellow-100 dark:bg-yellow-900/30','icon_color' => 'text-yellow-600 dark:text-yellow-400'],
-            ['label' => 'Resueltos',   'value' => $this->resumen['resueltos'],  'color' => 'text-green-700 dark:text-green-400',  'icon_bg' => 'bg-green-100 dark:bg-green-900/30','icon_color' => 'text-green-600 dark:text-green-400'],
-            ['label' => 'Urgentes',    'value' => $this->resumen['urgentes'],   'color' => 'text-red-700 dark:text-red-400',     'icon_bg' => 'bg-red-100 dark:bg-red-900/30',   'icon_color' => 'text-red-600 dark:text-red-400'],
+            ['label' => 'Total',       'value' => $this->resumen['total'],      'color' => 'text-gray-800 dark:text-gray-100',    'icon_bg' => 'bg-gray-100 dark:bg-gray-800',     'icon_color' => 'text-gray-500 dark:text-gray-400'],
+            ['label' => 'Pendientes',  'value' => $this->resumen['pendientes'], 'color' => 'text-yellow-700 dark:text-yellow-400', 'icon_bg' => 'bg-yellow-100 dark:bg-yellow-900/30','icon_color' => 'text-yellow-600 dark:text-yellow-400'],
+            ['label' => 'En proceso',  'value' => $this->resumen['en_proceso'], 'color' => 'text-blue-700 dark:text-blue-400',    'icon_bg' => 'bg-blue-100 dark:bg-blue-900/30',  'icon_color' => 'text-blue-600 dark:text-blue-400'],
+            ['label' => 'Cerrados',    'value' => $this->resumen['cerrados'],   'color' => 'text-gray-600 dark:text-gray-400',    'icon_bg' => 'bg-gray-100 dark:bg-gray-800',     'icon_color' => 'text-gray-500 dark:text-gray-400'],
+            ['label' => 'Urgentes',    'value' => $this->resumen['urgentes'],   'color' => 'text-red-700 dark:text-red-400',      'icon_bg' => 'bg-red-100 dark:bg-red-900/30',    'icon_color' => 'text-red-600 dark:text-red-400'],
         ];
         @endphp
         @foreach($tiles as $tile)
@@ -120,10 +119,8 @@
                 <div class="flex flex-col gap-2 flex-1 min-w-0">
                     @php
                     $estadoMeta = [
-                        'abierto'    => ['Abierto',    'bg-lime-500'],
+                        'pendiente'  => ['Pendiente',  'bg-yellow-400'],
                         'en_proceso' => ['En proceso', 'bg-blue-500'],
-                        'esperando'  => ['Esperando',  'bg-yellow-400'],
-                        'resuelto'   => ['Resuelto',   'bg-green-500'],
                         'cerrado'    => ['Cerrado',    'bg-gray-400'],
                     ];
                     $totalEstado = max(1, array_sum($this->chartData['porEstado']));
@@ -200,10 +197,10 @@
             instances.donut = new Chart(cDonut, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Abierto', 'En proceso', 'Esperando', 'Resuelto', 'Cerrado'],
+                    labels: ['Pendiente', 'En proceso', 'Cerrado'],
                     datasets: [{
                         data: Object.values(data.porEstado),
-                        backgroundColor: ['#84cc16','#3b82f6','#facc15','#22c55e','#9ca3af'],
+                        backgroundColor: ['#facc15','#3b82f6','#9ca3af'],
                         borderWidth: 0,
                         hoverOffset: 4,
                     }],

@@ -74,7 +74,7 @@ class Ticket extends Model
 
     public function estaAbierto(): bool
     {
-        return ! in_array($this->estado, ['resuelto', 'cerrado']);
+        return $this->estado !== 'cerrado';
     }
 
     // ── Labels para vistas ────────────────────────────────────────────────────
@@ -93,10 +93,8 @@ class Ticket extends Model
     public static function estadoColor(string $estado): string
     {
         return match ($estado) {
-            'abierto'    => 'bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300',
+            'pendiente'  => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
             'en_proceso' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-            'esperando'  => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
-            'resuelto'   => 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
             'cerrado'    => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
             default      => 'bg-gray-100 text-gray-600',
         };
@@ -105,10 +103,8 @@ class Ticket extends Model
     public static function estadoLabel(string $estado): string
     {
         return match ($estado) {
-            'abierto'    => 'Abierto',
+            'pendiente'  => 'Pendiente',
             'en_proceso' => 'En proceso',
-            'esperando'  => 'Esperando',
-            'resuelto'   => 'Resuelto',
             'cerrado'    => 'Cerrado',
             default      => ucfirst($estado),
         };

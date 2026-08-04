@@ -36,20 +36,18 @@ class TicketMetricas extends Component
             ->when($desde, fn($q) => $q->where('created_at', '>=', $desde))
             ->selectRaw("
                 COUNT(*) as total,
-                SUM(estado = 'abierto') as abiertos,
+                SUM(estado = 'pendiente') as pendientes,
                 SUM(estado = 'en_proceso') as en_proceso,
-                SUM(estado = 'esperando') as esperando,
-                SUM(estado IN ('resuelto','cerrado')) as resueltos,
+                SUM(estado = 'cerrado') as cerrados,
                 SUM(prioridad = 'urgente') as urgentes
             ")
             ->first();
 
         return [
             'total'      => (int) ($counts->total      ?? 0),
-            'abiertos'   => (int) ($counts->abiertos   ?? 0),
+            'pendientes' => (int) ($counts->pendientes ?? 0),
             'en_proceso' => (int) ($counts->en_proceso ?? 0),
-            'esperando'  => (int) ($counts->esperando  ?? 0),
-            'resueltos'  => (int) ($counts->resueltos  ?? 0),
+            'cerrados'   => (int) ($counts->cerrados   ?? 0),
             'urgentes'   => (int) ($counts->urgentes   ?? 0),
         ];
     }
@@ -66,8 +64,8 @@ class TicketMetricas extends Component
             ->value('horas');
 
         $resolucion = (clone $q)
-            ->whereNotNull('resolved_at')
-            ->selectRaw("ROUND(AVG(TIMESTAMPDIFF(HOUR, created_at, resolved_at)), 1) as horas")
+            ->whereNotNull('closed_at')
+            ->selectRaw("ROUND(AVG(TIMESTAMPDIFF(HOUR, created_at, closed_at)), 1) as horas")
             ->value('horas');
 
         return [
@@ -85,10 +83,8 @@ class TicketMetricas extends Component
         // Donut — por estado
         $rawEstado = $base()->selectRaw("estado, COUNT(*) as n")->groupBy('estado')->pluck('n', 'estado');
         $porEstado = [
-            'abierto'    => (int) ($rawEstado['abierto']    ?? 0),
+            'pendiente'  => (int) ($rawEstado['pendiente']  ?? 0),
             'en_proceso' => (int) ($rawEstado['en_proceso'] ?? 0),
-            'esperando'  => (int) ($rawEstado['esperando']  ?? 0),
-            'resuelto'   => (int) ($rawEstado['resuelto']   ?? 0),
             'cerrado'    => (int) ($rawEstado['cerrado']    ?? 0),
         ];
 

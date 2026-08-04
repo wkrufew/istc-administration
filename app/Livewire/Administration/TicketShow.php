@@ -7,6 +7,7 @@ use App\Models\TicketAsignacion;
 use App\Models\TicketMessage;
 use App\Models\User;
 use App\Notifications\TicketAsignadoNotification;
+use App\Notifications\TicketCerradoNotification;
 use App\Notifications\TicketMensajeNotification;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -142,19 +143,26 @@ class TicketShow extends Component
     {
         if ($this->sinPermiso('cambiar_estado_tickets')) return;
 
-        $estados = ['abierto', 'en_proceso', 'esperando', 'resuelto', 'cerrado'];
+        $estados = ['pendiente', 'en_proceso', 'cerrado'];
         if (! in_array($this->nuevoEstado, $estados)) return;
 
         $update = ['estado' => $this->nuevoEstado];
-        if ($this->nuevoEstado === 'resuelto' && ! $this->ticket->resolved_at) {
-            $update['resolved_at'] = now();
-        }
         if ($this->nuevoEstado === 'cerrado' && ! $this->ticket->closed_at) {
             $update['closed_at'] = now();
         }
 
         $this->ticket->update($update);
         $this->ticket->refresh();
+
+        // Notificar al creador cuando el ticket se cierra
+        if ($this->nuevoEstado === 'cerrado') {
+            $creador = $this->ticket->creador;
+            if ($creador && $creador->id !== Auth::id()) {
+                $notif = new TicketCerradoNotification($this->ticket, Auth::user()->name);
+                try { $creador->notify($notif); } catch (\Throwable) {}
+                try { $notif->enviarWhatsapp($creador); } catch (\Throwable) {}
+            }
+        }
 
         $this->dispatch('swal', ['icon' => 'success', 'title' => 'Estado actualizado', 'timer' => 1500]);
     }

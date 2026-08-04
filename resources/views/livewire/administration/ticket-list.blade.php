@@ -78,9 +78,8 @@
     {{-- ═══════════════════════════════════════ STATS ════════════════════════ --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         @foreach([
-            ['label' => 'Abiertos',    'value' => $this->stats['abiertos'],   'color' => 'text-lime-600 dark:text-lime-400',   'bg' => 'bg-lime-50 dark:bg-lime-900/20'],
+            ['label' => 'Pendientes',  'value' => $this->stats['pendientes'], 'color' => 'text-yellow-600 dark:text-yellow-400','bg' => 'bg-yellow-50 dark:bg-yellow-900/20'],
             ['label' => 'En proceso',  'value' => $this->stats['en_proceso'], 'color' => 'text-blue-600 dark:text-blue-400',   'bg' => 'bg-blue-50 dark:bg-blue-900/20'],
-            ['label' => 'Esperando',   'value' => $this->stats['esperando'],  'color' => 'text-yellow-600 dark:text-yellow-400','bg' => 'bg-yellow-50 dark:bg-yellow-900/20'],
             ['label' => 'Cerrados',    'value' => $this->stats['cerrados'],   'color' => 'text-gray-500 dark:text-gray-400',   'bg' => 'bg-gray-50 dark:bg-gray-800/50'],
         ] as $stat)
         <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex flex-col gap-1">
@@ -98,10 +97,8 @@
             <select wire:model.live="filtroEstado"
                 class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-lime-500/30">
                 <option value="">Todos</option>
-                <option value="abierto">Abierto</option>
+                <option value="pendiente">Pendiente</option>
                 <option value="en_proceso">En proceso</option>
-                <option value="esperando">Esperando</option>
-                <option value="resuelto">Resuelto</option>
                 <option value="cerrado">Cerrado</option>
             </select>
         </div>
@@ -225,18 +222,14 @@
     @if($vista === 'kanban')
     @php
     $colColors = [
-        'abierto'    => ['bar' => 'bg-lime-500',   'hdr' => 'text-lime-700 dark:text-lime-300',   'count' => 'bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300',  'col' => 'bg-lime-50/50 dark:bg-lime-950/20 border-lime-200 dark:border-lime-800'],
+        'pendiente'  => ['bar' => 'bg-yellow-500', 'hdr' => 'text-yellow-700 dark:text-yellow-300','count' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300','col' => 'bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800'],
         'en_proceso' => ['bar' => 'bg-blue-500',   'hdr' => 'text-blue-700 dark:text-blue-300',   'count' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',  'col' => 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'],
-        'esperando'  => ['bar' => 'bg-yellow-500', 'hdr' => 'text-yellow-700 dark:text-yellow-300','count' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300','col' => 'bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800'],
-        'resuelto'   => ['bar' => 'bg-green-500',  'hdr' => 'text-green-700 dark:text-green-300',  'count' => 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300', 'col' => 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800'],
         'cerrado'    => ['bar' => 'bg-gray-400',   'hdr' => 'text-gray-600 dark:text-gray-400',   'count' => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',    'col' => 'bg-gray-50/50 dark:bg-gray-900/60 border-gray-200 dark:border-gray-700'],
     ];
     $transiciones = [
-        'abierto'    => [['key' => 'en_proceso', 'label' => 'En proceso']],
-        'en_proceso' => [['key' => 'esperando', 'label' => 'Esperando'], ['key' => 'resuelto', 'label' => 'Resuelto']],
-        'esperando'  => [['key' => 'en_proceso', 'label' => 'En proceso'], ['key' => 'resuelto', 'label' => 'Resuelto']],
-        'resuelto'   => [['key' => 'cerrado', 'label' => 'Cerrar']],
-        'cerrado'    => [['key' => 'resuelto', 'label' => 'Reabrir']],
+        'pendiente'  => [['key' => 'en_proceso', 'label' => 'Iniciar']],
+        'en_proceso' => [['key' => 'pendiente', 'label' => 'Pendiente'], ['key' => 'cerrado', 'label' => 'Cerrar']],
+        'cerrado'    => [['key' => 'en_proceso', 'label' => 'Reabrir']],
     ];
     @endphp
 

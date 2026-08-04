@@ -209,10 +209,8 @@
                 <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</h3>
                 <select wire:model="nuevoEstado"
                     class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-lime-500/30 transition-colors">
-                    <option value="abierto">Abierto</option>
+                    <option value="pendiente">Pendiente</option>
                     <option value="en_proceso">En proceso</option>
-                    <option value="esperando">Esperando</option>
-                    <option value="resuelto">Resuelto</option>
                     <option value="cerrado">Cerrado</option>
                 </select>
                 <button wire:click="cambiarEstado"

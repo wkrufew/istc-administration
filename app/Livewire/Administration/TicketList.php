@@ -72,11 +72,9 @@ class TicketList extends Component
             ->get();
 
         $columnas = [
-            'abierto'    => ['label' => 'Abierto',     'color' => 'lime',   'items' => collect()],
+            'pendiente'  => ['label' => 'Pendiente',   'color' => 'yellow', 'items' => collect()],
             'en_proceso' => ['label' => 'En proceso',  'color' => 'blue',   'items' => collect()],
-            'esperando'  => ['label' => 'Esperando',   'color' => 'yellow', 'items' => collect()],
-            'resuelto'   => ['label' => 'Resuelto',    'color' => 'green',  'items' => collect()],
-            'cerrado'    => ['label' => 'Cerrado',     'color' => 'gray',   'items' => collect()],
+            'cerrado'    => ['label' => 'Cerrado',      'color' => 'gray',   'items' => collect()],
         ];
 
         foreach ($base as $ticket) {
@@ -94,18 +92,16 @@ class TicketList extends Component
         $counts = Ticket::query()
             ->selectRaw("
                 COUNT(*) as total,
-                SUM(estado = 'abierto') as abiertos,
+                SUM(estado = 'pendiente') as pendientes,
                 SUM(estado = 'en_proceso') as en_proceso,
-                SUM(estado = 'esperando') as esperando,
-                SUM(estado IN ('resuelto','cerrado')) as cerrados
+                SUM(estado = 'cerrado') as cerrados
             ")
             ->first();
 
         return [
             'total'      => $counts->total ?? 0,
-            'abiertos'   => $counts->abiertos ?? 0,
+            'pendientes' => $counts->pendientes ?? 0,
             'en_proceso' => $counts->en_proceso ?? 0,
-            'esperando'  => $counts->esperando ?? 0,
             'cerrados'   => $counts->cerrados ?? 0,
         ];
     }
@@ -114,15 +110,14 @@ class TicketList extends Component
 
     public function moverEstado(int $ticketId, string $estado): void
     {
-        $estados = ['abierto', 'en_proceso', 'esperando', 'resuelto', 'cerrado'];
+        $estados = ['pendiente', 'en_proceso', 'cerrado'];
         if (! in_array($estado, $estados)) return;
 
         $ticket = Ticket::find($ticketId);
         if (! $ticket) return;
 
         $update = ['estado' => $estado];
-        if ($estado === 'resuelto' && ! $ticket->resolved_at) $update['resolved_at'] = now();
-        if ($estado === 'cerrado'  && ! $ticket->closed_at)   $update['closed_at']   = now();
+        if ($estado === 'cerrado' && ! $ticket->closed_at) $update['closed_at'] = now();
 
         $ticket->update($update);
         unset($this->kanbanColumnas, $this->stats);
