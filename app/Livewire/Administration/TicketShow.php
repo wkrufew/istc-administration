@@ -6,6 +6,7 @@ use App\Models\Ticket;
 use App\Models\TicketAsignacion;
 use App\Models\TicketMessage;
 use App\Models\User;
+use App\Notifications\TicketAsignadoNotification;
 use App\Notifications\TicketMensajeNotification;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -163,19 +164,28 @@ class TicketShow extends Component
         if ($this->sinPermiso('asignar_tickets')) return;
         if (! $this->nuevoAsignadoId) return;
 
-        TicketAsignacion::firstOrCreate(
+        $asignacion = TicketAsignacion::firstOrCreate(
             ['ticket_id' => $this->ticket->id, 'user_id' => $this->nuevoAsignadoId],
             ['assigned_by' => Auth::id(), 'assigned_at' => now()]
         );
 
+        $asignado = User::find($this->nuevoAsignadoId);
+        $nombre   = $asignado?->name ?? '—';
+
         // Registrar en el hilo
-        $nombre = User::find($this->nuevoAsignadoId)?->name ?? '—';
         TicketMessage::create([
             'ticket_id'       => $this->ticket->id,
             'user_id'         => Auth::id(),
             'mensaje'         => "<em>Asignado a <strong>{$nombre}</strong></em>",
             'es_nota_interna' => true,
         ]);
+
+        // Notificar al usuario recién asignado (solo si es una asignación nueva)
+        if ($asignado && $asignacion->wasRecentlyCreated && $asignado->id !== Auth::id()) {
+            $notif = new TicketAsignadoNotification($this->ticket, Auth::user()->name);
+            try { $asignado->notify($notif); } catch (\Throwable) {}
+            try { $notif->enviarWhatsapp($asignado); } catch (\Throwable) {}
+        }
 
         $this->nuevoAsignadoId = null;
         unset($this->asignadosActuales, $this->usuariosDisponibles, $this->mensajes);

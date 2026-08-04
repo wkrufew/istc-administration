@@ -10,11 +10,14 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 
-class TicketCreadoNotification extends Notification
+class TicketAsignadoNotification extends Notification
 {
     use Queueable;
 
-    public function __construct(private readonly Ticket $ticket) {}
+    public function __construct(
+        private readonly Ticket $ticket,
+        private readonly string $asignadoPorNombre,
+    ) {}
 
     public function via(object $notifiable): array
     {
@@ -26,30 +29,23 @@ class TicketCreadoNotification extends Notification
         $ticket = $this->ticket;
 
         return (new MailMessage)
-            ->subject("Ticket #{$ticket->numero} creado — {$ticket->titulo}")
+            ->subject("Se te asignó el ticket #{$ticket->numero} — {$ticket->titulo}")
             ->greeting("Hola, {$notifiable->name}!")
-            ->line("Tu ticket de soporte ha sido registrado exitosamente.")
+            ->line("**{$this->asignadoPorNombre}** te ha asignado un ticket de soporte.")
             ->line("**Número:** {$ticket->numero}")
             ->line("**Título:** {$ticket->titulo}")
             ->line("**Prioridad:** " . ucfirst($ticket->prioridad))
             ->line("**Estado:** " . ucfirst($ticket->estado))
             ->action('Ver ticket', url("/administracion/tickets/{$ticket->id}"))
-            ->line("Nuestro equipo revisará tu solicitud a la brevedad posible.")
             ->salutation("Instituto Superior Tecnológico Cumandá");
     }
 
-    /**
-     * Enviar WhatsApp (llamar manualmente, no es canal nativo).
-     * Retorna true/false para loguear si fue necesario.
-     */
     public function enviarWhatsapp(object $notifiable): bool
     {
         if (SettingService::get('whatsapp.activo', '0') !== '1') return false;
 
         $telefono = $notifiable->phone ?? null;
-        if (! $telefono) {
-            return false;
-        }
+        if (! $telefono) return false;
 
         try {
             /** @var WhatsappService $ws */
@@ -63,7 +59,7 @@ class TicketCreadoNotification extends Notification
                 estado: ucfirst($this->ticket->estado),
             );
         } catch (\Throwable $e) {
-            Log::warning('WhatsApp ticket_nuevo falló', [
+            Log::warning('WhatsApp ticket_asignado falló', [
                 'ticket_id' => $this->ticket->id,
                 'error'     => $e->getMessage(),
             ]);

@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Ticket;
 use App\Models\TicketMessage;
+use App\Services\SettingService;
 use App\Services\WhatsappService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -47,6 +48,8 @@ class TicketMensajeNotification extends Notification
      */
     public function enviarWhatsapp(object $notifiable): bool
     {
+        if (SettingService::get('whatsapp.activo', '0') !== '1') return false;
+
         $telefono = $notifiable->phone ?? null;
         if (! $telefono) {
             return false;
