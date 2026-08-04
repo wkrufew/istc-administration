@@ -561,6 +561,53 @@ class Matriculacion extends Component
             }
         }
 
+        // Verificar cupo disponible al momento de guardar (solo en creación)
+        // Esto protege contra el caso en que el cupo se llenó mientras el admin
+        // avanzaba los pasos del wizard.
+        if (! $this->matriculaId) {
+            $materiasParaVerificar = collect($this->materiasSeleccionadas)
+                ->map(fn($mid) => [
+                    'materia_id'  => $mid,
+                    'paralelo_id' => $this->paralelosSeleccionados[$mid] ?? null,
+                ])
+                ->merge(
+                    collect($this->materiasArrastradas)
+                        ->filter(fn($m) => $m['incluir'] ?? false)
+                        ->map(fn($m) => [
+                            'materia_id'  => $m['materia_id'],
+                            'paralelo_id' => $this->paralelosSeleccionados[$m['materia_id']] ?? null,
+                        ])
+                )
+                ->filter(fn($item) => ! is_null($item['paralelo_id']));
+
+            foreach ($materiasParaVerificar as $item) {
+                $mpp = MateriaPeriodoParalelo::where('materia_id',  $item['materia_id'])
+                    ->where('periodo_id',  $this->periodo_id)
+                    ->where('paralelo_id', $item['paralelo_id'])
+                    ->where('is_active',   true)
+                    ->first();
+
+                if (! $mpp) continue;
+
+                $usado = DB::table('detalle_matriculas as dm')
+                    ->join('matriculas as m', 'dm.matricula_id', '=', 'm.id')
+                    ->where('m.periodo_id',   $this->periodo_id)
+                    ->where('m.estado',       '!=', 'Cancelada')
+                    ->where('dm.estado',      '!=', 'Retirado')
+                    ->whereNull('dm.deleted_at')
+                    ->where('dm.materia_id',  $item['materia_id'])
+                    ->where('dm.paralelo_id', $item['paralelo_id'])
+                    ->count();
+
+                if ($usado >= $mpp->cupo_maximo) {
+                    $nombreMateria = Materia::find($item['materia_id'])?->name ?? 'materia';
+                    $this->addError('paralelos', "El paralelo seleccionado para \"{$nombreMateria}\" ya no tiene cupo disponible. Regresa al paso anterior y elige otro.");
+                    $this->paso = 3;
+                    return;
+                }
+            }
+        }
+
         try {
             DB::beginTransaction();
 
