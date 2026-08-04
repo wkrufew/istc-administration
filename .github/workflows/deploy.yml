@@ -7,30 +7,25 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Deploy al VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: developer
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-            cd /var/www/istc/ohana/prod
-            git reset --hard HEAD
-            git pull origin prod
-            composer install --no-dev --optimize-autoloader
-            npm install
-            npm run build
-            php8.3 artisan optimize:clear
-            php8.3 artisan permission:cache-reset
-            php8.3 artisan migrate --force
-            php8.3 artisan config:cache
-            php8.3 artisan route:cache
-            php8.3 artisan view:cache
-            php8.3 artisan optimize:clear
-            chmod -R 775 storage bootstrap/cache || true
-            sudo systemctl reload php8.3-fpm
-            sudo supervisorctl restart istc-worker:*
+        run: |
+          set -e
+          cd /var/www/istc/ohana/prod
+          git reset --hard HEAD
+          git pull origin prod
+          composer install --no-dev --optimize-autoloader
+          npm install
+          npm run build
+          php8.3 artisan optimize:clear
+          php8.3 artisan permission:cache-reset
+          php8.3 artisan migrate --force
+          php8.3 artisan config:cache
+          php8.3 artisan route:cache
+          php8.3 artisan view:cache
+          php8.3 artisan optimize:clear
+          chmod -R 775 storage bootstrap/cache || true
+          sudo systemctl reload php8.3-fpm
+          sudo supervisorctl restart istc-worker:*
