@@ -9,6 +9,11 @@ class Matricula extends Model
 {
     use SoftDeletes;
 
+    const TIPO_NUEVA      = 'Nueva';
+    const TIPO_RENOVACION = 'Renovacion';
+    const TIPO_ARRASTRE   = 'Arrastre';
+    const TIPO_VALIDACION = 'Validacion';
+
     protected $fillable = [
         'fecha_matricula',
         'code',
@@ -82,5 +87,15 @@ class Matricula extends Model
     public function obligacionesFinancieras()
     {
         return $this->hasMany(ObligacionesFinanciera::class);
+    }
+
+    public function convalidacion()
+    {
+        return $this->hasOne(Convalidacion::class);
+    }
+
+    public function esValidacion(): bool
+    {
+        return $this->tipo === self::TIPO_VALIDACION;
     }
 }

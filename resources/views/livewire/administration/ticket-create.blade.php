@@ -44,6 +44,44 @@
             @enderror
         </div>
 
+        {{-- Destinatarios --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Para quién <span class="text-red-500">*</span>
+                <span class="text-xs font-normal text-gray-400 dark:text-gray-500 ml-1">(selecciona uno o varios)</span>
+            </label>
+            <div class="flex flex-wrap gap-2">
+                @forelse ($this->usuariosAdmin as $u)
+                    @php $sel = in_array($u['id'], $this->asignadosIds); @endphp
+                    <button type="button"
+                            wire:click="toggleAsignado({{ $u['id'] }})"
+                            class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-colors
+                                   {{ $sel
+                                       ? 'bg-lime-600 border-lime-600 text-white'
+                                       : 'bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-lime-400 dark:hover:border-lime-500' }}">
+                        <div class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0
+                                    {{ $sel ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">
+                            {{ strtoupper(substr($u['name'], 0, 2)) }}
+                        </div>
+                        <div class="text-left">
+                            <p class="font-medium leading-tight text-xs">{{ $u['name'] }}</p>
+                            <p class="text-[10px] {{ $sel ? 'text-lime-100' : 'text-gray-400 dark:text-gray-500' }}">{{ $u['rol'] }}</p>
+                        </div>
+                        @if($sel)
+                            <svg class="w-3.5 h-3.5 text-white/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        @endif
+                    </button>
+                @empty
+                    <p class="text-sm text-gray-400 dark:text-gray-500 italic">No hay otros usuarios administrativos disponibles.</p>
+                @endforelse
+            </div>
+            @error('asignadosIds')
+                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+            @enderror
+        </div>
+
         {{-- Prioridad + Fecha límite --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -78,13 +116,31 @@
             </div>
         </div>
 
-        {{-- Descripción — CKEditor --}}
+        {{-- Descripción — Quill --}}
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Descripción <span class="text-red-500">*</span>
             </label>
-            <div wire:ignore>
-                <div id="ck-descripcion" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 min-h-40 text-gray-900 dark:text-gray-100"></div>
+            <div wire:ignore
+                 x-data="{
+                     quill: null,
+                     init() {
+                         this.quill = new Quill(this.$refs.editor, {
+                             theme: 'snow',
+                             placeholder: 'Describe detalladamente el problema o solicitud...',
+                             modules: { toolbar: [['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],['link'],['clean']] }
+                         });
+                         const initial = @js($descripcion);
+                         if (initial) this.quill.root.innerHTML = initial;
+                         this.quill.on('text-change', () => {
+                             const html = this.quill.root.innerHTML;
+                             $wire.set('descripcion', html === '<p><br></p>' ? '' : html, false);
+                         });
+                     }
+                 }"
+                 class="rounded-xl bg-white dark:bg-gray-800 overflow-hidden focus-within:ring-2 focus-within:ring-lime-500/30 transition-all
+                        {{ $errors->has('descripcion') ? 'border border-red-400 dark:border-red-600' : 'border border-gray-300 dark:border-gray-700 focus-within:border-lime-500' }}">
+                <div x-ref="editor" style="min-height:140px;"></div>
             </div>
             @error('descripcion')
                 <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
@@ -129,26 +185,33 @@
     </form>
 </div>
 
-@push('js')
-<script src="https://cdn.ckeditor.com/ckeditor5/41.3.1/classic/ckeditor.js"></script>
-<script>
-    document.addEventListener('livewire:navigated', () => initCKEditor());
-    document.addEventListener('DOMContentLoaded', () => initCKEditor());
-
-    let ckDescripcion;
-    function initCKEditor() {
-        const el = document.getElementById('ck-descripcion');
-        if (!el || el._ckInitialized) return;
-        el._ckInitialized = true;
-
-        ClassicEditor.create(el, {
-            toolbar: ['bold','italic','underline','|','bulletedList','numberedList','|','blockQuote','|','undo','redo'],
-        }).then(editor => {
-            ckDescripcion = editor;
-            editor.model.document.on('change:data', () => {
-                @this.set('descripcion', editor.getData());
-            });
-        });
-    }
-</script>
-@endpush
+@assets
+<link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<style>
+    .ql-toolbar.ql-snow { border: none; border-bottom: 1px solid #e2e8f0; background: #f8fafc; padding: 8px 12px; }
+    .dark .ql-toolbar.ql-snow { border-bottom-color: #374151; background: #1f2937; }
+    .ql-container.ql-snow { border: none; font-family: inherit; }
+    .ql-editor { padding: 12px 16px; font-size: 0.875rem; line-height: 1.6; color: #1e293b; }
+    .dark .ql-editor { color: #f1f5f9; background: #1f2937; }
+    .ql-editor.ql-blank::before { color: #94a3b8; font-style: normal; font-size: 0.875rem; }
+    .dark .ql-editor.ql-blank::before { color: #6b7280; }
+    .ql-toolbar.ql-snow .ql-stroke { stroke: #64748b; }
+    .ql-toolbar.ql-snow .ql-fill  { fill: #64748b; }
+    .dark .ql-toolbar.ql-snow .ql-stroke { stroke: #9ca3af; }
+    .dark .ql-toolbar.ql-snow .ql-fill  { fill: #9ca3af; }
+    .ql-toolbar.ql-snow button:hover .ql-stroke, .ql-toolbar.ql-snow button.ql-active .ql-stroke { stroke: #84cc16; }
+    .ql-toolbar.ql-snow button:hover .ql-fill,   .ql-toolbar.ql-snow button.ql-active .ql-fill   { fill:   #84cc16; }
+    .ql-toolbar.ql-snow .ql-picker-label { color: #64748b; }
+    .dark .ql-toolbar.ql-snow .ql-picker-label { color: #9ca3af; }
+    /* Estilos para HTML renderizado en tickets */
+    .ticket-content strong, .ticket-content b { font-weight: 700; }
+    .ticket-content em, .ticket-content i { font-style: italic; }
+    .ticket-content u { text-decoration: underline; }
+    .ticket-content a { color: #2563eb; text-decoration: underline; }
+    .ticket-content ul { list-style-type: disc; padding-left: 1.25rem; margin-top: 0.25rem; }
+    .ticket-content ol { list-style-type: decimal; padding-left: 1.25rem; margin-top: 0.25rem; }
+    .ticket-content li { margin-top: 0.125rem; }
+    .ticket-content p:not(:last-child) { margin-bottom: 0.25rem; }
+</style>
+@endassets

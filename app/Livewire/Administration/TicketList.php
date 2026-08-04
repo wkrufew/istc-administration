@@ -23,26 +23,25 @@ class TicketList extends Component
     #[Url]
     public string $filtroPrioridad = '';
 
-    public function updatingSearch(): void
+    #[Url]
+    public string $vista = 'lista'; // 'lista' | 'kanban'
+
+    public function updatingSearch(): void        { $this->resetPage(); }
+    public function updatingFiltroEstado(): void  { $this->resetPage(); }
+    public function updatingFiltroPrioridad(): void { $this->resetPage(); }
+
+    public function setVista(string $v): void
     {
-        $this->resetPage();
+        $this->vista = in_array($v, ['lista', 'kanban']) ? $v : 'lista';
     }
 
-    public function updatingFiltroEstado(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatingFiltroPrioridad(): void
-    {
-        $this->resetPage();
-    }
+    // ── Computed ──────────────────────────────────────────────────────────────
 
     #[Computed]
     public function tickets()
     {
         return Ticket::query()
-            ->with(['creador', 'asignado'])
+            ->with(['creador', 'asignados'])
             ->when($this->search, fn($q) =>
                 $q->where('titulo', 'like', "%{$this->search}%")
                   ->orWhere('numero', 'like', "%{$this->search}%")
@@ -55,6 +54,38 @@ class TicketList extends Component
             )
             ->latest()
             ->paginate(15);
+    }
+
+    #[Computed]
+    public function kanbanColumnas(): array
+    {
+        $base = Ticket::query()
+            ->with(['asignados'])
+            ->when($this->search, fn($q) =>
+                $q->where('titulo', 'like', "%{$this->search}%")
+                  ->orWhere('numero', 'like', "%{$this->search}%")
+            )
+            ->when($this->filtroPrioridad, fn($q) =>
+                $q->where('prioridad', $this->filtroPrioridad)
+            )
+            ->latest()
+            ->get();
+
+        $columnas = [
+            'abierto'    => ['label' => 'Abierto',     'color' => 'lime',   'items' => collect()],
+            'en_proceso' => ['label' => 'En proceso',  'color' => 'blue',   'items' => collect()],
+            'esperando'  => ['label' => 'Esperando',   'color' => 'yellow', 'items' => collect()],
+            'resuelto'   => ['label' => 'Resuelto',    'color' => 'green',  'items' => collect()],
+            'cerrado'    => ['label' => 'Cerrado',     'color' => 'gray',   'items' => collect()],
+        ];
+
+        foreach ($base as $ticket) {
+            if (isset($columnas[$ticket->estado])) {
+                $columnas[$ticket->estado]['items']->push($ticket);
+            }
+        }
+
+        return $columnas;
     }
 
     #[Computed]
@@ -77,6 +108,24 @@ class TicketList extends Component
             'esperando'  => $counts->esperando ?? 0,
             'cerrados'   => $counts->cerrados ?? 0,
         ];
+    }
+
+    // ── Acción rápida desde Kanban ────────────────────────────────────────────
+
+    public function moverEstado(int $ticketId, string $estado): void
+    {
+        $estados = ['abierto', 'en_proceso', 'esperando', 'resuelto', 'cerrado'];
+        if (! in_array($estado, $estados)) return;
+
+        $ticket = Ticket::find($ticketId);
+        if (! $ticket) return;
+
+        $update = ['estado' => $estado];
+        if ($estado === 'resuelto' && ! $ticket->resolved_at) $update['resolved_at'] = now();
+        if ($estado === 'cerrado'  && ! $ticket->closed_at)   $update['closed_at']   = now();
+
+        $ticket->update($update);
+        unset($this->kanbanColumnas, $this->stats);
     }
 
     #[Layout('layouts.admin')]

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ticket extends Model
@@ -48,6 +49,18 @@ class Ticket extends Model
     public function mensajes(): HasMany
     {
         return $this->hasMany(TicketMessage::class);
+    }
+
+    public function asignaciones(): HasMany
+    {
+        return $this->hasMany(TicketAsignacion::class);
+    }
+
+    public function asignados(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'ticket_asignaciones', 'ticket_id', 'user_id')
+                    ->withPivot('assigned_by', 'assigned_at')
+                    ->orderBy('name');
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

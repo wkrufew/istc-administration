@@ -120,7 +120,8 @@ class HorariosForm extends Component
         $asignacion = AsignacionDocente::find($this->asignacionId);
         if (! $asignacion) return null;
 
-        $base = Horario::where('dia_semana', $this->diaSemana)
+        $base = Horario::where('periodo_id', $this->periodoId)
+            ->where('dia_semana', $this->diaSemana)
             ->where('hora_inicio', '<', $this->horaFin)
             ->where('hora_fin', '>', $this->horaInicio);
 

@@ -20,7 +20,7 @@ class ReportesHorarios extends Component
     public ?int $carreraId = null;
     public ?int $materiaId = null;
 
-    protected const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    protected const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
     protected const PALETA = [
         '#2563eb', '#16a34a', '#dc2626', '#7c3aed',
@@ -278,6 +278,16 @@ class ReportesHorarios extends Component
             'Documento generado por el Sistema Académico del ISTC. Válido solo con firma y sello institucional.'
         );
 
+        $logoPath = SettingService::get('instituto.logo_path');
+        $logoFile = $logoPath
+            ? storage_path('app/public/' . $logoPath)
+            : public_path('imagenes/icono.webp');
+        $ext    = strtolower(pathinfo($logoFile, PATHINFO_EXTENSION));
+        $mime   = match($ext) { 'png' => 'png', 'gif' => 'gif', 'webp' => 'webp', default => 'jpeg' };
+        $logo64 = file_exists($logoFile)
+            ? "data:image/{$mime};base64," . base64_encode(file_get_contents($logoFile))
+            : null;
+
         $data = [
             'grilla'     => $this->grillaData,
             'stats'      => $this->stats,
@@ -286,6 +296,13 @@ class ReportesHorarios extends Component
             'periodo'    => Periodo::find($this->periodoId),
             'carrera'    => $this->carreraId ? Carrera::find($this->carreraId) : null,
             'materia'    => $this->materiaId ? Materia::find($this->materiaId) : null,
+            'logo64'     => $logo64,
+            'instituto'  => [
+                'nombre_largo' => SettingService::get('instituto.nombre_largo', 'Instituto Superior Tecnológico'),
+                'ruc'          => SettingService::get('instituto.ruc', ''),
+                'senescyt'     => SettingService::get('instituto.senescyt', ''),
+                'ciudad'       => SettingService::get('documentos.ciudad', ''),
+            ],
         ];
 
         $pdf = Pdf::loadView('pdf.reporte-horarios', $data)

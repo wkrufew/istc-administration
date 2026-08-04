@@ -86,6 +86,26 @@ class DetalleMatricula extends Model
         return $this->hasMany(Asistencia::class);
     }
 
+    public function convalidacionDetalle()
+    {
+        return $this->hasOne(ConvalidacionDetalle::class);
+    }
+
+    public function scopeValidacion($query)
+    {
+        return $query->where('tipo', 'Validacion');
+    }
+
+    public function scopeNormal($query)
+    {
+        return $query->whereIn('tipo', ['Normal', 'Arrastre']);
+    }
+
+    public function esValidacion(): bool
+    {
+        return $this->tipo === 'Validacion';
+    }
+
     // Método para obtener horarios de esta materia (VER SI ES FACTIBLE ESTO PILAS)
     public function horarios()
     {

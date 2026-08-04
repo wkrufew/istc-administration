@@ -37,6 +37,7 @@ use App\Livewire\Administration\TiposSolicitudesGestion;
 use App\Livewire\Administration\TicketList;
 use App\Livewire\Administration\TicketCreate;
 use App\Livewire\Administration\TicketShow;
+use App\Livewire\Administration\TicketMetricas;
 use App\Livewire\Docente\AvisosDocente;
 use App\Livewire\Estudiante\AvisosEstudiante;
 use Illuminate\Support\Facades\Auth;
@@ -155,6 +156,12 @@ Route::middleware([
         Route::get('/procesos-titulacion', [ProcesoTitulacionController::class, 'index'])->name('proceso-titulacion.index');
 
         Route::get('titulacion/acta/{userId}', ActaCalificacionAdmin::class)->name('titulacion.acta');
+
+        // Validación de conocimientos
+        Route::get('convalidaciones', \App\Livewire\Administration\ConvalidacionesIndex::class)
+             ->name('convalidaciones.index');
+        Route::get('convalidacion/{userId}', \App\Livewire\Administration\ConvalidacionConocimiento::class)
+             ->name('convalidacion.conocimiento');
         // Pagos
         Route::resource('pagos', PagosController::class)->names('pagos');
         // Actas de organo de colegiado superior
@@ -170,6 +177,7 @@ Route::middleware([
         // Tickets de soporte
         Route::get('tickets', TicketList::class)->name('tickets.index');
         Route::get('tickets/create', TicketCreate::class)->name('tickets.create');
+        Route::get('tickets/metricas', TicketMetricas::class)->name('tickets.metricas');
         Route::get('tickets/{ticket}', TicketShow::class)->name('tickets.show');
 
         // Auditoría del sistema

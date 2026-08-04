@@ -100,7 +100,7 @@
             {{-- Descripción original --}}
             <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
                 <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Descripción</h3>
-                <div class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200 ck-content">
+                <div class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200 ticket-content">
                     {!! $ticket->descripcion !!}
                 </div>
             </div>
@@ -130,7 +130,7 @@
                                     </span>
                                     @endif
                                 </div>
-                                <div class="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 ck-content">
+                                <div class="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 ticket-content">
                                     {!! $msg->mensaje !!}
                                 </div>
                             </div>
@@ -153,8 +153,25 @@
                 <p class="text-xs text-red-500 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-3 py-2 rounded-xl">{{ $message }}</p>
                 @enderror
 
-                <div wire:ignore>
-                    <div id="ck-mensaje" class="rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 min-h-32 text-gray-900 dark:text-gray-100"></div>
+                <div wire:ignore
+                     x-data="{
+                         quill: null,
+                         init() {
+                             this.quill = new Quill(this.$refs.editor, {
+                                 theme: 'snow',
+                                 placeholder: 'Escribe tu respuesta...',
+                                 modules: { toolbar: [['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],['link'],['clean']] }
+                             });
+                             this.quill.on('text-change', () => {
+                                 const html = this.quill.root.innerHTML;
+                                 $wire.set('mensaje', html === '<p><br></p>' ? '' : html, false);
+                             });
+                             $wire.on('mensaje-enviado', () => this.quill.setContents([]));
+                         }
+                     }"
+                     class="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden
+                            focus-within:ring-2 focus-within:ring-lime-500/30 focus-within:border-lime-500 transition-all">
+                    <div x-ref="editor" style="min-height:128px;"></div>
                 </div>
 
                 <div class="flex items-center justify-between flex-wrap gap-3">
@@ -204,20 +221,64 @@
                 </button>
             </div>
 
-            {{-- Asignar --}}
+            {{-- Asignados --}}
             <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Asignar a</h3>
-                <select wire:model="nuevoAsignado"
-                    class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-lime-500/30 transition-colors">
-                    <option value="">Sin asignar</option>
-                    @foreach($this->adminUsers as $u)
-                        <option value="{{ $u->id }}">{{ $u->name }}</option>
-                    @endforeach
-                </select>
-                <button wire:click="asignar"
-                    class="w-full px-4 py-2 rounded-xl text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 transition-colors">
-                    Asignar
-                </button>
+                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Asignados</h3>
+
+                {{-- Lista actual --}}
+                @if($this->asignadosActuales->isEmpty())
+                    <p class="text-xs text-gray-400 dark:text-gray-500 italic">Sin asignados aún.</p>
+                @else
+                    <div class="space-y-2">
+                        @foreach($this->asignadosActuales as $u)
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-lime-500 to-sky-600
+                                                flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                        {{ strtoupper(substr($u->name, 0, 2)) }}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{{ $u->name }}</p>
+                                        <p class="text-[10px] text-gray-400 dark:text-gray-500">{{ $u->roles->first()?->name ?? 'Admin' }}</p>
+                                    </div>
+                                </div>
+                                @can('asignar_tickets')
+                                    <button wire:click="quitarAsignado({{ $u->id }})"
+                                            wire:confirm="¿Quitar la asignación de {{ $u->name }}?"
+                                            class="p-1 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400
+                                                   hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                @endcan
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                {{-- Agregar nuevo --}}
+                @if($this->usuariosDisponibles->isNotEmpty())
+                    @can('asignar_tickets')
+                        <div class="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                            <select wire:model="nuevoAsignadoId"
+                                class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800
+                                       px-3 py-2 text-xs text-gray-900 dark:text-gray-100
+                                       focus:outline-none focus:ring-2 focus:ring-lime-500/30 transition-colors">
+                                <option value="">Agregar asignado...</option>
+                                @foreach($this->usuariosDisponibles as $u)
+                                    <option value="{{ $u['id'] }}">{{ $u['name'] }} — {{ $u['rol'] }}</option>
+                                @endforeach
+                            </select>
+                            <button wire:click="agregarAsignado"
+                                    @disabled(!$nuevoAsignadoId)
+                                    class="w-full px-3 py-2 rounded-xl text-xs font-semibold text-white
+                                           bg-sky-600 hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                Agregar
+                            </button>
+                        </div>
+                    @endcan
+                @endif
             </div>
 
             {{-- Detalles del ticket --}}
@@ -266,33 +327,32 @@
 
 </div>
 
-@push('js')
-<script src="https://cdn.ckeditor.com/ckeditor5/41.3.1/classic/ckeditor.js"></script>
-<script>
-    document.addEventListener('livewire:navigated', () => initCKShowEditor());
-    document.addEventListener('DOMContentLoaded', () => initCKShowEditor());
-
-    let ckMensaje;
-    function initCKShowEditor() {
-        const el = document.getElementById('ck-mensaje');
-        if (!el || el._ckInitialized) return;
-        el._ckInitialized = true;
-
-        ClassicEditor.create(el, {
-            toolbar: ['bold','italic','underline','|','bulletedList','numberedList','|','blockQuote','|','undo','redo'],
-        }).then(editor => {
-            ckMensaje = editor;
-            editor.model.document.on('change:data', () => {
-                @this.set('mensaje', editor.getData());
-            });
-        });
-    }
-
-    // Limpiar editor después de enviar
-    Livewire.on('mensaje-enviado', () => {
-        if (ckMensaje) {
-            ckMensaje.setData('');
-        }
-    });
-</script>
-@endpush
+@assets
+<link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<style>
+    .ql-toolbar.ql-snow { border: none; border-bottom: 1px solid #e2e8f0; background: #f8fafc; padding: 8px 12px; }
+    .dark .ql-toolbar.ql-snow { border-bottom-color: #374151; background: #1f2937; }
+    .ql-container.ql-snow { border: none; font-family: inherit; }
+    .ql-editor { padding: 12px 16px; font-size: 0.875rem; line-height: 1.6; color: #1e293b; }
+    .dark .ql-editor { color: #f1f5f9; background: #1f2937; }
+    .ql-editor.ql-blank::before { color: #94a3b8; font-style: normal; font-size: 0.875rem; }
+    .dark .ql-editor.ql-blank::before { color: #6b7280; }
+    .ql-toolbar.ql-snow .ql-stroke { stroke: #64748b; }
+    .ql-toolbar.ql-snow .ql-fill  { fill: #64748b; }
+    .dark .ql-toolbar.ql-snow .ql-stroke { stroke: #9ca3af; }
+    .dark .ql-toolbar.ql-snow .ql-fill  { fill: #9ca3af; }
+    .ql-toolbar.ql-snow button:hover .ql-stroke, .ql-toolbar.ql-snow button.ql-active .ql-stroke { stroke: #84cc16; }
+    .ql-toolbar.ql-snow button:hover .ql-fill,   .ql-toolbar.ql-snow button.ql-active .ql-fill   { fill:   #84cc16; }
+    .ql-toolbar.ql-snow .ql-picker-label { color: #64748b; }
+    .dark .ql-toolbar.ql-snow .ql-picker-label { color: #9ca3af; }
+    .ticket-content strong, .ticket-content b { font-weight: 700; }
+    .ticket-content em, .ticket-content i { font-style: italic; }
+    .ticket-content u { text-decoration: underline; }
+    .ticket-content a { color: #2563eb; text-decoration: underline; }
+    .ticket-content ul { list-style-type: disc; padding-left: 1.25rem; margin-top: 0.25rem; }
+    .ticket-content ol { list-style-type: decimal; padding-left: 1.25rem; margin-top: 0.25rem; }
+    .ticket-content li { margin-top: 0.125rem; }
+    .ticket-content p:not(:last-child) { margin-bottom: 0.25rem; }
+</style>
+@endassets

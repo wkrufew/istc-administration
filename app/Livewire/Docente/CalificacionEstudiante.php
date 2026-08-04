@@ -933,6 +933,7 @@ class CalificacionEstudiante extends Component
                 'telefono'      => SettingService::get('instituto.telefono', ''),
                 'ciudad'        => SettingService::get('documentos.ciudad', 'Ecuador'),
                 'rector'        => SettingService::get('documentos.rector', ''),
+                'secretario'    => SettingService::get('documentos.secretario', ''),
                 'pie_pagina'    => SettingService::get('documentos.pie_pagina',
                     'Documento generado por el Sistema Académico. Válido solo con firma y sello institucional.'),
             ],

@@ -118,6 +118,16 @@ class User extends Authenticatable
         return $this->hasMany(Matricula::class, 'user_id');
     }
 
+    public function ultimaMatricula(): HasOne
+    {
+        return $this->hasOne(Matricula::class, 'user_id')->latestOfMany();
+    }
+
+    public function convalidaciones()
+    {
+        return $this->hasMany(\App\Models\Convalidacion::class, 'user_id');
+    }
+
     /**
      * Matrícula principal
      */

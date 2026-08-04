@@ -225,6 +225,14 @@
             });
         @endif
 
+        // ── Reaplicar dark mode tras navegación SPA (morphdom resetea <html>) ──
+        document.addEventListener('livewire:navigated', function () {
+            const t = localStorage.getItem('theme');
+            const dark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', dark);
+            document.documentElement.classList.toggle('light', !dark);
+        });
+
         // ── Livewire → $this->dispatch('swal', [...]) ─────────────────────
         document.addEventListener('livewire:init', function() {
             Livewire.on('swal', function(params) {

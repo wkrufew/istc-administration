@@ -67,6 +67,8 @@ class Matriculacion extends Component
     public $paso       = 1;
     public $totalPasos = 4;
 
+    public ?string $semestreSugerido = null;
+
     // -------------------------------------------------------------------------
     // CÁLCULOS
     // -------------------------------------------------------------------------
@@ -111,18 +113,24 @@ class Matriculacion extends Component
                         ->orWhere('matricula_numero', 'like', "%{$this->search}%")
                 )
             )
+            // Solo filtrar por carrera (whereHas): muestra solo estudiantes matriculados en esa carrera.
+            // El periodo NO filtra qué estudiantes aparecen — solo afecta qué matrícula se muestra en la columna.
             ->when(
-                $this->selectedCarrera || $this->selectedPeriodo,
+                $this->selectedCarrera,
                 fn($q) => $q->whereHas('matriculas', fn($q2) => $q2
-                    ->when($this->selectedCarrera, fn($q3) => $q3->where('carrera_id', $this->selectedCarrera))
-                    ->when($this->selectedPeriodo, fn($q3) => $q3->where('periodo_id', $this->selectedPeriodo))
+                    ->where('carrera_id', $this->selectedCarrera)
                 )
             )
             ->with([
+                // Matrícula del periodo/carrera seleccionado — puede ser vacía si aún no tiene
                 'matriculas' => fn($q) => $q
                     ->when($this->selectedCarrera, fn($q2) => $q2->where('carrera_id', $this->selectedCarrera))
                     ->when($this->selectedPeriodo, fn($q2) => $q2->where('periodo_id', $this->selectedPeriodo))
+                    ->with(['periodo', 'carrera'])
                     ->latest(),
+                // Última matrícula histórica (para contexto cuando no hay matrícula en el periodo filtrado)
+                'ultimaMatricula.periodo',
+                'ultimaMatricula.carrera',
             ])
             ->orderBy('name')
             ->paginate(10);
@@ -231,6 +239,18 @@ class Matriculacion extends Component
                 'carrera_id' => 'required|exists:carreras,id',
                 'periodo_id' => 'required|exists:periodos,id',
             ]);
+
+            // Validar que no exista ya una matrícula en el mismo periodo (solo en creación)
+            if (! $this->matriculaId) {
+                $existe = Matricula::where('user_id', $this->estudiante->id)
+                    ->where('periodo_id', $this->periodo_id)
+                    ->exists();
+                if ($existe) {
+                    $this->addError('periodo_id', 'Este estudiante ya tiene una matrícula registrada en el período seleccionado.');
+                    return;
+                }
+            }
+
             $this->cargarMateriasDisponibles();
             $this->calcularMontosPorCarrera();
         }
@@ -271,7 +291,7 @@ class Matriculacion extends Component
     {
         if (! $this->carrera_id) return;
 
-        $carrera = Carrera::with('semestres.materias')->find($this->carrera_id);
+        $carrera = Carrera::with(['semestres' => fn($q) => $q->orderBy('order'), 'semestres.materias'])->find($this->carrera_id);
 
         $materiasAprobadas = DB::table('calificacions')
             ->join('detalle_matriculas', 'calificacions.detalle_matricula_id', '=', 'detalle_matriculas.id')
@@ -308,6 +328,24 @@ class Matriculacion extends Component
 
             if (! empty($materiasSemestre)) {
                 $this->materiasDisponibles[$semestre->name] = $materiasSemestre;
+            }
+        }
+
+        // Auto-sugerir el siguiente semestre: primer semestre con materias inscribibles.
+        // Solo aplica en creación (no en edición), y no sobreescribe selección previa.
+        $this->semestreSugerido = null;
+        if (! $this->matriculaId && empty($this->materiasSeleccionadas)) {
+            foreach ($carrera->semestres->sortBy('order') as $semestre) {
+                if (! isset($this->materiasDisponibles[$semestre->name])) continue;
+
+                $inscribibles = collect($this->materiasDisponibles[$semestre->name])
+                    ->filter(fn($m) => $m['puede_inscribir']);
+
+                if ($inscribibles->isNotEmpty()) {
+                    $this->semestreSugerido    = $semestre->name;
+                    $this->materiasSeleccionadas = $inscribibles->pluck('id')->toArray();
+                    break;
+                }
             }
         }
     }
@@ -487,6 +525,17 @@ class Matriculacion extends Component
             'periodo_id'  => 'required|exists:periodos,id',
             'descuento'   => 'numeric|min:0|max:' . $this->costoTotal,
         ]);
+
+        // Red de seguridad: evitar duplicado si el wizard se envía sin pasar por el paso 1
+        if (! $this->matriculaId) {
+            $existe = Matricula::where('user_id', $this->estudiante->id)
+                ->where('periodo_id', $this->periodo_id)
+                ->exists();
+            if ($existe) {
+                $this->addError('periodo_id', 'Este estudiante ya tiene una matrícula en el período seleccionado.');
+                return;
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -759,6 +808,7 @@ class Matriculacion extends Component
             'materiasDisponibles',
             'paralelosSeleccionados',
             'paralelosDisponibles',
+            'semestreSugerido',
             'paso',
             'totalCreditos',
             'costoTotal',
