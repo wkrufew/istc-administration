@@ -15,6 +15,7 @@ class MateriaPeriodoParalelo extends Model
         'fecha_inicio',
         'fecha_fin',
         'is_active',
+        'cupo_maximo',
     ];
 
     protected $casts = [

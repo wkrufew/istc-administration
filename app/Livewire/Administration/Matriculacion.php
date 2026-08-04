@@ -12,6 +12,7 @@ use App\Models\Matricula;
 use App\Models\DetalleMatricula;
 use App\Models\AsignacionDocente;
 use App\Models\MateriasArrastrada;
+use App\Models\MateriaPeriodoParalelo;
 use App\Models\Pago;
 use App\Models\ObligacionesFinanciera;
 use Illuminate\Support\Facades\DB;
@@ -362,21 +363,44 @@ class Matriculacion extends Component
 
         $this->paralelosDisponibles = [];
 
-        foreach ($todasLasMaterias as $materiaId) {
-            $paralelos = Paralelo::whereHas('asignacionesDocentes', function ($query) use ($materiaId) {
-                $query->where('materia_id', $materiaId)
-                    ->where('periodo_id', $this->periodo_id);
-            })
-                ->where('is_active', true)
-                ->get()
-                ->map(fn($paralelo) => [
-                    'id'              => $paralelo->id,
-                    'name'            => $paralelo->name,
-                    'cupo_disponible' => $paralelo->cupo_maximo - $paralelo->cupo_actual,
-                    'tiene_cupo'      => $paralelo->tieneCupoDisponible(),
-                ]);
+        if (empty($todasLasMaterias)) return;
 
-            $this->paralelosDisponibles[$materiaId] = $paralelos;
+        // Secciones habilitadas (MPP) para estas materias en el período actual
+        $secciones = MateriaPeriodoParalelo::with('paralelo')
+            ->where('periodo_id', $this->periodo_id)
+            ->whereIn('materia_id', $todasLasMaterias)
+            ->where('is_active', true)
+            ->get();
+
+        // Una sola query: cupo ya usado por (materia, paralelo) en este período
+        $cuposUsados = DB::table('detalle_matriculas as dm')
+            ->join('matriculas as m', 'dm.matricula_id', '=', 'm.id')
+            ->where('m.periodo_id', $this->periodo_id)
+            ->where('m.estado', '!=', 'Cancelada')
+            ->where('dm.estado', '!=', 'Retirado')
+            ->whereNull('dm.deleted_at')
+            ->whereNotNull('dm.paralelo_id')
+            ->whereIn('dm.materia_id', $todasLasMaterias)
+            ->select('dm.materia_id', 'dm.paralelo_id', DB::raw('COUNT(*) as usado'))
+            ->groupBy('dm.materia_id', 'dm.paralelo_id')
+            ->get()
+            ->keyBy(fn($row) => $row->materia_id . '_' . $row->paralelo_id);
+
+        foreach ($todasLasMaterias as $materiaId) {
+            $this->paralelosDisponibles[$materiaId] = $secciones
+                ->where('materia_id', $materiaId)
+                ->map(function ($mpp) use ($cuposUsados, $materiaId) {
+                    $usado      = $cuposUsados->get($materiaId . '_' . $mpp->paralelo_id)?->usado ?? 0;
+                    $disponible = max(0, $mpp->cupo_maximo - $usado);
+
+                    return [
+                        'id'              => $mpp->paralelo->id,
+                        'name'            => $mpp->paralelo->name,
+                        'cupo_disponible' => $disponible,
+                        'tiene_cupo'      => $disponible > 0,
+                    ];
+                })
+                ->values();
         }
     }
 
