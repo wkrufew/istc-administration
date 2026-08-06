@@ -365,7 +365,20 @@ class CalificacionEstudiante extends Component
     public function cargarCalificacionExistente($calificacion)
     {
         $this->calificacion_actual = $calificacion;
-        $this->insumo1             = number_format($this->nota_asistencia, 2, '.', '');
+
+        $savedInsumo1 = $calificacion->insumo1 !== null
+            ? number_format((float) $calificacion->insumo1, 2, '.', '')
+            : null;
+        $autoInsumo1  = number_format($this->nota_asistencia, 2, '.', '');
+
+        if ($savedInsumo1 !== null && $savedInsumo1 !== $autoInsumo1) {
+            $this->insumo1_manual = true;
+            $this->insumo1        = $savedInsumo1;
+        } else {
+            $this->insumo1_manual = false;
+            $this->insumo1        = $autoInsumo1;
+        }
+
         $this->insumo2             = $calificacion->insumo2;
         $this->insumo3             = $calificacion->insumo3;
         $this->insumo4             = $calificacion->insumo4;

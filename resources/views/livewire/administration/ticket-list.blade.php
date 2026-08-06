@@ -1,20 +1,20 @@
 <div class="max-w-7xl mx-auto px-4 py-6 space-y-4" wire:poll.20000ms.visible>
 
     {{-- ═══════════════════════════════════════ HEADER ═══════════════════════ --}}
-    <div class="bg-slate-900 border border-slate-700/50 relative overflow-hidden rounded-xl">
+    <div class="bg-white dark:bg-slate-900 border border-slate-700/50 relative overflow-hidden rounded-xl">
         <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-lime-500 to-sky-600 opacity-70"></div>
         <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-green-700 via-lime-500 to-sky-600 opacity-50"></div>
 
         <div class="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-lime-600 to-sky-700 flex items-center justify-center shadow-lg flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-semibold text-white/90 leading-none">Tickets de Soporte</h1>
-                    <p class="text-xs text-lime-400/70 tracking-widest uppercase mt-1">Administración · Soporte</p>
+                    <h1 class="text-xl font-semibold text-gray-700 dark:text-white/90 leading-none">Tickets de Soporte</h1>
+                    <p class="text-xs text-lime-400 tracking-widest uppercase mt-1">Administración · Soporte</p>
                 </div>
             </div>
 
@@ -76,7 +76,7 @@
     </div>
 
     {{-- ═══════════════════════════════════════ STATS ════════════════════════ --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
         @foreach([
             ['label' => 'Pendientes',  'value' => $this->stats['pendientes'], 'color' => 'text-yellow-600 dark:text-yellow-400','bg' => 'bg-yellow-50 dark:bg-yellow-900/20'],
             ['label' => 'En proceso',  'value' => $this->stats['en_proceso'], 'color' => 'text-blue-600 dark:text-blue-400',   'bg' => 'bg-blue-50 dark:bg-blue-900/20'],
@@ -87,42 +87,46 @@
             <p class="text-2xl font-bold {{ $stat['color'] }}">{{ $stat['value'] }}</p>
         </div>
         @endforeach
+        {{-- ═══════════════════════════════════════ FILTROS ══════════════════════ --}}
+        <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-naranja p-4 col-span-2">
+            {{-- <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Filtros</h2> --}}
+            <div class="flex items-end gap-3 flex-wrap">
+                @if($vista === 'lista')
+                    <div class="flex-1 min-w-36">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Estado</label>
+                        <select wire:model.live="filtroEstado"
+                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-lime-500/30">
+                            <option value="">Todos</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="en_proceso">En proceso</option>
+                            <option value="cerrado">Cerrado</option>
+                        </select>
+                    </div>
+                @endif
+                    <div class="flex-1 min-w-36">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Prioridad</label>
+                        <select wire:model.live="filtroPrioridad"
+                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-lime-500/30">
+                            <option value="">Todas</option>
+                            <option value="baja">Baja</option>
+                            <option value="media">Media</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                    </div>
+                @if($filtroEstado || $filtroPrioridad || $search)
+                    <div class="flex items-end">
+                        <button wire:click="$set('filtroEstado',''); $set('filtroPrioridad',''); $set('search','')"
+                            class="px-3 py-2 rounded-xl text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                            Limpiar filtros
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
     </div>
 
-    {{-- ═══════════════════════════════════════ FILTROS ══════════════════════ --}}
-    <div class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 flex flex-wrap gap-3">
-        @if($vista === 'lista')
-        <div class="flex-1 min-w-36">
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Estado</label>
-            <select wire:model.live="filtroEstado"
-                class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-lime-500/30">
-                <option value="">Todos</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="en_proceso">En proceso</option>
-                <option value="cerrado">Cerrado</option>
-            </select>
-        </div>
-        @endif
-        <div class="flex-1 min-w-36">
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Prioridad</label>
-            <select wire:model.live="filtroPrioridad"
-                class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-lime-500/30">
-                <option value="">Todas</option>
-                <option value="baja">Baja</option>
-                <option value="media">Media</option>
-                <option value="alta">Alta</option>
-                <option value="urgente">Urgente</option>
-            </select>
-        </div>
-        @if($filtroEstado || $filtroPrioridad || $search)
-        <div class="flex items-end">
-            <button wire:click="$set('filtroEstado',''); $set('filtroPrioridad',''); $set('search','')"
-                class="px-3 py-2 rounded-xl text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                Limpiar filtros
-            </button>
-        </div>
-        @endif
-    </div>
+
 
     {{-- ═══════════════════════════════════════ VISTA LISTA ══════════════════ --}}
     @if($vista === 'lista')
@@ -234,7 +238,8 @@
     @endphp
 
     <div class="overflow-x-auto pb-2">
-        <div class="flex gap-4 min-w-max">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 text-center">Kanban</h2>
+        <div class="flex justify-center gap-6 min-w-max">
             @foreach($this->kanbanColumnas as $estadoKey => $col)
             @php $cc = $colColors[$estadoKey]; @endphp
             <div class="w-72 flex flex-col rounded-2xl border {{ $cc['col'] }}">

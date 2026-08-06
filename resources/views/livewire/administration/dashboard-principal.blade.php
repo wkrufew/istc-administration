@@ -248,7 +248,7 @@
 
                     {{-- CARD FINANCIERO GRANDE --}}
                     @if (!empty($sf))
-                        <div class="rounded-2xl bg-gradient-to-br from-sky-600 to-indigo-700 text-white shadow-lg p-6">
+                        <div class="rounded-2xl bg-lime-700 text-white shadow-lg p-6">
                             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
                                 <div>
                                     <p class="text-white/70 text-sm">Recaudación del periodo</p>
@@ -261,7 +261,7 @@
                                 <div class="text-right">
                                     <div class="inline-flex items-center gap-2 bg-white/15 rounded-xl px-4 py-2">
                                         <span class="text-2xl font-bold">{{ $sf['pct_recaudado'] }}%</span>
-                                        <span class="text-white/70 text-xs">recaudado</span>
+                                        <span class="text-white/80 text-xs">recaudado</span>
                                     </div>
                                     {{-- Barra de progreso --}}
                                     <div class="w-full bg-white/20 rounded-full h-2 mt-3">

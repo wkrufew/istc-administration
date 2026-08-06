@@ -16,55 +16,55 @@
         </div>
     @endif
 
-    {{-- ── Filtros ──────────────────────────────────────────────────────────────── --}}
-    <div class="bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-100 rounded-2xl shadow-xl border border-white/20 p-6 mb-8">
-        <h2 class="text-xl font-semibold text-slate-800 mb-5 flex items-center gap-2">
-            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"/>
-            </svg>
-            Filtros de Búsqueda
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div class="space-y-1.5">
-                <label class="block text-sm font-semibold text-slate-700">Período Académico</label>
-                <div class="relative">
-                    <select wire:model.live="periodo_id" class="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all appearance-none">
-                        <option value="">Seleccione un período</option>
-                        @foreach ($periodos as $periodo)
-                            <option value="{{ $periodo->id }}">{{ $periodo->code }} - {{ $periodo->description }}</option>
-                        @endforeach
-                    </select>
-                    <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    {{-- ── Selector de Contexto ─────────────────────────────────────────────────── --}}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+        <div class="h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400"></div>
+
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-800">Contexto de Calificación</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Selecciona período, materia y paralelo para cargar estudiantes</p>
                     </div>
                 </div>
+                @if ($periodo_id && $materia_id && $paralelo_id)
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-semibold text-emerald-700">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Contexto listo
+                    </span>
+                @endif
             </div>
 
-            @if ($periodo_id && count($materias_asignadas) > 0)
-                <div class="space-y-1.5">
-                    <label class="block text-sm font-semibold text-slate-700">Materia</label>
-                    <div class="relative">
-                        <select wire:model.live="materia_id" class="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all appearance-none">
-                            <option value="">Seleccione una materia</option>
-                            @foreach ($materias_asignadas as $data)
-                                <option value="{{ $data['materia']->id }}">{{ $data['materia']->code }} - {{ $data['materia']->name }}</option>
-                            @endforeach
-                        </select>
-                        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </div>
-                    </div>
-                </div>
-            @endif
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
 
-            @if ($materia_id && count($paralelos) > 0)
-                <div class="space-y-1.5">
-                    <label class="block text-sm font-semibold text-slate-700">Paralelo</label>
+                {{-- Paso 1: Período --}}
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors
+                            {{ $periodo_id ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500' }}">
+                            @if ($periodo_id)
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            @else
+                                1
+                            @endif
+                        </span>
+                        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Período Académico</label>
+                    </div>
                     <div class="relative">
-                        <select wire:model.live="paralelo_id" class="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all appearance-none">
-                            <option value="">Seleccione un paralelo</option>
-                            @foreach ($paralelos as $paralelo)
-                                <option value="{{ $paralelo->id }}">{{ $paralelo->name }} ({{ $paralelo->code }})</option>
+                        <select wire:model.live="periodo_id"
+                            class="w-full bg-white border-2 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:ring-4 focus:ring-emerald-100 transition-all appearance-none
+                                {{ $periodo_id ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-emerald-400' }}">
+                            <option value="">Seleccione un período</option>
+                            @foreach ($periodos as $periodo)
+                                <option value="{{ $periodo->id }}">{{ $periodo->code }} — {{ $periodo->description }}</option>
                             @endforeach
                         </select>
                         <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
@@ -72,67 +72,205 @@
                         </div>
                     </div>
                 </div>
-            @endif
+
+                {{-- Paso 2: Materia --}}
+                @if ($periodo_id && count($materias_asignadas) > 0)
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors
+                                {{ $materia_id ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500' }}">
+                                @if ($materia_id)
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                @else
+                                    2
+                                @endif
+                            </span>
+                            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Materia</label>
+                        </div>
+                        <div class="relative">
+                            <select wire:model.live="materia_id"
+                                class="w-full bg-white border-2 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:ring-4 focus:ring-emerald-100 transition-all appearance-none
+                                    {{ $materia_id ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-emerald-400' }}">
+                                <option value="">Seleccione una materia</option>
+                                @foreach ($materias_asignadas as $data)
+                                    <option value="{{ $data['materia']->id }}">{{ $data['materia']->code }} — {{ $data['materia']->name }}</option>
+                                @endforeach
+                            </select>
+                            <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Paso 3: Paralelo --}}
+                @if ($materia_id && count($paralelos) > 0)
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors
+                                {{ $paralelo_id ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500' }}">
+                                @if ($paralelo_id)
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                @else
+                                    3
+                                @endif
+                            </span>
+                            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Paralelo</label>
+                        </div>
+                        <div class="relative">
+                            <select wire:model.live="paralelo_id"
+                                class="w-full bg-white border-2 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:ring-4 focus:ring-emerald-100 transition-all appearance-none
+                                    {{ $paralelo_id ? 'border-emerald-300 focus:border-emerald-500' : 'border-slate-200 focus:border-emerald-400' }}">
+                                <option value="">Seleccione un paralelo</option>
+                                @foreach ($paralelos as $paralelo)
+                                    <option value="{{ $paralelo->id }}">{{ $paralelo->name }} ({{ $paralelo->code }})</option>
+                                @endforeach
+                            </select>
+                            <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+            </div>
         </div>
     </div>
 
     {{-- ── Lista de Estudiantes ─────────────────────────────────────────────────── --}}
     @if (count($estudiantes) > 0)
-        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/>
+        @php
+            $total      = count($estudiantes);
+            $publicados = collect($estudiantes)->where('tiene_calificacion', true)->where('es_borrador', false)->count();
+            $borradores = collect($estudiantes)->where('es_borrador', true)->count();
+            $pendientes = $total - collect($estudiantes)->where('tiene_calificacion', true)->count();
+            $pct        = $total > 0 ? round(($publicados / $total) * 100) : 0;
+        @endphp
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+             x-data="{
+                 busqueda: '',
+                 emptySearch: false,
+                 updateEmpty() {
+                     this.$nextTick(() => {
+                         const rows = this.$el.querySelectorAll('[data-estudiante]');
+                         this.emptySearch = [...rows].every(r => r.style.display === 'none');
+                     });
+                 }
+             }"
+             x-effect="busqueda !== '' ? updateEmpty() : (emptySearch = false)">
+
+            {{-- Header --}}
+            <div class="px-6 pt-5 pb-4 border-b border-slate-100">
+
+                {{-- Título + botón PDF --}}
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/>
+                            </svg>
+                            Lista de Estudiantes
+                        </h2>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                            <span class="text-xs text-slate-500">{{ $total }} total</span>
+                            @if ($publicados > 0)
+                                <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                    {{ $publicados }} publicados
+                                </span>
+                            @endif
+                            @if ($borradores > 0)
+                                <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-700">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                                    {{ $borradores }} borradores
+                                </span>
+                            @endif
+                            @if ($pendientes > 0)
+                                <span class="text-xs text-slate-400">{{ $pendientes }} sin nota</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <button wire:click="exportarActaPDF"
+                            wire:loading.attr="disabled"
+                            wire:target="exportarActaPDF"
+                            class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-sm hover:shadow-md shrink-0">
+                        <svg wire:loading.remove wire:target="exportarActaPDF" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11v6m4-6v6m-6-3h8"/>
                         </svg>
-                        Lista de Estudiantes
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        {{ count($estudiantes) }} estudiantes · {{ collect($estudiantes)->where('tipo', 'Arrastre')->count() }} arrastres
-                        @if (collect($estudiantes)->where('es_borrador', true)->count() > 0)
-                            · <span class="text-amber-600 font-medium">{{ collect($estudiantes)->where('es_borrador', true)->count() }} borradores</span>
-                        @endif
-                    </p>
+                        <svg wire:loading wire:target="exportarActaPDF" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span wire:loading.remove wire:target="exportarActaPDF">Descargar Acta</span>
+                        <span wire:loading wire:target="exportarActaPDF">Generando…</span>
+                    </button>
                 </div>
 
-                {{-- Botón Descargar Acta --}}
-                <button wire:click="exportarActaPDF"
-                        wire:loading.attr="disabled"
-                        wire:target="exportarActaPDF"
-                        class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800
-                               disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl
-                               text-sm transition-all shadow-sm hover:shadow-md">
-                    <svg wire:loading.remove wire:target="exportarActaPDF"
-                         class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M10 11v6m4-6v6m-6-3h8"/>
-                    </svg>
-                    <svg wire:loading wire:target="exportarActaPDF"
-                         class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                    <span wire:loading.remove wire:target="exportarActaPDF">Descargar Acta</span>
-                    <span wire:loading wire:target="exportarActaPDF">Generando PDF…</span>
-                </button>
+                {{-- Barra de progreso --}}
+                <div class="space-y-1.5 mb-4">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-500 font-medium">Progreso de publicación</span>
+                        <span class="font-bold {{ $pct === 100 ? 'text-emerald-600' : 'text-slate-600' }}">
+                            {{ $publicados }}/{{ $total }}
+                            <span class="font-normal text-slate-400">({{ $pct }}%)</span>
+                        </span>
+                    </div>
+                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500
+                            {{ $pct === 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-teal-400 to-emerald-400' }}"
+                             style="width: {{ $pct }}%"></div>
+                    </div>
+                    @if ($borradores > 0)
+                        <p class="text-xs text-amber-600 flex items-center gap-1">
+                            <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                            {{ $borradores }} nota(s) en borrador — aún no son visibles para los estudiantes
+                        </p>
+                    @endif
+                </div>
+
+                {{-- Buscador --}}
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                    <input type="text"
+                           x-model="busqueda"
+                           placeholder="Buscar por nombre o cédula…"
+                           class="w-full pl-10 pr-10 py-2.5 border-2 border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all">
+                    <button x-show="busqueda" @click="busqueda = ''"
+                            class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
             </div>
+
+            {{-- Tabla --}}
             <div class="overflow-x-auto">
                 <table class="w-full">
-                    <thead class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
+                    <thead class="bg-slate-50 border-b border-slate-200">
                         <tr>
-                            <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Estudiante</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Cédula</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Tipo</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Nota Final</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Estado</th>
-                            <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Acción</th>
+                            <th class="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Estudiante</th>
+                            <th class="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Cédula</th>
+                            <th class="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th>
+                            <th class="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Nota Final</th>
+                            <th class="px-5 py-3.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado de Nota</th>
+                            <th class="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Acción</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach ($estudiantes as $est)
-                            <tr class="hover:bg-slate-50 transition-colors">
+                            <tr data-estudiante
+                                data-nombre="{{ strtolower($est['estudiante']->name) }}"
+                                data-cedula="{{ $est['estudiante']->cedula ?? '' }}"
+                                x-show="!busqueda ||
+                                    $el.dataset.nombre.includes(busqueda.toLowerCase()) ||
+                                    $el.dataset.cedula.includes(busqueda)"
+                                class="transition-colors {{ $est['es_borrador'] ? 'bg-amber-50/50 hover:bg-amber-50' : 'hover:bg-slate-50' }}">
+
                                 <td class="px-5 py-3.5">
                                     <div class="flex items-center gap-3">
                                         <div class="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
@@ -144,7 +282,9 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-5 py-3.5 text-sm text-slate-600">{{ $est['estudiante']->cedula ?? 'N/A' }}</td>
+
+                                <td class="px-5 py-3.5 text-sm text-slate-600">{{ $est['estudiante']->cedula ?? '—' }}</td>
+
                                 <td class="px-5 py-3.5">
                                     <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold
                                         @if ($est['tipo'] === 'Arrastre') bg-amber-100 text-amber-800
@@ -153,51 +293,109 @@
                                         {{ $est['tipo'] }}
                                     </span>
                                 </td>
+
                                 <td class="px-5 py-3.5">
                                     @if ($est['nota_final'] !== null)
-                                        <span class="inline-flex px-3 py-1 rounded-lg text-sm font-bold
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-bold
                                             @if ($est['nota_final'] >= $nota_minima_aprobacion) bg-emerald-100 text-emerald-800
                                             @elseif($est['nota_final'] >= $nota_minima_aprobacion - 3) bg-amber-100 text-amber-800
                                             @else bg-red-100 text-red-800 @endif">
                                             {{ number_format($est['nota_final'], 2) }}
+                                            @if ($est['es_borrador'])
+                                                <span class="text-xs opacity-50 font-normal">*</span>
+                                            @endif
                                         </span>
                                     @else
                                         <span class="text-slate-400 text-sm">—</span>
                                     @endif
                                 </td>
+
+                                {{-- Estado de nota: protagonista = resultado académico, secundario = publicado/borrador --}}
                                 <td class="px-5 py-3.5">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold
-                                            @if ($est['estado_final'] === 'Aprobado') bg-emerald-100 text-emerald-800
-                                            @elseif($est['estado_final'] === 'Reprobado') bg-red-100 text-red-800
-                                            @elseif($est['estado_final'] === 'Borrador') bg-slate-100 text-slate-600
-                                            @else bg-slate-100 text-slate-700 @endif">
-                                            {{ $est['estado_final'] }}
-                                        </span>
-                                        @if ($est['es_borrador'] ?? false)
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
-                                                Borrador
+                                    <div class="flex flex-col items-center gap-1.5">
+                                        {{-- Resultado académico (protagonista) --}}
+                                        @if (!$est['tiene_calificacion'])
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                Sin nota
                                             </span>
+                                        @elseif ($est['estado_final'] === 'Aprobado')
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                                Aprobado
+                                            </span>
+                                        @elseif ($est['estado_final'] === 'Reprobado')
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                                                Reprobado
+                                            </span>
+                                        @elseif ($est['estado_final'] === 'Incompleto')
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                                Incompleto
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                                                Pendiente
+                                            </span>
+                                        @endif
+
+                                        {{-- Estado de publicación (secundario), solo si tiene calificación --}}
+                                        @if ($est['tiene_calificacion'])
+                                            @if ($est['es_borrador'])
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">
+                                                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                                                    Borrador
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                                    Publicado
+                                                </span>
+                                            @endif
                                         @endif
                                     </div>
                                 </td>
+
                                 <td class="px-5 py-3.5">
                                     <button
                                         wire:click="abrirFormularioCalificacion({{ $est['detalle_matricula_id'] }})"
-                                        class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-xl text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all shadow-sm">
+                                        class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-xl text-white transition-all shadow-sm focus:outline-none focus:ring-4 focus:ring-emerald-100
+                                            {{ $est['es_borrador'] ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700' }}">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                         </svg>
-                                        {{ $est['tiene_calificacion'] ? 'Editar' : 'Calificar' }}
+                                        @if (!$est['tiene_calificacion'])
+                                            Calificar
+                                        @elseif ($est['es_borrador'])
+                                            Completar
+                                        @else
+                                            Editar
+                                        @endif
                                     </button>
                                 </td>
                             </tr>
                         @endforeach
+
+                        {{-- Sin resultados en búsqueda --}}
+                        <tr x-show="emptySearch" style="display:none">
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <svg class="w-10 h-10 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <p class="text-sm text-slate-500">No se encontró ningún estudiante con
+                                    "<span x-text="busqueda" class="font-semibold text-slate-700"></span>"
+                                </p>
+                                <button @click="busqueda = ''" class="mt-2 text-xs text-emerald-600 hover:text-emerald-700 font-medium underline underline-offset-2">
+                                    Limpiar búsqueda
+                                </button>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+
     @elseif($paralelo_id)
         <div class="bg-emerald-50 border-l-4 border-emerald-400 p-5 rounded-r-2xl">
             <p class="text-emerald-800 font-medium text-sm">No hay estudiantes inscritos en este paralelo.</p>
@@ -271,7 +469,7 @@
                             <svg class="w-4 h-4 text-amber-300 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
                             </svg>
-                            <p class="text-amber-200 text-xs font-medium">En borrador — puedes seguir ingresando notas y guardar cuando estén completas.</p>
+                            <p class="text-amber-200 text-xs font-medium">En borrador — puedes seguir ingresando notas y publicar cuando estén completas.</p>
                         </div>
                     @endif
 
@@ -431,13 +629,11 @@
 
                     {{-- Resultado final --}}
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {{-- Nota base --}}
                         <div class="bg-slate-50 rounded-xl border border-slate-200 p-4 text-center">
                             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Nota Base</p>
                             <p class="text-3xl font-extrabold text-slate-800">{{ number_format($nota_base, 2) }}</p>
                             <p class="text-xs text-slate-400 mt-1">{{ $nuevo_calculo ? '60% + 20% + 20%' : '30% + 30% + 40%' }}</p>
                         </div>
-                        {{-- Nota final --}}
                         <div class="rounded-xl border p-4 text-center
                             @if ($nota_final >= $nota_minima_aprobacion) bg-emerald-50 border-emerald-200
                             @elseif($nota_final >= $nota_minima_aprobacion - 3) bg-amber-50 border-amber-200
@@ -457,7 +653,6 @@
                                 <p class="text-xs mt-1 text-amber-600">incluye suspenso</p>
                             @endif
                         </div>
-                        {{-- Estado --}}
                         <div class="rounded-xl border p-4 text-center
                             @if ($estado_final === 'Aprobado') bg-emerald-50 border-emerald-200
                             @elseif($estado_final === 'Reprobado') bg-red-50 border-red-200
@@ -504,7 +699,6 @@
 
                 {{-- ── Footer fijo ──────────────────────────────────────────── --}}
                 <div class="flex-none border-t border-slate-200 bg-white px-6 py-4 rounded-b-2xl flex items-center justify-between gap-3">
-                    {{-- Info izquierda --}}
                     <div class="flex items-center gap-3 text-sm text-slate-500 min-w-0">
                         <div class="flex items-center gap-1.5 bg-slate-100 rounded-lg px-3 py-1.5 shrink-0">
                             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -520,7 +714,6 @@
                         @endif
                     </div>
 
-                    {{-- Botones --}}
                     <div class="flex items-center gap-2.5 shrink-0">
                         <button wire:click="cerrarFormulario"
                             class="inline-flex items-center gap-1.5 px-4 py-2.5 border-2 border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all">
