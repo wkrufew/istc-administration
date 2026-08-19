@@ -5,8 +5,9 @@
         ? \Illuminate\Support\Facades\Storage::disk('public')->url($asideLogo)
         : asset('../imagenes/icono.webp');
 
-    $solicitudesPendientes   = \App\Models\Solicitud::where('estado', 'pendiente')->count();
-    $pagosPendientesVerif    = \App\Models\Pago::where('estado', \App\Models\Pago::ESTADO_PENDIENTE)->count();
+    $solicitudesPendientes      = \App\Models\Solicitud::where('estado', 'pendiente')->count();
+    $pagosPendientesVerif       = \App\Models\Pago::where('estado', \App\Models\Pago::ESTADO_PENDIENTE)->count();
+    $aspirantesPendientesVerif  = \App\Models\Aspirante::where('estado', 'verificacion')->count();
 
     // Pre-filtra navItems: elimina secciones que no tendrían ningún item visible
     $buildNav = function(array $items) {
@@ -112,6 +113,22 @@
          'active' => 'administracion.administrativa.tipos-solicitudes.*',      'permission' => 'gestionar_tipos_solicitudes', 'viewBox' => '0 0 24 24',
          'svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" fill="none" stroke="currentColor" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'],
 
+        ['route' => 'administracion.administrativa.becas.index',            'label' => 'Becas',
+         'active' => 'administracion.administrativa.becas.*',                'permission' => 'gestionar_becas', 'viewBox' => '0 0 24 24',
+         'svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" fill="none" stroke="currentColor" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>'],
+
+        ['route' => 'administracion.administrativa.tipos-beca.index',       'label' => 'Tipos de Beca',
+         'active' => 'administracion.administrativa.tipos-beca.*',           'permission' => 'gestionar_becas', 'viewBox' => '0 0 24 24',
+         'svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" fill="none" stroke="currentColor" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>'],
+
+        ['route' => 'administracion.administrativa.convenios.index',        'label' => 'Convenios',
+         'active' => 'administracion.administrativa.convenios.*',            'permission' => 'gestionar_convenios', 'viewBox' => '0 0 24 24',
+         'svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" fill="none" stroke="currentColor" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>'],
+
+        ['route' => 'administracion.administrativa.tipos-convenio.index',   'label' => 'Tipos de Convenio',
+         'active' => 'administracion.administrativa.tipos-convenio.*',       'permission' => 'gestionar_convenios', 'viewBox' => '0 0 24 24',
+         'svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" fill="none" stroke="currentColor" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'],
+
         ['route' => 'administracion.administrativa.matriculacion.index', 'label' => 'Matrículas',
          'active' => 'administracion.administrativa.matriculacion.*',    'permission' => 'gestionar_matriculas', 'viewBox' => '0 0 640 640',
          'svg' => '<path d="M288 32L352 32C369.7 32 384 46.3 384 64L384 128L256 128L256 64C256 46.3 270.3 32 288 32zM96 96L208 96L208 128C208 154.5 229.5 176 256 176L384 176C410.5 176 432 154.5 432 128L432 96L544 96C579.3 96 608 124.7 608 160L608 480C608 515.3 579.3 544 544 544L96 544C60.7 544 32 515.3 32 480L32 160C32 124.7 60.7 96 96 96zM208 464C208 472.8 215.2 480 224 480L416 480C424.8 480 432 472.8 432 464C432 419.8 396.2 384 352 384L288 384C243.8 384 208 419.8 208 464zM320 344C350.9 344 376 318.9 376 288C376 257.1 350.9 232 320 232C289.1 232 264 257.1 264 288C264 318.9 289.1 344 320 344z"/>'],
@@ -139,6 +156,16 @@
         ['route' => 'administracion.administrativa.proceso-titulacion.index', 'label' => 'Titulación',
          'active' => 'administracion.administrativa.proceso-titulacion.*', 'permission' => 'gestionar_titulacion', 'viewBox' => '0 0 640 640',
          'svg' => '<path d="M80 259.8L289.2 345.9C299 349.9 309.4 352 320 352C330.6 352 341 349.9 350.8 345.9L593.2 246.1C602.2 242.4 608 233.7 608 224C608 214.3 602.2 205.6 593.2 201.9L350.8 102.1C341 98.1 330.6 96 320 96C309.4 96 299 98.1 289.2 102.1L46.8 201.9C37.8 205.6 32 214.3 32 224L32 520C32 533.3 42.7 544 56 544C69.3 544 80 533.3 80 520L80 259.8zM128 331.5L128 448C128 501 214 544 320 544C426 544 512 501 512 448L512 331.4L369.1 390.3C353.5 396.7 336.9 400 320 400C303.1 400 286.5 396.7 270.9 390.3L128 331.4z"/>'],
+
+        ['type' => 'section', 'label' => 'Admisión'],
+
+        ['route' => 'administracion.administrativa.cohortes.index',   'label' => 'Cohortes',
+         'active' => 'administracion.administrativa.cohortes.*',       'permission' => 'gestionar_cohortes', 'viewBox' => '0 0 640 512',
+         'svg' => '<path d="M72 88a56 56 0 1 1 112 0A56 56 0 1 1 72 88zM64 245.7C54 256.9 48 271.8 48 288s6 31.1 16 42.3l0-84.7zm144.4-49.3C178.7 222.7 160 261.2 160 304c0 34.3 12 65.8 32 90.5l0 21.5c0 17.7-14.3 32-32 32l-64 0c-17.7 0-32-14.3-32-32l0-26.8C26.2 371.2 0 332.7 0 288c0-61.9 50.1-112 112-112l32 0c24 0 46.2 7.5 64.4 20.3zM448 416l0-21.5c20-24.7 32-56.2 32-90.5c0-42.8-18.7-81.3-48.4-107.7C449.8 183.5 472 176 496 176l32 0c61.9 0 112 50.1 112 112c0 44.7-26.2 83.2-64 101.2l0 26.8c0 17.7-14.3 32-32 32l-64 0c-17.7 0-32-14.3-32-32zm8-328a56 56 0 1 1 112 0A56 56 0 1 1 456 88zM576 245.7l0 84.7c10-11.3 16-26.1 16-42.3s-6-31.1-16-42.3zM320 32a64 64 0 1 1 0 128 64 64 0 1 1 0-128zM240 304c0 16.2 6 31 16 42.3l0-84.7c-10 11.3-16 26.1-16 42.3zm144 42.3c10-11.3 16-26.1 16-42.3s-6-31.1-16-42.3l0 84.7zm-74.7-98.1C325.2 243.5 343.7 240 363 240l-86 0c19.3 0 37.8 3.5 52.3 8.2zM256 416c0-17.7 14.3-32 32-32l64 0c17.7 0 32 14.3 32 32l0 32c0 17.7-14.3 32-32 32l-64 0c-17.7 0-32-14.3-32-32l0-32z"/>'],
+
+        ['route' => 'administracion.administrativa.aspirantes.index', 'label' => 'Aspirantes',
+         'active' => 'administracion.administrativa.aspirantes.*',     'permission' => 'gestionar_aspirantes', 'badge' => $aspirantesPendientesVerif, 'viewBox' => '0 0 640 512',
+         'svg' => '<path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304l91.4 0C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7L29.7 512C13.3 512 0 498.7 0 482.3zM609.3 512l-137.8 0c5.4-9.4 8.6-20.3 8.6-32l0-8c0-60.7-27.1-115.2-69.8-151.8c2.4-.1 4.7-.2 7.1-.2l61.4 0C567.8 320 640 392.2 640 481.3c0 17-13.8 30.7-30.7 30.7zM432 256c-31 0-59-12.6-79.3-32.9C372.4 196.5 384 163.6 384 128c0-26.8-6.6-52.1-18.3-74.3C384.3 40.1 407.2 32 432 32c61.9 0 112 50.1 112 112s-50.1 112-112 112z"/>'],
 
         ['type' => 'section', 'label' => 'Reportes y Docs.'],
 

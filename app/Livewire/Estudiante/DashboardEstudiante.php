@@ -7,6 +7,8 @@ use App\Models\Periodo;
 use App\Models\Matricula;
 use App\Models\DetalleMatricula;
 use App\Models\MateriasArrastrada;
+use App\Models\BecaAplicada;
+use App\Models\ConvenioAplicado;
 use App\Models\ObligacionesFinanciera;
 use App\Models\AsignacionDocente;
 use Illuminate\Support\Facades\Auth;
@@ -130,6 +132,34 @@ class DashboardEstudiante extends Component
         return round($notas->average(), 2);
     }
 
+    // Beca y convenio activos del estudiante
+    #[Computed]
+    public function becaYConvenio(): array
+    {
+        $beca = BecaAplicada::where('user_id', $this->idUser)
+            ->where('is_active', true)
+            ->with('tipoBeca')
+            ->first();
+
+        $convenio = ConvenioAplicado::where('user_id', $this->idUser)
+            ->where('is_active', true)
+            ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
+            ->with('tipoConvenio')
+            ->first();
+
+        $pctBeca     = $beca     ? (float) $beca->porcentaje_aplicado     : 0;
+        $pctConvenio = $convenio ? (float) $convenio->porcentaje_aplicado : 0;
+        $pctTotal    = min(100, $pctBeca + $pctConvenio);
+
+        return [
+            'beca'       => $beca,
+            'convenio'   => $convenio,
+            'pct_total'  => $pctTotal,
+            'gratuidad'  => $pctTotal >= 100,
+            'tiene_algo' => $beca || $convenio,
+        ];
+    }
+
     // Stats rápidas
     #[Computed]
     public function stats()
@@ -150,14 +180,15 @@ class DashboardEstudiante extends Component
     public function render()
     {
         return view('livewire.estudiante.dashboard-estudiante', [
-            'periodos'           => $this->periodos,
-            'matricula'          => $this->matricula,
-            'materiasConDocente' => $this->materiasConDocente,
+            'periodos'            => $this->periodos,
+            'matricula'           => $this->matricula,
+            'materiasConDocente'  => $this->materiasConDocente,
             'materiasArrastradas' => $this->materiasArrastradas,
-            'resumenFinanciero'  => $this->resumenFinanciero,
-            'promedioGeneral'    => $this->promedioGeneral,
-            'stats'              => $this->stats,
-            'estudiante'         => Auth::user(),
+            'resumenFinanciero'   => $this->resumenFinanciero,
+            'promedioGeneral'     => $this->promedioGeneral,
+            'stats'               => $this->stats,
+            'estudiante'          => Auth::user(),
+            'becaYConvenio'       => $this->becaYConvenio,
         ]);
     }
 }

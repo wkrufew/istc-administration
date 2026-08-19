@@ -6,7 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'ISTC') }} — Portal Estudiantil</title>
+    <title>{{ config('app.name', 'ISTC') }} — Portal Admisión</title>
+
+    @php
+        $nombreCorto = \App\Services\SettingService::get('instituto.nombre_corto') ?: config('app.name', 'ISTCumandá');
+        $faviconPath = \App\Services\SettingService::get('instituto.favicon_path');
+    @endphp
+    <title>{{ $nombreCorto }}</title>
+    @if ($faviconPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($faviconPath))
+        <link rel="shortcut icon" href="{{ Storage::disk('public')->url($faviconPath) }}">
+    @else
+        <link rel="shortcut icon" href="{{ asset('../imagenes/icono.webp') }}">
+    @endif
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -118,24 +129,41 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        @if (session('success'))
-            document.addEventListener('DOMContentLoaded', function() {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: "top-end",
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.onmouseenter = Swal.stopTimer;
-                        toast.onmouseleave = Swal.resumeTimer;
-                    }
-                });
-                Toast.fire({
-                    icon: 'success',
-                    title: "{{ session('success') }}"
-                });
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('swal', (params) => {
+                const config = Array.isArray(params) ? params[0] : params;
+                if (config.toast) {
+                    Swal.mixin({
+                        toast: true,
+                        position: config.position || 'top-end',
+                        showConfirmButton: false,
+                        timer: config.timer || 3000,
+                        timerProgressBar: true,
+                    }).fire({ icon: config.icon, title: config.title, text: config.text });
+                } else {
+                    Swal.fire({
+                        icon:              config.icon,
+                        title:             config.title,
+                        text:              config.text,
+                        timer:             config.timer || undefined,
+                        showConfirmButton: !config.timer,
+                        confirmButtonText: config.confirmButtonText || 'OK',
+                    });
+                }
             });
+        });
+
+        @if(session('swal'))
+        document.addEventListener('DOMContentLoaded', function () {
+            Swal.fire(@json(session('swal')));
+        });
+        @endif
+
+        @if(session('success'))
+        document.addEventListener('DOMContentLoaded', function () {
+            Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 })
+                .fire({ icon: 'success', title: "{{ session('success') }}" });
+        });
         @endif
     </script>
 </body>

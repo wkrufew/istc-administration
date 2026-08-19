@@ -104,6 +104,9 @@ trait WithAuthorization
         if ($user->can('acceso_estudiantil')) {
             return 'administracion.estudiantil.dashboard';
         }
+        if ($user->can('acceso_admision')) {
+            return 'administracion.admision.dashboard';
+        }
         return 'login';
     }
 }

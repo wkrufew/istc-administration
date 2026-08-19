@@ -32,11 +32,6 @@ class EditUser extends Component
     public $telefono_emergencia, $contacto_emergencia;
     public $tipo_sangre, $observaciones_medicas;
 
-    // Discapacidad
-    public $discapacidad = false;
-    public $discapacidad_descripcion;
-    public $certificado_discapacidad;
-    public $certificado_discapacidad_actual;
 
     // Datos de facturación
     public $is_facturador = false;
@@ -82,9 +77,6 @@ class EditUser extends Component
         $this->contacto_emergencia = $this->user->contacto_emergencia;
         $this->tipo_sangre = $this->user->tipo_sangre;
         $this->observaciones_medicas = $this->user->observaciones_medicas;
-        $this->discapacidad = $this->user->discapacidad ?? false;
-        $this->discapacidad_descripcion = $this->user->discapacidad_descripcion;
-        $this->certificado_discapacidad_actual = $this->user->certificado_discapacidad_path;
         //dd($this->user->is_facturador);
         $this->is_facturador = $this->user->is_facturador ?? false;
         $this->fact_nombre = $this->user->fact_nombre;
@@ -122,9 +114,6 @@ class EditUser extends Component
             'contacto_emergencia' => 'nullable|string|max:255',
             'tipo_sangre' => 'nullable|string|max:10',
             'observaciones_medicas' => 'nullable|string',
-            'discapacidad' => 'boolean',
-            'discapacidad_descripcion' => 'required_if:discapacidad,true|nullable|string',
-            'certificado_discapacidad' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'is_facturador' => 'boolean',
             'fact_nombre' => 'required_if:is_facturador,false|nullable|string|max:255',
             'fact_documento' => 'required_if:is_facturador,false|nullable|string|max:50',
@@ -147,16 +136,7 @@ class EditUser extends Component
         'cedula.required' => 'La cédula es obligatoria',
         'cedula.unique' => 'Esta cédula ya está registrada',
         'role_id.required' => 'Debe seleccionar un rol',
-        'discapacidad_descripcion.required_if' => 'Describa la discapacidad',
     ];
-
-    public function updatedDiscapacidad($value)
-    {
-        if (!$value) {
-            $this->discapacidad_descripcion = null;
-            $this->certificado_discapacidad = null;
-        }
-    }
 
     public function updatedIsFacturador($value)
     {
@@ -179,15 +159,6 @@ class EditUser extends Component
         }
     }
 
-    public function deleteCertificado()
-    {
-        if ($this->certificado_discapacidad_actual) {
-            Storage::disk('public')->delete($this->certificado_discapacidad_actual);
-            $this->user->update(['certificado_discapacidad_path' => null]);
-            $this->certificado_discapacidad_actual = null;
-            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Certificado eliminado.', 'timer' => 2000]);
-        }
-    }
 
     public function update()
     {
@@ -216,8 +187,6 @@ class EditUser extends Component
             'contacto_emergencia' => $this->contacto_emergencia,
             'tipo_sangre' => $this->tipo_sangre,
             'observaciones_medicas' => $this->observaciones_medicas,
-            'discapacidad' => $this->discapacidad,
-            'discapacidad_descripcion' => $this->discapacidad_descripcion,
             'is_facturador' => $this->is_facturador,
             'fact_nombre' => $this->fact_nombre,
             'fact_documento' => $this->fact_documento,
@@ -236,13 +205,6 @@ class EditUser extends Component
                 Storage::disk('public')->delete($this->profile_photo_actual);
             }
             $data['profile_photo_path'] = $this->profile_photo->store('users-data/profile-photos', 'public');
-        }
-
-        if ($this->certificado_discapacidad) {
-            if ($this->certificado_discapacidad_actual) {
-                Storage::disk('public')->delete($this->certificado_discapacidad_actual);
-            }
-            $data['certificado_discapacidad_path'] = $this->certificado_discapacidad->store('users-data/certificados-discapacidad', 'public');
         }
 
         $this->user->update($data);

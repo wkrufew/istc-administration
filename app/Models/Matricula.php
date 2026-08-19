@@ -26,7 +26,8 @@ class Matricula extends Model
         'observaciones',
         'periodo_id',
         'carrera_id',
-        'user_id'
+        'user_id',
+        'num_cuotas_arancel',
     ];
 
     protected $casts = [
@@ -92,6 +93,11 @@ class Matricula extends Model
     public function convalidacion()
     {
         return $this->hasOne(Convalidacion::class);
+    }
+
+    public function retiro()
+    {
+        return $this->hasOne(Retiro::class);
     }
 
     public function esValidacion(): bool

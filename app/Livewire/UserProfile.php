@@ -36,12 +36,6 @@ class UserProfile extends Component
     public $telefono_emergencia, $contacto_emergencia;
     public $tipo_sangre, $observaciones_medicas;
 
-    // Discapacidad
-    public $discapacidad = false;
-    public $discapacidad_descripcion;
-    public $certificado_discapacidad;
-    public $certificado_discapacidad_actual;
-
     // Datos de facturación
     public $is_facturador = false;
     public $fact_nombre, $fact_documento, $fact_correo, $fact_direccion, $fact_telefono;
@@ -87,9 +81,6 @@ class UserProfile extends Component
         $this->contacto_emergencia = $this->user->contacto_emergencia;
         $this->tipo_sangre = $this->user->tipo_sangre;
         $this->observaciones_medicas = $this->user->observaciones_medicas;
-        $this->discapacidad = $this->user->discapacidad ?? false;
-        $this->discapacidad_descripcion = $this->user->discapacidad_descripcion;
-        $this->certificado_discapacidad_actual = $this->user->certificado_discapacidad_path;
         //dd($this->user->is_facturador);
         $this->is_facturador = $this->user->is_facturador ?? false;
         $this->fact_nombre = $this->user->fact_nombre;
@@ -135,9 +126,6 @@ class UserProfile extends Component
             'contacto_emergencia' => 'nullable|string|max:255',
             'tipo_sangre' => 'nullable|string|max:10',
             'observaciones_medicas' => 'nullable|string',
-            'discapacidad' => 'boolean',
-            'discapacidad_descripcion' => 'required_if:discapacidad,true|nullable|string',
-            'certificado_discapacidad' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'is_facturador' => 'boolean',
             'fact_nombre' => 'required_if:is_facturador,false|nullable|string|max:255',
             'fact_documento' => 'required_if:is_facturador,false|nullable|string|max:50',
@@ -147,14 +135,6 @@ class UserProfile extends Component
 
             /* 'photo' => ['nullable', 'image', 'max:2048'], */ // 2MB
         ];
-    }
-
-    public function updatedDiscapacidad($value)
-    {
-        if (!$value) {
-            $this->discapacidad_descripcion = null;
-            $this->certificado_discapacidad = null;
-        }
     }
 
     public function updatedIsFacturador($value)
@@ -177,16 +157,6 @@ class UserProfile extends Component
             session()->flash('message', 'Foto eliminada exitosamente.');
         }
     }
-
-    /* public function deleteCertificado()
-    {
-        if ($this->certificado_discapacidad_actual) {
-            Storage::disk('public')->delete($this->certificado_discapacidad_actual);
-            $this->user->update(['certificado_discapacidad_path' => null]);
-            $this->certificado_discapacidad_actual = null;
-            session()->flash('message', 'Certificado eliminado exitosamente.');
-        }
-    } */
 
     /* public function updatedPhoto()
     {
@@ -226,8 +196,6 @@ class UserProfile extends Component
         $user->tutor = $this->tutor;
         $user->observaciones_medicas = $this->observaciones_medicas;
         $user->tipo_sangre = $this->tipo_sangre;
-        $user->discapacidad = $this->discapacidad;
-        $user->discapacidad_descripcion = $this->discapacidad_descripcion;
         $user->is_facturador = $this->is_facturador;
         $user->fact_nombre = $this->fact_nombre;
         $user->fact_documento = $this->fact_documento;
@@ -245,13 +213,6 @@ class UserProfile extends Component
                 Storage::disk('public')->delete($this->photo_preview);
             }
             $user->profile_photo_path = $this->photo->store('users-data/profile-photos', 'public');
-        } */
-
-        /*  if ($this->certificado_discapacidad) {
-            if ($this->certificado_discapacidad_actual) {
-                Storage::disk('public')->delete($this->certificado_discapacidad_actual);
-            }
-            $user->certificado_discapacidad_path = $this->certificado_discapacidad->store('users-data/certificados-discapacidad', 'public');
         } */
 
         $user->save();

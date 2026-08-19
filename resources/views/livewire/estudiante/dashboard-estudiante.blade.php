@@ -66,6 +66,99 @@
             </div>
         </div>
 
+        {{-- ================================================================
+             BECA / CONVENIO — siempre visible si el estudiante tiene alguno
+             ================================================================ --}}
+        @if ($becaYConvenio['tiene_algo'])
+            <div class="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
+                <div class="h-1 bg-gradient-to-r from-violet-500 to-purple-500"></div>
+                <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                    {{-- Icono --}}
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                        </svg>
+                    </div>
+
+                    {{-- Título --}}
+                    <div class="flex-shrink-0">
+                        <p class="text-xs font-semibold text-violet-500 uppercase tracking-widest">Beneficios Activos</p>
+                        <p class="text-sm text-gray-500 mt-0.5">Aplicados al arancel de tu carrera</p>
+                    </div>
+
+                    <div class="h-px sm:h-8 sm:w-px bg-gray-100 flex-shrink-0"></div>
+
+                    {{-- Detalle beca --}}
+                    @if ($becaYConvenio['beca'])
+                        @php $beca = $becaYConvenio['beca']; @endphp
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-gray-700 truncate">{{ $beca->tipoBeca?->nombre ?? '—' }}</p>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                                        Beca {{ number_format($beca->porcentaje_aplicado, 0) }}%
+                                    </span>
+                                    <span class="text-[0.6rem] text-gray-400">desde {{ $beca->fecha_asignacion?->format('d/m/Y') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if ($becaYConvenio['beca'] && $becaYConvenio['convenio'])
+                        <div class="h-px sm:h-8 sm:w-px bg-gray-100 flex-shrink-0"></div>
+                    @endif
+
+                    {{-- Detalle convenio --}}
+                    @if ($becaYConvenio['convenio'])
+                        @php $conv = $becaYConvenio['convenio']; @endphp
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-gray-700 truncate">{{ $conv->tipoConvenio?->nombre ?? '—' }}</p>
+                                <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-violet-100 text-violet-700">
+                                        Convenio {{ number_format($conv->porcentaje_aplicado, 0) }}%
+                                    </span>
+                                    @if ($conv->motivo)
+                                        <span class="text-[0.6rem] text-gray-400 truncate max-w-[120px]">{{ $conv->motivo }}</span>
+                                    @endif
+                                    <span class="inline-flex items-center px-1.5 py-0 rounded text-[0.6rem] font-medium {{ $conv->tipoConvenio->tipo_alcance === 'anual' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600' }}">
+                                        {{ ucfirst($conv->tipoConvenio->tipo_alcance) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Descuento total / Gratuidad --}}
+                    <div class="sm:ml-auto flex-shrink-0">
+                        @if ($becaYConvenio['gratuidad'])
+                            <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-green-100 text-green-700 border border-green-200">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                GRATUIDAD
+                            </span>
+                        @elseif ($becaYConvenio['pct_total'] > 0)
+                            <div class="text-center">
+                                <p class="text-[0.6rem] font-semibold text-gray-400 uppercase tracking-widest">Desc. total</p>
+                                <p class="text-2xl font-extrabold text-violet-600">{{ number_format($becaYConvenio['pct_total'], 0) }}%</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if (!$periodoSeleccionado)
             <div class="bg-blue-50 border border-blue-200 rounded-2xl p-8 text-center text-blue-700">
                 <svg class="w-12 h-12 mx-auto mb-3 text-blue-400" fill="none" stroke="currentColor"

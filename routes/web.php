@@ -34,6 +34,10 @@ use App\Livewire\Administration\ObligacionesEstudiante;
 use App\Livewire\Administration\PagoMatricula;
 use App\Livewire\Administration\SolicitudesGestion;
 use App\Livewire\Administration\TiposSolicitudesGestion;
+use App\Livewire\Administration\TiposBecaGestion;
+use App\Livewire\Administration\BecasEstudiantes;
+use App\Livewire\Administration\TiposConvenioGestion;
+use App\Livewire\Administration\ConveniosEstudiantes;
 use App\Livewire\Administration\TicketList;
 use App\Livewire\Administration\TicketCreate;
 use App\Livewire\Administration\TicketShow;
@@ -63,6 +67,11 @@ Route::get('/', function () {
         if ($user->can('acceso_estudiantil')) {
             session()->flash('success', $welcomeMessage);
             return redirect()->route('administracion.estudiantil.dashboard');
+        }
+
+        if ($user->can('acceso_admision')) {
+            session()->flash('success', $welcomeMessage);
+            return redirect()->route('administracion.admision.dashboard');
         }
 
         // Si no tiene permisos, cerrar sesión
@@ -193,6 +202,21 @@ Route::middleware([
         Route::get('solicitudes', SolicitudesGestion::class)->name('solicitudes.index');
         Route::get('tipos-solicitudes', TiposSolicitudesGestion::class)->name('tipos-solicitudes.index');
 
+        // Módulo Becas
+        Route::get('tipos-beca', TiposBecaGestion::class)->name('tipos-beca.index');
+        Route::get('becas', BecasEstudiantes::class)->name('becas.index');
+
+        // Módulo Convenios
+        Route::get('tipos-convenio', TiposConvenioGestion::class)->name('tipos-convenio.index');
+        Route::get('convenios', ConveniosEstudiantes::class)->name('convenios.index');
+
+        // Módulo Admisión — Cohortes y Aspirantes
+        Route::get('cohortes', \App\Livewire\Administration\GestionCohortes::class)->name('cohortes.index');
+        Route::get('aspirantes/registrar', \App\Livewire\Administration\RegistrarAspirante::class)->name('aspirantes.registrar');
+        Route::get('aspirantes/papelera', \App\Livewire\Administration\BandejaAspirantes::class)->name('aspirantes.papelera');
+        Route::get('aspirantes/{id}/eliminar', \App\Livewire\Administration\EliminarAspirantePermanente::class)->name('aspirantes.eliminar');
+        Route::get('aspirantes', \App\Livewire\Administration\GestionAspirantes::class)->name('aspirantes.index');
+
     });
 
     Route::middleware('permisos:acceso_docencia')->prefix('docencia')->name('administracion.docencia.')->group(function () {
@@ -228,15 +252,7 @@ Route::middleware([
         Route::get('calendario-moodle', fn () => view('estudiantil.calendario-moodle'))->name('calendario-moodle');
     });
 
-    Route::middleware('permisos:acceso_admision')->prefix('administracion/admision ')->name('administracion.admision.')->group(function () {
-        Route::get('/', function () {
-            return view('admision.dashboard-admision');
-        })->name('dashboard');
-
-        // Rutas para informacion para que el estudiante pueda ver los requisitos para el proceso de admision
-        // Ruta para que el estudiante pueda descargar los requisitos para el proceso de admision
-        // Ruta para que el estudiante pueda ver el estado de su proceso de admision
-        // Ruta para que el estudiante pueda rellenar un formulario para el proceso de admision con sus datos personales y academico
-        // Rutas para que el estudiante pueda subir documentos para el proceso de admision
+    Route::middleware('permisos:acceso_admision')->prefix('admision')->name('administracion.admision.')->group(function () {
+        Route::get('/', \App\Livewire\Admision\PortalAspirante::class)->name('dashboard');
     });
 });

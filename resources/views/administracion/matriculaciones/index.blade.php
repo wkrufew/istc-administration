@@ -6,4 +6,5 @@
     @endif
     {{-- Livewire component --}}
     @livewire('administration.matriculacion')
+    @livewire('administration.anular-matricula')
 </x-admin-layout>

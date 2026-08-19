@@ -29,6 +29,7 @@ class Carrera extends Model
         'description',
         'costo_credito',
         'costo_carrera',
+        'costo_convalidacion',
         'duracion_semestres',
         'modalidad',
         'tipo',
@@ -36,8 +37,9 @@ class Carrera extends Model
     ];
 
     protected $casts = [
-        'costo_credito'     => 'decimal:2',
-        'costo_carrera'     => 'decimal:2',
+        'costo_credito'      => 'decimal:2',
+        'costo_carrera'      => 'decimal:2',
+        'costo_convalidacion' => 'decimal:2',
         'duracion_semestres' => 'integer',
         'is_active'         => 'boolean',
     ];

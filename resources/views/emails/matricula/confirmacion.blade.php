@@ -184,6 +184,89 @@
                             </tr>
                         </table>
 
+                        {{-- ── BECA / CONVENIO ACTIVO ─────────────────── --}}
+                        @if(!$esEdicion && ($becaActiva || $convenioActivo))
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="background-color:#faf5ff;border:2px solid #c4b5fd;border-radius:10px;margin-bottom:24px;">
+                            <tr>
+                                <td style="padding:20px 24px;">
+                                    <p style="margin:0 0 14px;font-size:11px;font-weight:700;color:#6d28d9;
+                                               text-transform:uppercase;letter-spacing:0.13em;">
+                                        Beneficios Aplicados al Arancel
+                                    </p>
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                        @if($becaActiva)
+                                        <tr>
+                                            <td style="padding:9px 0;border-bottom:1px solid #ddd6fe;font-size:13px;color:#7c3aed;">
+                                                Beca · {{ $becaActiva->tipoBeca?->nombre ?? '—' }}
+                                            </td>
+                                            <td style="padding:9px 0;border-bottom:1px solid #ddd6fe;text-align:right;">
+                                                <span style="font-size:13px;font-weight:700;background-color:#ede9fe;
+                                                             color:#6d28d9;padding:3px 10px;border-radius:20px;">
+                                                    {{ number_format($becaActiva->porcentaje_aplicado, 0) }}% descuento
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @endif
+                                        @if($convenioActivo)
+                                        <tr>
+                                            <td style="padding:9px 0;{{ $becaActiva ? '' : 'border-bottom:1px solid #ddd6fe;' }}font-size:13px;color:#7c3aed;">
+                                                Convenio · {{ $convenioActivo->tipoConvenio?->nombre ?? '—' }}
+                                                @if($convenioActivo->motivo)
+                                                    <span style="font-size:11px;color:#a78bfa;"> — {{ $convenioActivo->motivo }}</span>
+                                                @endif
+                                            </td>
+                                            <td style="padding:9px 0;{{ $becaActiva ? '' : 'border-bottom:1px solid #ddd6fe;' }}text-align:right;">
+                                                <span style="font-size:13px;font-weight:700;background-color:#ede9fe;
+                                                             color:#6d28d9;padding:3px 10px;border-radius:20px;">
+                                                    {{ number_format($convenioActivo->porcentaje_aplicado, 0) }}% descuento
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @endif
+                                        @php
+                                            $pctBeca     = $becaActiva ? (float) $becaActiva->porcentaje_aplicado : 0;
+                                            $pctConvenio = $convenioActivo ? (float) $convenioActivo->porcentaje_aplicado : 0;
+                                            $pctTotal    = min(100, $pctBeca + $pctConvenio);
+                                        @endphp
+                                        @if($pctBeca > 0 && $pctConvenio > 0)
+                                        <tr>
+                                            <td style="padding:9px 0 0;font-size:13px;color:#6d28d9;font-weight:600;">
+                                                Descuento total combinado
+                                            </td>
+                                            <td style="padding:9px 0 0;text-align:right;">
+                                                @if($pctTotal >= 100)
+                                                <span style="font-size:13px;font-weight:700;background-color:#d1fae5;
+                                                             color:#065f46;padding:3px 10px;border-radius:20px;">
+                                                    GRATUIDAD (100%)
+                                                </span>
+                                                @else
+                                                <span style="font-size:13px;font-weight:700;background-color:#ede9fe;
+                                                             color:#6d28d9;padding:3px 10px;border-radius:20px;">
+                                                    {{ $pctTotal }}% total
+                                                </span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        @elseif($pctTotal >= 100)
+                                        <tr>
+                                            <td colspan="2" style="padding:9px 0 0;text-align:center;">
+                                                <span style="font-size:13px;font-weight:700;background-color:#d1fae5;
+                                                             color:#065f46;padding:4px 14px;border-radius:20px;">
+                                                    GRATUIDAD — Arancel $0.00
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @endif
+                                    </table>
+                                    <p style="margin:14px 0 0;font-size:12px;color:#7c3aed;line-height:1.6;">
+                                        Estos beneficios se aplican únicamente al arancel semestral. La cuota de matrícula no se modifica.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                        @endif
+
                         {{-- ── MATERIAS INSCRITAS ──────────────────────── --}}
                         @if($matricula->detalles->isNotEmpty())
                         <p class="text-label" style="margin:0 0 12px;font-size:11px;font-weight:700;color:#94a3b8;
@@ -400,7 +483,9 @@
                                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                                         <tr>
                                             <td style="vertical-align:top;">
-                                                <p style="margin:0;font-size:12px;color:#1d4ed8;">Valor del semestre</p>
+                                                <p style="margin:0;font-size:12px;color:#1d4ed8;">
+                                                        Valor del semestre{{ isset($numCuotasArancel) && $numCuotasArancel > 1 ? ' (' . $numCuotasArancel . ' cuotas)' : '' }}
+                                                    </p>
                                                 <p style="margin:4px 0 0;font-size:34px;font-weight:800;color:#1e40af;line-height:1;">
                                                     ${{ $montoArancel }}
                                                 </p>

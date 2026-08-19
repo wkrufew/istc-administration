@@ -121,7 +121,7 @@ class TiposSolicitudesGestion extends Component
         $tipo->update(['is_active' => ! $tipo->is_active]);
         unset($this->tipos);
 
-        $label = $tipo->is_active ? 'activado' : 'desactivado';
+        $label = ! $tipo->is_active ? 'activado' : 'desactivado';
         $this->dispatch('swal', [
             'toast' => true,
             'icon'  => 'success',

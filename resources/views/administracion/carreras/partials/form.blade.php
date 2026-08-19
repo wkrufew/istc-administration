@@ -27,7 +27,7 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
     <div>
         <label for="costo_credito" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Costo por Crédito</label>
         <input type="number" name="costo_credito" id="costo_credito" step="0.01" min="0"
@@ -35,10 +35,20 @@
             value="{{ old('costo_credito', $carrera->costo_credito ?? '0.00') }}" required>
     </div>
     <div>
-        <label for="costo_carrera" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Costo por Carrera</label>
+        <label for="costo_carrera" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Costo Carrera (Regular)</label>
         <input type="number" name="costo_carrera" id="costo_carrera" step="0.01" min="0"
             class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-verdeclaro focus:ring-2 focus:ring-verdeclaro/40 transition"
             value="{{ old('costo_carrera', $carrera->costo_carrera ?? '0.00') }}" required>
+    </div>
+    <div>
+        <label for="costo_convalidacion" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            Arancel Convalidación <span class="text-xs font-normal text-gray-400">(por semestre)</span>
+        </label>
+        <input type="number" name="costo_convalidacion" id="costo_convalidacion" step="0.01" min="0"
+            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-verdeclaro focus:ring-2 focus:ring-verdeclaro/40 transition"
+            value="{{ old('costo_convalidacion', $carrera->costo_convalidacion ?? '') }}"
+            placeholder="Vacío = usa costo_carrera">
+        <p class="mt-1 text-xs text-gray-400">Si se deja vacío, se calcula sobre el costo regular.</p>
     </div>
 
     <div>

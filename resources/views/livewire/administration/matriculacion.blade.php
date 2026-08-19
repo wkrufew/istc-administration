@@ -131,11 +131,8 @@
                             class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Estudiante</th>
                         <th
-                            class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
-                            Cédula</th>
-                        <th
                             class="px-5 py-3.5 text-left text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
-                            Email</th>
+                            Email / C.I.</th>
                         <th
                             class="px-5 py-3.5 text-center text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
                             Matrícula Actual</th>
@@ -168,14 +165,12 @@
                                 </div>
                             </td>
 
-                            {{-- Cédula --}}
-                            <td class="px-5 py-3.5 text-center">
-                                <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ $student->cedula }}</span>
-                            </td>
-
-                            {{-- Email --}}
+                            {{-- Email + C.I. --}}
                             <td class="px-5 py-3.5">
-                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ $student->email }}</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">{{ $student->email }}</p>
+                                @if($student->cedula)
+                                <p class="text-[0.65rem] text-slate-400 dark:text-slate-500 mt-0.5 font-mono">C.I.: {{ $student->cedula }}</p>
+                                @endif
                             </td>
 
                             {{-- Matrícula --}}
@@ -226,6 +221,13 @@
                                             </span>
                                         @break
 
+                                        @case('Retirada')
+                                            <span
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-orange-500/10 border border-orange-500/20 text-orange-400">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span>Retirada
+                                            </span>
+                                        @break
+
                                         @default
                                             <span
                                                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-sky-500/10 border border-sky-500/20 text-sky-400">
@@ -244,20 +246,57 @@
                             {{-- Acciones --}}
                             <td class="px-5 py-3.5 text-center">
                                 @if ($matriculaActual)
-                                    <button type="button" wire:click="editarMatricula({{ $matriculaActual->id }})"
-                                        title="Editar matrícula"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
-                                               text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
-                                               hover:text-sky-400 hover:border-sky-500/30 hover:bg-sky-500/[0.06]
-                                               transition-all duration-150">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                        </svg>
-                                        Editar
-                                    </button>
+                                    <div class="flex flex-col items-center gap-1">
+                                        <button type="button" wire:click="editarMatricula({{ $matriculaActual->id }})"
+                                            title="Editar matrícula"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
+                                                   text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
+                                                   hover:text-sky-400 hover:border-sky-500/30 hover:bg-sky-500/[0.06]
+                                                   transition-all duration-150">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                            </svg>
+                                            Editar
+                                        </button>
+                                        @role('Administrador')
+                                        <button type="button" wire:click="abrirAnulacion({{ $student->id }})"
+                                            title="Anular matrícula"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.65rem] font-medium
+                                                   text-red-500/80 border border-red-200/40 dark:border-red-500/10 bg-red-50/60 dark:bg-red-900/[0.06]
+                                                   hover:text-red-600 hover:border-red-400/50 hover:bg-red-50 dark:hover:bg-red-900/10
+                                                   transition-all duration-150">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                                <path d="M10 11v6"/><path d="M14 11v6"/>
+                                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                            </svg>
+                                            Anular
+                                        </button>
+                                        @endrole
+                                        @can('cancelar_matriculas')
+                                        @if (!in_array($matriculaActual->estado, ['Cancelada', 'Retirada']))
+                                        <button type="button" wire:click="abrirRetiro({{ $matriculaActual->id }})"
+                                            title="Registrar retiro del estudiante"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.65rem] font-medium
+                                                   text-orange-500/80 border border-orange-200/40 dark:border-orange-500/10 bg-orange-50/60 dark:bg-orange-900/[0.06]
+                                                   hover:text-orange-600 hover:border-orange-400/50 hover:bg-orange-50 dark:hover:bg-orange-900/10
+                                                   transition-all duration-150">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                            </svg>
+                                            Retirar
+                                        </button>
+                                        @endif
+                                        @endcan
+                                    </div>
                                 @else
                                     <div class="flex flex-col items-center gap-1">
                                         <button type="button" wire:click="iniciarMatricula({{ $student->id }})"
@@ -291,7 +330,7 @@
                         </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-16 text-center">
+                                <td colspan="5" class="px-6 py-16 text-center">
                                     <div class="flex flex-col items-center gap-3 text-slate-500">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30"
                                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"
@@ -327,7 +366,7 @@
             <div class="fixed inset-0 z-[99999] flex items-center justify-center p-4" role="dialog" aria-modal="true">
 
                 {{-- Overlay --}}
-                <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" wire:click="cerrarModal"></div>
+                <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
 
                 {{-- Panel --}}
                 <div class="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden flex flex-col max-h-[90vh]"
@@ -934,20 +973,6 @@
                                                     Costo Matrícula
                                                 </p>
 
-                                                {{-- Descuento --}}
-                                                <div>
-                                                    <label
-                                                        class="block text-[0.65rem] font-medium tracking-[0.12em] uppercase text-slate-400 mb-1.5">
-                                                        Descuento ($)
-                                                    </label>
-                                                    <input type="number" wire:model.blur="descuento" min="0"
-                                                        max="{{ $costoTotal }}" step="0.01" placeholder="0.00"
-                                                        class="w-full px-3 py-2 rounded-lg text-sm text-white/80 bg-slate-900 border border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('descuento') border-red-500/50 @enderror">
-                                                    @error('descuento')
-                                                        <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
-                                                    @enderror
-                                                </div>
-
                                                 <div class="space-y-2">
                                                     <div class="flex justify-between items-center">
                                                         <span class="text-xs text-slate-500 dark:text-slate-400">Costo Matrícula</span>
@@ -980,14 +1005,6 @@
                                                             </span>
                                                         </div>
                                                     @endif
-                                                    @if ($descuento > 0)
-                                                        <div class="flex justify-between items-center">
-                                                            <span class="text-xs text-lime-400/70">Descuento</span>
-                                                            <span class="text-xs font-medium text-lime-400">
-                                                                -${{ number_format($descuento, 2) }}
-                                                            </span>
-                                                        </div>
-                                                    @endif
                                                 </div>
 
                                                 <div
@@ -1008,12 +1025,82 @@
                                                     class="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-amber-400/80 mb-2.5">
                                                     Valor Pendiente
                                                 </p>
+
+                                                {{-- Arancel base --}}
                                                 <div class="flex justify-between items-center">
-                                                    <span class="text-xs text-slate-500 dark:text-slate-400">Arancel Semestral</span>
-                                                    <span class="text-xs font-semibold text-amber-300">
+                                                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                                                        Arancel base{{ $tipo === 'Validacion' ? ' (Convalidación)' : '' }}
+                                                    </span>
+                                                    <span class="text-xs font-medium text-slate-700 dark:text-white/70">
+                                                        ${{ number_format($montoArancelBruto, 2) }}
+                                                    </span>
+                                                </div>
+
+                                                {{-- Reintegro --}}
+                                                @if ($tieneReintegro)
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-xs text-orange-400/90">Recargo reintegro (+10%)</span>
+                                                        <span class="text-xs font-medium text-orange-400">
+                                                            +${{ number_format($montoReintegro, 2) }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+
+                                                {{-- Beca --}}
+                                                @if ($infoBeca)
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-xs text-lime-400/90">
+                                                            Beca {{ $infoBeca['nombre'] }}
+                                                            <span class="text-lime-500">({{ number_format($infoBeca['porcentaje'], 0) }}%)</span>
+                                                        </span>
+                                                        <span class="text-xs font-medium text-lime-400">
+                                                            -${{ number_format($descuentoBeca, 2) }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+
+                                                {{-- Convenio --}}
+                                                @if ($infoConvenio)
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-xs text-violet-400/90">
+                                                            Convenio {{ $infoConvenio['nombre'] }}
+                                                            <span class="text-violet-500">({{ number_format($infoConvenio['porcentaje'], 0) }}%)</span>
+                                                        </span>
+                                                        <span class="text-xs font-medium text-violet-400">
+                                                            -${{ number_format($descuentoConvenio, 2) }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+
+                                                @if ($esGratuidad)
+                                                    <div class="flex items-center justify-center gap-1.5 py-1">
+                                                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[0.65rem] font-bold bg-lime-500/15 border border-lime-500/30 text-lime-400 tracking-wide uppercase">
+                                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                                            Gratuidad — Arancel $0.00
+                                                        </span>
+                                                    </div>
+                                                @endif
+
+                                                <div class="border-t border-amber-500/20 pt-2 flex justify-between items-center">
+                                                    <span class="text-xs font-semibold text-slate-400">Arancel Neto</span>
+                                                    <span class="text-xs font-bold text-amber-300">
                                                         ${{ number_format($montoArancel, 2) }}
                                                     </span>
                                                 </div>
+
+                                                {{-- Cuotas --}}
+                                                <div class="pt-1">
+                                                    <label class="text-[0.6rem] text-amber-400/60 uppercase tracking-wide block mb-1">
+                                                        Cuotas del arancel
+                                                    </label>
+                                                    <select wire:model.live="num_cuotas_arancel"
+                                                        class="w-full text-xs rounded bg-slate-900 border border-white/10 text-white/70 px-2 py-1 focus:outline-none focus:border-amber-500/50">
+                                                        @foreach([1,2,3,4,6] as $n)
+                                                            <option value="{{ $n }}">{{ $n }} cuota{{ $n > 1 ? 's' : '' }}{{ $n > 1 ? ' — $' . number_format($montoArancel / $n, 2) . ' c/u' : '' }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
                                                 <p class="text-[0.6rem] text-amber-400/50 leading-relaxed">
                                                     Valor a pagar durante el transcurso del semestre.
                                                 </p>
@@ -1096,6 +1183,117 @@
                 </div>
             </div>
         @endif
+
+    {{-- ══════════════════════════════════════════════════════
+         MODAL: RETIRO DE ESTUDIANTE
+    ═══════════════════════════════════════════════════════ --}}
+    @if ($showRetiroModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" wire:click="cerrarRetiro"></div>
+            <div class="relative z-10 w-full max-w-md mx-4">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-orange-200/30 dark:border-orange-500/20 overflow-hidden">
+
+                    {{-- Header --}}
+                    <div class="flex items-center gap-3 px-6 py-4 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-200/40 dark:border-orange-500/20">
+                        <div class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-orange-900 dark:text-orange-100">Registrar Retiro</h3>
+                            <p class="text-xs text-orange-700/70 dark:text-orange-300/60 truncate max-w-xs">{{ $retiroEstudianteNombre }}</p>
+                        </div>
+                        <button type="button" wire:click="cerrarRetiro" class="ml-auto text-orange-400 hover:text-orange-600 transition-colors">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    {{-- Body --}}
+                    <div class="px-6 py-5 space-y-4">
+                        <div class="bg-orange-50 dark:bg-orange-900/10 border border-orange-200/50 dark:border-orange-500/20 rounded-lg px-4 py-3">
+                            <p class="text-xs text-orange-700 dark:text-orange-300/80 leading-relaxed">
+                                El retiro cambiará el estado de la matrícula a <strong>Retirada</strong> y marcará todas las materias como <strong>Retirado</strong>.
+                                Si el estudiante se re-matrícula en el futuro, se aplicará un recargo de 10% (reintegro).
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                Fecha de retiro <span class="text-red-500">*</span>
+                            </label>
+                            <input type="date" wire:model="retiroFecha"
+                                class="w-full text-sm rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white/80 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500/50 @error('retiroFecha') border-red-400 @enderror">
+                            @error('retiroFecha')
+                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                Solicitud / Certificado de retiro <span class="text-red-500">*</span>
+                            </label>
+                            <label class="flex flex-col items-center justify-center w-full h-24 rounded-lg border-2 border-dashed cursor-pointer transition-colors
+                                          @error('retiroDocumento') border-red-400 bg-red-50 dark:bg-red-900/10 @else border-orange-200 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 hover:bg-orange-50 dark:hover:bg-orange-900/20 @enderror">
+                                @if($retiroDocumento)
+                                    <div class="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                                        </svg>
+                                        <span class="text-xs font-medium truncate max-w-[220px]">{{ $retiroDocumento->getClientOriginalName() }}</span>
+                                    </div>
+                                    <p class="text-[10px] text-orange-500 dark:text-orange-400 mt-1">Clic para cambiar</p>
+                                @else
+                                    <svg class="w-6 h-6 text-orange-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                                    </svg>
+                                    <p class="text-xs text-orange-600 dark:text-orange-300 font-medium">Subir documento</p>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">PDF, JPG o PNG — máx. 5 MB</p>
+                                @endif
+                                <input type="file" wire:model="retiroDocumento" accept=".pdf,.jpg,.jpeg,.png" class="hidden">
+                            </label>
+                            <div wire:loading wire:target="retiroDocumento" class="mt-1 text-xs text-slate-400">Cargando archivo…</div>
+                            @error('retiroDocumento')
+                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                Motivo <span class="text-slate-400">(opcional)</span>
+                            </label>
+                            <textarea wire:model="retiroMotivo" rows="2" placeholder="Indique el motivo del retiro..."
+                                class="w-full text-sm rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white/80 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500/50 resize-none @error('retiroMotivo') border-red-400 @enderror"></textarea>
+                            @error('retiroMotivo')
+                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Footer --}}
+                    <div class="flex items-center justify-end gap-2 px-6 py-4 bg-slate-50 dark:bg-black/15 border-t border-slate-100 dark:border-white/[0.05]">
+                        <button type="button" wire:click="cerrarRetiro"
+                            class="px-4 py-2 text-xs font-medium rounded-full text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+                            Cancelar
+                        </button>
+                        <button type="button" wire:click="confirmarRetiro" wire:loading.attr="disabled"
+                            class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold rounded-full text-white
+                                bg-orange-600 hover:bg-orange-700 disabled:opacity-60 transition-all shadow-sm">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                            <span wire:loading.remove wire:target="confirmarRetiro">Confirmar Retiro</span>
+                            <span wire:loading wire:target="confirmarRetiro">Procesando...</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    @endif
 
     </div>
 
@@ -1306,6 +1504,11 @@
                                                         class="bg-gray-300 text-gray-800 px-3 py-1 rounded-full text-sm">Cancelada</span>
                                                 @break
 
+                                                @case('Retirada')
+                                                    <span
+                                                        class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">Retirada</span>
+                                                @break
+
                                                 @default
                                                     <span
                                                         class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">{{ $matriculaActual->estado }}</span>
@@ -1330,6 +1533,18 @@
                                                     </path>
                                                 </svg>
                                             </button>
+                                            @can('cancelar_matriculas')
+                                            @if (!in_array($matriculaActual->estado, ['Cancelada', 'Retirada']))
+                                            <button type="button"
+                                                class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-md text-sm transition duration-200"
+                                                wire:click="abrirRetiro({{ $matriculaActual->id }})"
+                                                title="Retirar estudiante">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                                </svg>
+                                            </button>
+                                            @endif
+                                            @endcan
                                         @else
                                             <button type="button"
                                                 class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition duration-200"
@@ -1999,6 +2214,42 @@
                                                         <span
                                                             class="text-xl font-bold text-blue-600">${{ number_format($totalPagar + $valorInscripcion, 2) }}</span>
                                                     </div>
+
+                                                    <hr class="my-4">
+
+                                                    <!-- Desglose arancel -->
+                                                    <div class="space-y-2">
+                                                        <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Arancel Semestral</p>
+                                                        <div class="flex justify-between items-center">
+                                                            <span class="text-sm text-gray-600">Base{{ $tipo === 'Validacion' ? ' (Convalidación)' : '' }}:</span>
+                                                            <span class="font-medium text-gray-900">${{ number_format($montoArancelBruto, 2) }}</span>
+                                                        </div>
+                                                        @if ($tieneReintegro)
+                                                            <div class="flex justify-between items-center text-orange-600">
+                                                                <span class="text-sm">Recargo reintegro (+10%):</span>
+                                                                <span class="font-medium">+${{ number_format($montoReintegro, 2) }}</span>
+                                                            </div>
+                                                        @endif
+                                                        @if ($infoBeca)
+                                                            <div class="flex justify-between items-center text-green-600">
+                                                                <span class="text-sm">Beca {{ $infoBeca['nombre'] }} ({{ number_format($infoBeca['porcentaje'], 0) }}%):</span>
+                                                                <span class="font-medium">-${{ number_format($descuentoBeca, 2) }}</span>
+                                                            </div>
+                                                        @endif
+                                                        <div class="flex justify-between items-center font-semibold text-amber-700">
+                                                            <span class="text-sm">Arancel Neto:</span>
+                                                            <span>${{ number_format($montoArancel, 2) }}</span>
+                                                        </div>
+                                                        <div class="mt-2">
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Cuotas del arancel</label>
+                                                            <select wire:model.live="num_cuotas_arancel"
+                                                                class="w-full text-sm rounded border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                                                                @foreach([1,2,3,4,6] as $n)
+                                                                    <option value="{{ $n }}">{{ $n }} cuota{{ $n > 1 ? 's' : '' }}{{ $n > 1 ? ' — $' . number_format($montoArancel / $n, 2) . ' c/u' : '' }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -2063,6 +2314,7 @@
         </div>
     </div>
     </div>
+ --}}
 
     @push('js')
         <script>
@@ -2118,4 +2370,3 @@
             });
         </script>
     @endpush
- --}}

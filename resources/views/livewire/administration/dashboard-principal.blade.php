@@ -1,4 +1,5 @@
 <div>
+@can('ver_dashboard')
     <div>
         {{-- SELECTOR DE PERIODO --}}
         <div class="w-full px-4 sm:px-6 lg:px-8 pt-6">
@@ -661,4 +662,42 @@
             </div>
         </div>
     </div>
+
+@else
+    {{-- ══ PANTALLA DE BIENVENIDA (sin permiso ver_dashboard) ══════════════ --}}
+    <div class="min-h-[80vh] flex items-center justify-center px-4">
+        <div class="text-center max-w-md w-full">
+
+            {{-- Ícono --}}
+            <div class="flex justify-center mb-6">
+                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                    <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/>
+                    </svg>
+                </div>
+            </div>
+
+            {{-- Saludo --}}
+            <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+                Bienvenido, {{ explode(' ', auth()->user()->name)[0] }}
+            </h1>
+            <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+                Tu sesión está activa. Usa el menú lateral para acceder a las funciones asignadas a tu perfil.
+            </p>
+
+            {{-- Línea separadora decorativa --}}
+            <div class="flex items-center gap-3 justify-center">
+                <div class="h-px w-12 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                <div class="h-px w-12 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+            </div>
+
+            <p class="text-xs text-slate-400 dark:text-slate-600 mt-6">
+                {{ \App\Services\SettingService::get('instituto.nombre_largo', 'Instituto Superior Tecnológico') }}
+            </p>
+
+        </div>
+    </div>
+@endcan
+
 </div>

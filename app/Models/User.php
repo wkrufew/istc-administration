@@ -56,9 +56,6 @@ class User extends Authenticatable
         'observaciones_medicas',
         'is_active',
         'moodle_suspended',
-        'discapacidad',
-        'discapacidad_descripcion',
-        /* 'certificado_discapacidad_path', */
         'is_facturador',
         'fact_nombre',
         'fact_documento',
@@ -67,6 +64,32 @@ class User extends Authenticatable
         'fact_telefono',
         'profile_photo_path',
         'cumpleanos_notificado_year',
+
+        // Discapacidad
+        'tiene_discapacidad',
+        'tipo_discapacidad',
+        'porcentaje_discapacidad',
+        'nro_conadis',
+        'certificado_discapacidad_path',
+
+        // Ficha de registro — campos de admisión
+        'sexo',
+        'pueblo_nacionalidad',
+        'provincia_nacimiento',
+        'canton_nacimiento',
+        'pais_residencia',
+        'provincia_residencia',
+        'canton_residencia',
+        'tipo_colegio',
+        'nombre_colegio',
+        'ocupacion',
+        'empleo_ingresos',
+        'bono_dh',
+        'ingresos_hogar',
+        'miembros_hogar',
+        'formacion_padre',
+        'formacion_madre',
+        'parentesco_emergencia',
     ];
 
     /**
@@ -89,7 +112,6 @@ class User extends Authenticatable
     protected $appends = [
         'profile_photo_url',
         /* 'profile_photo_path', */
-        /* 'certificado_discapacidad_path' */
     ];
 
     /**
@@ -100,11 +122,13 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'fecha_nacimiento' => 'date',
-            'is_active'        => 'boolean',
-            'moodle_suspended' => 'boolean',
+            'email_verified_at'    => 'datetime',
+            'password'             => 'hashed',
+            'fecha_nacimiento'     => 'date',
+            'is_active'            => 'boolean',
+            'moodle_suspended'     => 'boolean',
+            'tiene_discapacidad'   => 'boolean',
+            'porcentaje_discapacidad' => 'integer',
         ];
     }
 
@@ -258,6 +282,40 @@ class User extends Authenticatable
     public function obligacionesFinancieras()
     {
         return $this->hasMany(ObligacionesFinanciera::class);
+    }
+
+    public function retiros()
+    {
+        return $this->hasMany(Retiro::class);
+    }
+
+    public function aspirante(): HasOne
+    {
+        return $this->hasOne(Aspirante::class);
+    }
+
+    public function becasAplicadas()
+    {
+        return $this->hasMany(BecaAplicada::class);
+    }
+
+    public function becaActiva(): ?BecaAplicada
+    {
+        return $this->becasAplicadas()->where('is_active', true)->with('tipoBeca')->first();
+    }
+
+    public function conveniosAplicados()
+    {
+        return $this->hasMany(ConvenioAplicado::class);
+    }
+
+    public function convenioActivo(): ?ConvenioAplicado
+    {
+        return $this->conveniosAplicados()
+            ->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
+            ->with('tipoConvenio')
+            ->first();
     }
 
     ///para practicas preprofesionales y titutlacion

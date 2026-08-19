@@ -14,20 +14,26 @@ use App\Models\MateriasArrastrada;
 use App\Models\MateriaPeriodoParalelo;
 use App\Models\Pago;
 use App\Models\ObligacionesFinanciera;
+use App\Models\BecaAplicada;
+use App\Models\ConvenioAplicado;
+use App\Models\Retiro;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Rule;
 use Livewire\Attributes\Computed;
 use Carbon\Carbon;
 use App\Jobs\EnviarEmailMatricula;
+use App\Jobs\EnviarEmailRetiro;
 use App\Jobs\EnviarWhatsappMatricula;
 use App\Services\SettingService;
 use App\Traits\WithAuthorization;
 
 class Matriculacion extends Component
 {
-    use WithPagination, WithAuthorization;
+    use WithPagination, WithAuthorization, WithFileUploads;
 
     // -------------------------------------------------------------------------
     // PROPIEDADES DE BÚSQUEDA Y FILTROS
@@ -77,11 +83,31 @@ class Matriculacion extends Component
     public $totalPagar    = 0;
 
     // Costos calculados automáticamente según carrera
-    public $montoMatricula  = 0; // (costo_carrera * 10%) / duracion_semestres
-    public $montoArancel    = 0; // costo_carrera / duracion_semestres
-    public $montoCostoTotal = 0; // montoMatricula + costoArrastres
-    public $costoArrastres  = 0; // suma de costo_adicional de arrastres incluidos
+    public $montoMatricula   = 0; // (costo_carrera * 10%) / duracion_semestres
+    public $montoArancel     = 0; // arancel neto tras beca y reintegro
+    public $montoArancelBruto = 0; // arancel base antes de beca (con reintegro ya sumado)
+    public $descuentoBeca    = 0; // descuento de beca aplicado al arancel
+    public $montoReintegro   = 0; // recargo 10% costo_carrera por reintegro
+    public $tieneReintegro   = false;
+    public $infoBeca             = null; // ['nombre' => ..., 'porcentaje' => ...]
+    public $infoConvenio         = null; // ['nombre' => ..., 'porcentaje' => ...]
+    public $descuentoConvenio    = 0;
+    public $porcentajeDescuentoTotal = 0;
+    public $esGratuidad          = false;
+    public $num_cuotas_arancel = 1;  // cuotas en que se divide el arancel semestral
+    public $montoCostoTotal  = 0; // montoMatricula + costoArrastres
+    public $costoArrastres   = 0; // suma de costo_adicional de arrastres incluidos
     public $valorInscripcion = 0; // solo primera matrícula — leído de settings
+
+    // -------------------------------------------------------------------------
+    // PROPIEDADES DEL MODAL RETIRO
+    // -------------------------------------------------------------------------
+    public bool   $showRetiroModal      = false;
+    public ?int   $retiroMatriculaId    = null;
+    public string $retiroEstudianteNombre = '';
+    public string $retiroFecha          = '';
+    public string $retiroMotivo         = '';
+    public        $retiroDocumento      = null;
 
     protected $listeners = [
         'matricularEstudiante' => 'iniciarMatricula',
@@ -456,8 +482,8 @@ class Matriculacion extends Component
      * Calcula los montos base según la carrera seleccionada.
      * Se llama al pasar el paso 1.
      *
-     * Matrícula  = (costo_carrera × 10%) / duracion_semestres
-     * Arancel    = costo_carrera / duracion_semestres
+     * Matrícula  = (costo_carrera × 10%) / duracion_semestres  (siempre, sin beca)
+     * Arancel    = base (carrera o convalidación) + reintegro – beca
      */
     public function calcularMontosPorCarrera()
     {
@@ -467,7 +493,76 @@ class Matriculacion extends Component
         $semestres = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
 
         $this->montoMatricula = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
-        $this->montoArancel   = round($carrera->costo_carrera / $semestres, 2);
+
+        $this->aplicarCalculoArancel($carrera, $semestres);
+    }
+
+    /**
+     * Helper compartido: calcula base arancel, reintegro y beca,
+     * y actualiza las propiedades correspondientes.
+     */
+    private function aplicarCalculoArancel(Carrera $carrera, int $semestres): void
+    {
+        // Base arancel: Validación usa costo_convalidacion si está definido
+        if ($this->tipo === 'Validacion'
+            && $carrera->costo_convalidacion !== null
+            && (float) $carrera->costo_convalidacion > 0
+        ) {
+            $base = round((float) $carrera->costo_convalidacion, 2);
+        } else {
+            $base = round($carrera->costo_carrera / $semestres, 2);
+        }
+
+        // Reintegro: +10% costo_carrera si tiene retiro sin cobrar
+        $retiroPendiente      = $this->estudiante
+            ? Retiro::where('user_id', $this->estudiante->id)->where('recargo_cobrado', false)->exists()
+            : false;
+        $this->tieneReintegro = $retiroPendiente;
+        $this->montoReintegro = $retiroPendiente ? round($carrera->costo_carrera * 0.10, 2) : 0;
+
+        // Beca activa
+        $beca = $this->estudiante
+            ? BecaAplicada::where('user_id', $this->estudiante->id)->where('is_active', true)->with('tipoBeca')->first()
+            : null;
+
+        $pctBeca = 0;
+        if ($beca) {
+            $pctBeca        = (float) $beca->porcentaje_aplicado;
+            $this->infoBeca = ['nombre' => $beca->tipoBeca->nombre, 'porcentaje' => $pctBeca];
+        } else {
+            $this->infoBeca      = null;
+            $this->descuentoBeca = 0;
+        }
+
+        // Convenio activo
+        $convenio = $this->estudiante
+            ? ConvenioAplicado::where('user_id', $this->estudiante->id)
+                ->where('is_active', true)
+                ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
+                ->with('tipoConvenio')
+                ->first()
+            : null;
+
+        $pctConvenio = 0;
+        if ($convenio) {
+            $pctConvenio          = (float) $convenio->porcentaje_aplicado;
+            $this->infoConvenio   = ['nombre' => $convenio->tipoConvenio->nombre, 'porcentaje' => $pctConvenio];
+        } else {
+            $this->infoConvenio      = null;
+            $this->descuentoConvenio = 0;
+        }
+
+        // Descuento combinado (máx. 100%)
+        $pctTotal                        = min(100, $pctBeca + $pctConvenio);
+        $this->porcentajeDescuentoTotal  = $pctTotal;
+        $this->esGratuidad               = ($pctTotal >= 100);
+        $descuentoTotal                  = round(($base + $this->montoReintegro) * ($pctTotal / 100), 2);
+
+        $this->descuentoBeca     = $beca    ? round(($base + $this->montoReintegro) * ($pctBeca / 100), 2)    : 0;
+        $this->descuentoConvenio = $convenio ? round(($base + $this->montoReintegro) * ($pctConvenio / 100), 2) : 0;
+
+        $this->montoArancelBruto = $base;
+        $this->montoArancel      = max(0, $base + $this->montoReintegro - $descuentoTotal);
     }
 
     /**
@@ -482,7 +577,7 @@ class Matriculacion extends Component
         $semestres = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
 
         $this->montoMatricula = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
-        $this->montoArancel   = round($carrera->costo_carrera / $semestres, 2);
+        $this->aplicarCalculoArancel($carrera, $semestres);
 
         // Créditos: acumular horas brutas de TODAS las materias y dividir una sola vez al final
         // Esto evita pérdida de precisión al redondear créditos individuales antes de sumar
@@ -621,7 +716,40 @@ class Matriculacion extends Component
             // MONTOS
             // ------------------------------------------------------------------
             $montoMatricula = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
-            $montoArancel   = round($carrera->costo_carrera / $semestres, 2);
+
+            // Base arancel: Validación usa costo_convalidacion si está definido
+            if ($this->tipo === 'Validacion'
+                && $carrera->costo_convalidacion !== null
+                && (float) $carrera->costo_convalidacion > 0
+            ) {
+                $montoArancelBase = round((float) $carrera->costo_convalidacion, 2);
+            } else {
+                $montoArancelBase = round($carrera->costo_carrera / $semestres, 2);
+            }
+
+            // Reintegro: +10% costo_carrera si hay retiro sin cobrar
+            $retiroPendiente = Retiro::where('user_id', $this->estudiante->id)
+                ->where('recargo_cobrado', false)
+                ->first();
+            $montoRecargo = $retiroPendiente ? round($carrera->costo_carrera * 0.10, 2) : 0;
+
+            // Beca activa
+            $becaActiva = BecaAplicada::where('user_id', $this->estudiante->id)
+                ->where('is_active', true)
+                ->first();
+            $pctBecaGuardar = $becaActiva ? (float) $becaActiva->porcentaje_aplicado : 0;
+
+            // Convenio activo
+            $convenioActivo = ConvenioAplicado::where('user_id', $this->estudiante->id)
+                ->where('is_active', true)
+                ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
+                ->first();
+            $pctConvenioGuardar = $convenioActivo ? (float) $convenioActivo->porcentaje_aplicado : 0;
+
+            $pctTotalGuardar      = min(100, $pctBecaGuardar + $pctConvenioGuardar);
+            $descuentoBecaGuardar = round(($montoArancelBase + $montoRecargo) * ($pctTotalGuardar / 100), 2);
+
+            $montoArancel = max(0, $montoArancelBase + $montoRecargo - $descuentoBecaGuardar);
 
             $costoArrastres = 0;
             foreach ($this->materiasArrastradas as $ma) {
@@ -648,14 +776,15 @@ class Matriculacion extends Component
                 $matricula->detalles()->delete();
             } else {
                 $matricula = Matricula::create([
-                    'fecha_matricula' => now(),
-                    'code'            => $this->generarCodigoMatricula(),
-                    'tipo'            => $this->tipo,
-                    'estado'          => 'Pendiente_Pago',
-                    'observaciones'   => $this->observaciones,
-                    'periodo_id'      => $this->periodo_id,
-                    'carrera_id'      => $this->carrera_id,
-                    'user_id'         => $this->estudiante->id,
+                    'fecha_matricula'   => now(),
+                    'code'              => $this->generarCodigoMatricula(),
+                    'tipo'              => $this->tipo,
+                    'estado'            => 'Pendiente_Pago',
+                    'observaciones'     => $this->observaciones,
+                    'periodo_id'        => $this->periodo_id,
+                    'carrera_id'        => $this->carrera_id,
+                    'user_id'           => $this->estudiante->id,
+                    'num_cuotas_arancel' => max(1, (int) $this->num_cuotas_arancel),
                 ]);
 
                 // ← AQUÍ: asignar matricula_numero si el estudiante no tiene uno aún
@@ -685,19 +814,48 @@ class Matriculacion extends Component
 
                 // --------------------------------------------------------------
                 // OBLIGACIÓN FINANCIERA: ARANCEL/COLEGIATURA del semestre
+                // Puede dividirse en N cuotas; incluye reintegro y descuento beca.
                 // --------------------------------------------------------------
-                ObligacionesFinanciera::create([
-                    'user_id'          => $this->estudiante->id,
-                    'periodo_id'       => $this->periodo_id,
-                    'matricula_id'     => $matricula->id,
-                    'tipo'             => 'COLEGIATURA',
-                    'monto_original'   => $montoArancel,
-                    'descuento'        => 0,
-                    'monto_final'      => $montoArancel,
-                    'estado'           => 'Pendiente',
-                    'fecha_vencimiento' => now()->addDays(30),
-                    'descripcion'      => 'Arancel semestral - Período ' . $matricula->periodo_id,
-                ]);
+
+                // Marcar reintegro cobrado antes de generar las obligaciones
+                $retiroPendiente?->update(['recargo_cobrado' => true]);
+
+                $numCuotas      = max(1, (int) $this->num_cuotas_arancel);
+                $originalTotal  = $montoArancelBase + $montoRecargo;
+                $arancelRestante = $montoArancel;
+
+                for ($cuota = 1; $cuota <= $numCuotas; $cuota++) {
+                    $esUltima = ($cuota === $numCuotas);
+
+                    // Reparte proporcionalmente; la última absorbe el residuo de redondeo
+                    $montoEsta = $esUltima
+                        ? round($arancelRestante, 2)
+                        : round($montoArancel / $numCuotas, 2);
+
+                    $arancelRestante -= round($montoArancel / $numCuotas, 2);
+
+                    $sufijo      = $numCuotas > 1 ? " (Cuota {$cuota}/{$numCuotas})" : '';
+                    $descPartes  = array_filter([
+                        $pctBecaGuardar > 0 ? 'beca' : null,
+                        $pctConvenioGuardar > 0 ? 'convenio' : null,
+                    ]);
+                    $descSufijo    = count($descPartes) ? ' con ' . implode(' y ', $descPartes) : '';
+                    $recargoSufijo = $montoRecargo > 0 ? ' + reintegro' : '';
+
+                    ObligacionesFinanciera::create([
+                        'user_id'           => $this->estudiante->id,
+                        'periodo_id'        => $this->periodo_id,
+                        'matricula_id'      => $matricula->id,
+                        'tipo'              => 'COLEGIATURA',
+                        'monto_original'    => round($originalTotal / $numCuotas, 2),
+                        'descuento'         => round($descuentoBecaGuardar / $numCuotas, 2),
+                        'monto_final'       => $montoEsta,
+                        'estado'            => 'Pendiente',
+                        'fecha_vencimiento' => now()->addDays(30 * $cuota),
+                        'descripcion'       => 'Arancel semestral' . $recargoSufijo . $descSufijo
+                            . ' - Período ' . $matricula->periodo_id . $sufijo,
+                    ]);
+                }
 
                 // --------------------------------------------------------------
                 // OBLIGACIÓN FINANCIERA: INSCRIPCIÓN (solo primera matrícula)
@@ -880,10 +1038,127 @@ class Matriculacion extends Component
             'totalPagar',
             'montoMatricula',
             'montoArancel',
+            'montoArancelBruto',
+            'descuentoBeca',
+            'montoReintegro',
+            'tieneReintegro',
+            'infoBeca',
+            'infoConvenio',
+            'descuentoConvenio',
+            'porcentajeDescuentoTotal',
+            'esGratuidad',
+            'num_cuotas_arancel',
             'costoArrastres',
             'valorInscripcion',
         ]);
     }
+    /* =========================
+        RETIRO DE MATRÍCULA
+    ========================== */
+
+    public function abrirRetiro(int $matriculaId): void
+    {
+        if ($this->sinPermiso('cancelar_matriculas')) return;
+
+        $matricula = Matricula::with('estudiante')->find($matriculaId);
+        if (! $matricula || in_array($matricula->estado, ['Cancelada', 'Retirada'])) return;
+
+        //dd($matriculaId);
+        $this->retiroMatriculaId      = $matriculaId;
+        $this->retiroEstudianteNombre = $matricula->estudiante->name;
+        $this->retiroFecha            = now()->toDateString();
+        $this->retiroMotivo           = '';
+        $this->showRetiroModal        = true;
+    }
+
+    public function cerrarRetiro(): void
+    {
+        $this->showRetiroModal        = false;
+        $this->retiroMatriculaId      = null;
+        $this->retiroEstudianteNombre = '';
+        $this->retiroFecha            = '';
+        $this->retiroMotivo           = '';
+        $this->retiroDocumento        = null;
+        $this->resetValidation(['retiroFecha', 'retiroMotivo', 'retiroDocumento']);
+    }
+
+    public function confirmarRetiro(): void
+    {
+        if ($this->sinPermiso('cancelar_matriculas')) return;
+
+        $this->validate([
+            'retiroFecha'      => 'required|date',
+            'retiroMotivo'     => 'nullable|string|max:1000',
+            'retiroDocumento'  => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'retiroDocumento.required' => 'Debes adjuntar la solicitud o certificado de retiro.',
+            'retiroDocumento.mimes'    => 'El documento debe ser PDF, JPG o PNG.',
+            'retiroDocumento.max'      => 'El documento no puede superar los 5 MB.',
+        ]);
+
+        $matricula = Matricula::with('detalles', 'estudiante')->find($this->retiroMatriculaId);
+        if (! $matricula) {
+            $this->cerrarRetiro();
+            return;
+        }
+
+        try {
+            DB::transaction(function () use ($matricula) {
+                $documentoPath = $this->retiroDocumento->store(
+                    'retiros/' . $matricula->id,
+                    'public'
+                );
+
+                Retiro::create([
+                    'matricula_id'    => $matricula->id,
+                    'user_id'         => $matricula->user_id,
+                    'fecha_retiro'    => $this->retiroFecha,
+                    'motivo'          => $this->retiroMotivo ?: null,
+                    'documento_path'  => $documentoPath,
+                    'recargo_cobrado' => false,
+                    'registrado_por'  => auth()->id(),
+                ]);
+
+                $matricula->update(['estado' => 'Retirada']);
+
+                $matricula->detalles()->update(['estado' => 'Retirado']);
+            });
+
+            $nombre = $matricula->estudiante->name;
+            EnviarEmailRetiro::dispatch($matricula->id);
+            unset($this->estudiantes);
+            $this->cerrarRetiro();
+            $this->dispatch('swal', [
+                'icon'  => 'success',
+                'title' => 'Retiro registrado',
+                'text'  => "El retiro de {$nombre} fue registrado. Si se re-matricula, se aplicará un recargo del 10%.",
+                'timer' => 4000,
+            ]);
+        } catch (\Throwable $e) {
+            $this->dispatch('swal', [
+                'icon'  => 'error',
+                'title' => 'Error al registrar el retiro',
+                'text'  => app()->isLocal() ? $e->getMessage() : 'Contacte al administrador del sistema.',
+                'timer' => 6000,
+            ]);
+        }
+    }
+
+    /* =========================
+        ANULACIÓN DE MATRÍCULA
+    ========================== */
+
+    public function abrirAnulacion(int $estudianteId): void
+    {
+        $this->dispatch('abrir-anulacion-matricula', estudianteId: $estudianteId);
+    }
+
+    #[On('matricula-anulada')]
+    public function refrescarLista(): void
+    {
+        unset($this->estudiantes);
+    }
+
     /* =========================
         RENDER
     ========================== */

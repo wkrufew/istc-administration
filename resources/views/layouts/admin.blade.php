@@ -28,7 +28,9 @@
         $nombreCorto = \App\Services\SettingService::get('instituto.nombre_corto') ?: config('app.name', 'ISTCumandá');
         $faviconPath = \App\Services\SettingService::get('instituto.favicon_path');
     @endphp
-    <title>{{ $nombreCorto }}</title>
+    {{-- <title>{{ $nombreCorto }}</title> --}}
+    <title>{{ config('app.name', 'ISTC') }} — Gestión Administrativa</title>
+
     @if ($faviconPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($faviconPath))
         <link rel="shortcut icon" href="{{ Storage::disk('public')->url($faviconPath) }}">
     @else

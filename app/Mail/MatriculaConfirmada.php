@@ -2,6 +2,8 @@
 
 namespace App\Mail;
 
+use App\Models\BecaAplicada;
+use App\Models\ConvenioAplicado;
 use App\Models\Matricula;
 use App\Services\MoodleService;
 use App\Services\SettingService;
@@ -41,11 +43,27 @@ class MatriculaConfirmada extends Mailable
         $moodleActivo = MoodleService::activo();
         $moodleUrl    = $moodleActivo ? SettingService::get('moodle.url', '') : null;
 
-        $obligMatricula   = $this->matricula->obligacionesFinancieras
+        $estudianteId = $this->matricula->user_id;
+
+        $becaActiva = BecaAplicada::where('user_id', $estudianteId)
+            ->where('is_active', true)
+            ->with('tipoBeca')
+            ->first();
+
+        $convenioActivo = ConvenioAplicado::where('user_id', $estudianteId)
+            ->where('is_active', true)
+            ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
+            ->with('tipoConvenio')
+            ->first();
+
+        $obligMatricula    = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'MATRICULA');
-        $obligColegiatura = $this->matricula->obligacionesFinancieras
-            ->firstWhere('tipo', 'COLEGIATURA');
-        $obligInscripcion = $this->matricula->obligacionesFinancieras
+        $obligColegiaturas = $this->matricula->obligacionesFinancieras
+            ->where('tipo', 'COLEGIATURA');
+        $obligColegiatura  = $obligColegiaturas->first();
+        $totalArancel      = $obligColegiaturas->sum('monto_final');
+        $numCuotasArancel  = $obligColegiaturas->count();
+        $obligInscripcion  = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'INSCRIPCION');
         $logoPath = SettingService::get('instituto.logo_path');
 
@@ -68,15 +86,17 @@ class MatriculaConfirmada extends Mailable
                     'logo_url'     => $logoPath ? url('storage/' . $logoPath) : null,
                     'url_portal'   => url('/login'),
                 ],
-                'moodle_activo' => $moodleActivo,
-                'moodle_url'    => $moodleUrl,
+                'moodle_activo'  => $moodleActivo,
+                'moodle_url'     => $moodleUrl,
+                'becaActiva'     => $becaActiva,
+                'convenioActivo' => $convenioActivo,
                 'monto'              => $obligMatricula
                     ? number_format((float) $obligMatricula->monto_final, 2) : null,
                 'fechaLimite'        => $obligMatricula?->fecha_vencimiento
                     ? Carbon::parse($obligMatricula->fecha_vencimiento)->format('d/m/Y') : null,
-                'montoArancel'       => $obligColegiatura
-                    ? number_format((float) $obligColegiatura->monto_final, 2) : null,
-                'fechaArancel'       => $obligColegiatura?->fecha_vencimiento
+                'montoArancel'        => $totalArancel > 0 ? number_format($totalArancel, 2) : null,
+                'numCuotasArancel'    => $numCuotasArancel,
+                'fechaArancel'        => $obligColegiatura?->fecha_vencimiento
                     ? Carbon::parse($obligColegiatura->fecha_vencimiento)->format('d/m/Y') : null,
                 'montoInscripcion'   => $obligInscripcion
                     ? number_format((float) $obligInscripcion->monto_final, 2) : null,

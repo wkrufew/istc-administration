@@ -286,7 +286,7 @@
                 </span>
                 <div class="flex-1 h-px bg-slate-200 dark:bg-white/[0.05]"></div>
                 <span class="px-2.5 py-0.5 rounded-full text-[0.62rem] tracking-wide bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400">
-                    28 columnas
+                    26 columnas
                 </span>
             </div>
 
@@ -324,14 +324,12 @@
                             [18, 'contacto_emergencia',      false, 'María López',            'Nombre del contacto de emergencia'],
                             [19, 'tipo_sangre',              false, 'O+',                     'Grupo sanguíneo'],
                             [20, 'observaciones_medicas',    false, '(vacío)',                'Notas médicas relevantes'],
-                            [21, 'discapacidad',             false, 'no',                     'Tiene discapacidad · si / no'],
-                            [22, 'discapacidad_descripcion', false, '(vacío)',                'Descripción detallada si discapacidad = si'],
-                            [23, 'is_facturador',            false, 'no',                     'Tiene datos de facturación · si / no'],
-                            [24, 'fact_nombre',              false, '(vacío)',                'Nombre o razón social para factura'],
-                            [25, 'fact_documento',           false, '(vacío)',                'RUC o cédula para factura'],
-                            [26, 'fact_correo',              false, '(vacío)',                'Correo electrónico para factura'],
-                            [27, 'fact_direccion',           false, '(vacío)',                'Dirección para factura'],
-                            [28, 'fact_telefono',            false, '(vacío)',                'Teléfono para factura'],
+                            [21, 'is_facturador',            false, 'no',                     'Tiene datos de facturación · si / no'],
+                            [22, 'fact_nombre',              false, '(vacío)',                'Nombre o razón social para factura'],
+                            [23, 'fact_documento',           false, '(vacío)',                'RUC o cédula para factura'],
+                            [24, 'fact_correo',              false, '(vacío)',                'Correo electrónico para factura'],
+                            [25, 'fact_direccion',           false, '(vacío)',                'Dirección para factura'],
+                            [26, 'fact_telefono',            false, '(vacío)',                'Teléfono para factura'],
                         ];
                         @endphp
                         @foreach ($fields as [$num, $field, $required, $example, $desc])

@@ -37,15 +37,19 @@ class CarreraController extends Controller
             'name'              => 'required|string|max:255',
             'code'              => 'required|string|max:255|unique:carreras,code',
             'description'       => 'nullable|string|max:1000',
-            'costo_credito'     => 'required|numeric|min:0',
-            'costo_carrera'     => 'required|numeric|min:0',
-            'duracion_semestres' => 'required|integer|min:1',
-            'modalidad'         => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
-            'tipo'              => 'required|in:Tecnologica,Tecnicatura',
-            'is_active'         => 'nullable|boolean',
+            'costo_credito'       => 'required|numeric|min:0',
+            'costo_carrera'       => 'required|numeric|min:0',
+            'costo_convalidacion' => 'nullable|numeric|min:0',
+            'duracion_semestres'  => 'required|integer|min:1',
+            'modalidad'           => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
+            'tipo'                => 'required|in:Tecnologica,Tecnicatura',
+            'is_active'           => 'nullable|boolean',
         ]);
 
-        Carrera::create($request->all());
+        Carrera::create($request->only([
+            'name', 'code', 'description', 'costo_credito', 'costo_carrera',
+            'costo_convalidacion', 'duracion_semestres', 'modalidad', 'tipo', 'is_active',
+        ]));
         return redirect()->route('administracion.administrativa.carreras.index')->with('success', 'Carrera creada exitosamente.');
     }
 
@@ -74,15 +78,19 @@ class CarreraController extends Controller
             'name'              => 'required|string|max:255',
             'code'              => 'required|string|max:255|unique:carreras,code,' . $carrera->id,
             'description'       => 'nullable|string|max:1000',
-            'costo_credito'     => 'required|numeric|min:0',
-            'costo_carrera'     => 'required|numeric|min:0',
-            'duracion_semestres' => 'required|integer|min:1',
-            'modalidad'         => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
-            'tipo'              => 'required|in:Tecnologica,Tecnicatura',
-            'is_active'         => 'nullable|boolean',
+            'costo_credito'       => 'required|numeric|min:0',
+            'costo_carrera'       => 'required|numeric|min:0',
+            'costo_convalidacion' => 'nullable|numeric|min:0',
+            'duracion_semestres'  => 'required|integer|min:1',
+            'modalidad'           => 'required|in:Presencial,Virtual,Híbrida,Semipresencial',
+            'tipo'                => 'required|in:Tecnologica,Tecnicatura',
+            'is_active'           => 'nullable|boolean',
         ]);
 
-        $carrera->update($request->all());
+        $carrera->update($request->only([
+            'name', 'code', 'description', 'costo_credito', 'costo_carrera',
+            'costo_convalidacion', 'duracion_semestres', 'modalidad', 'tipo', 'is_active',
+        ]));
         return redirect()->route('administracion.administrativa.carreras.index')->with('success', 'Carrera actualizada correctamente.');
     }
 

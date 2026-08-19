@@ -378,67 +378,6 @@
                                 @enderror
                             </div>
 
-                            <!-- Discapacidad -->
-                            <div class="border-b pb-2">
-                                <h3 class="text-lg font-semibold text-gray-700 mb-4">Discapacidad</h3>
-
-                                <div class="flex items-center space-x-3 mb-4">
-                                    <label class="text-sm font-medium text-gray-700">¿Presenta alguna
-                                        discapacidad?</label>
-                                    <label class="relative inline-flex cursor-pointer items-center">
-                                        <input type="checkbox" wire:model.live="discapacidad" class="peer sr-only" />
-                                        <div
-                                            class="peer h-6 w-11 rounded-full border bg-slate-200 after:absolute after:left-[2px] after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-blue-300">
-                                        </div>
-                                    </label>
-                                    <span
-                                        class="text-sm font-semibold {{ $discapacidad ? 'text-blue-600' : 'text-gray-500' }}">
-                                        {{ $discapacidad ? 'Sí' : 'No' }}
-                                    </span>
-                                </div>
-
-                                @if ($discapacidad)
-                                    <div class="space-y-4 mt-4 p-4 bg-blue-50 rounded-lg">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700">Descripción de la
-                                                Discapacidad
-                                                *</label>
-                                            <textarea wire:model="discapacidad_descripcion" rows="3"
-                                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
-                                            @error('discapacidad_descripcion')
-                                                <span class="text-red-500 text-sm">{{ $message }}</span>
-                                            @enderror
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700">Certificado de
-                                                Discapacidad</label>
-
-                                            @if ($certificado_discapacidad_actual)
-                                                <div
-                                                    class="mb-2 p-3 bg-white rounded border flex items-center justify-between">
-                                                    <span class="text-sm text-gray-600">Certificado actual
-                                                        guardado</span>
-                                                    <button type="button" wire:click="deleteCertificado"
-                                                        class="text-sm text-red-600 hover:text-red-800">
-                                                        Eliminar
-                                                    </button>
-                                                </div>
-                                            @endif
-
-                                            <input type="file" wire:model="certificado_discapacidad"
-                                                accept="image/*,.pdf"
-                                                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                                            <p class="text-xs text-gray-500 mt-1">Formatos aceptados: JPG, PNG, PDF
-                                                (máx. 2MB)</p>
-                                            @error('certificado_discapacidad')
-                                                <span class="text-red-500 text-sm">{{ $message }}</span>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-
                             <!-- Datos de Facturación -->
                             @if ($this->esEstudiante)
                                 <div class="border-b pb-6">

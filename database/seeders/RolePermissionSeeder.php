@@ -25,6 +25,7 @@ class RolePermissionSeeder extends Seeder
             'acceso_docencia',
             'acceso_estudiantil',
             'acceso_admision',
+            'ver_dashboard',          // muestra el panel principal; sin él, solo pantalla de bienvenida
 
             // -----------------------------------------------------------------
             // ROLES Y USUARIOS
@@ -114,6 +115,8 @@ class RolePermissionSeeder extends Seeder
             'rechazar_solicitudes',         // botón Rechazar
             'avanzar_solicitudes',          // botón Avanzar estado
             'gestionar_tipos_solicitudes',  // menú Tipos Solicitud + CRUD
+            'gestionar_becas',              // menú Becas + CRUD tipos + asignación
+            'gestionar_convenios',          // menú Convenios + CRUD tipos + asignación a estudiantes
 
             // -----------------------------------------------------------------
             // DOCENCIA
@@ -123,6 +126,12 @@ class RolePermissionSeeder extends Seeder
             'ver_notas_estudiantes',        // ver calificaciones de sus materias
             'ingresar_notas_estudiantes',   // registrar/editar calificaciones
             'gestionar_asistencias',        // AsistenciasController (CRUD + corrección)
+
+            // -----------------------------------------------------------------
+            // ADMISIÓN — gestión de cohortes y aspirantes
+            // -----------------------------------------------------------------
+            'gestionar_cohortes',     // CRUD cohortes + cambiar estado abierto/cerrado
+            'gestionar_aspirantes',   // ver y gestionar aspirantes: cambiar estados, observaciones
 
             // -----------------------------------------------------------------
             // PORTAL ESTUDIANTIL
@@ -147,6 +156,7 @@ class RolePermissionSeeder extends Seeder
             'Porteros' => [
                 'acceso_administrativo', 'acceso_docencia',
                 'acceso_estudiantil', 'acceso_admision',
+                'ver_dashboard',
             ],
             'Usuarios y Roles' => [
                 'asignar_roles', 'crear_roles', 'gestionar_usuarios',
@@ -182,6 +192,14 @@ class RolePermissionSeeder extends Seeder
             'Solicitudes' => [
                 'gestionar_solicitudes', 'aprobar_solicitudes', 'rechazar_solicitudes',
                 'avanzar_solicitudes', 'gestionar_tipos_solicitudes',
+            ],
+            'Becas y Convenios' => [
+                'gestionar_becas',
+                'gestionar_convenios',
+            ],
+            'Admisión' => [
+                'gestionar_cohortes',
+                'gestionar_aspirantes',
             ],
             'Docencia' => [
                 'ver_notas_estudiantes', 'ingresar_notas_estudiantes', 'gestionar_asistencias',

@@ -24,7 +24,7 @@ class UsersTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
             'phone', 'address', 'fecha_nacimiento', 'matricula_numero',
             'padre', 'madre', 'tutor', 'nacionalidad', 'genero', 'estado_civil',
             'telefono_emergencia', 'contacto_emergencia', 'tipo_sangre', 'observaciones_medicas',
-            'discapacidad', 'discapacidad_descripcion', 'is_facturador',
+            'is_facturador',
             'fact_nombre', 'fact_documento', 'fact_correo', 'fact_direccion', 'fact_telefono',
         ];
     }
@@ -36,7 +36,7 @@ class UsersTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
             '0999123456', 'Av. Principal 123', '1990-01-15', 'MAT-2024-001',
             'Pedro Pérez', 'María López', '', 'Ecuatoriano', 'Masculino', 'Soltero',
             '0988123456', 'María López', 'O+', '',
-            'no', '', 'no',
+            'no',
             '', '', '', '', '',
         ]];
     }
@@ -61,8 +61,7 @@ class UsersTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
             'F' => 14, 'G' => 14, 'H' => 24, 'I' => 18, 'J' => 18,
             'K' => 16, 'L' => 16, 'M' => 16, 'N' => 14, 'O' => 14,
             'P' => 14, 'Q' => 20, 'R' => 20, 'S' => 12, 'T' => 24,
-            'U' => 14, 'V' => 24, 'W' => 14, 'X' => 20, 'Y' => 16,
-            'Z' => 24, 'AA' => 24, 'AB' => 16,
+            'U' => 14, 'V' => 20, 'W' => 16, 'X' => 24, 'Y' => 24, 'Z' => 16,
         ];
     }
 }

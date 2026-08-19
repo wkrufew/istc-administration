@@ -30,11 +30,6 @@ class CreateUser extends Component
     public $telefono_emergencia, $contacto_emergencia;
     public $tipo_sangre, $observaciones_medicas;
 
-    // Discapacidad
-    public $discapacidad = false;
-    public $discapacidad_descripcion;
-    public $certificado_discapacidad;
-
     // Datos de facturación
     public $is_facturador = false;
     public $fact_nombre, $fact_documento, $fact_correo, $fact_direccion, $fact_telefono;
@@ -78,9 +73,6 @@ class CreateUser extends Component
             'contacto_emergencia' => 'nullable|string|max:255',
             'tipo_sangre' => 'nullable|string|max:10',
             'observaciones_medicas' => 'nullable|string',
-            'discapacidad' => 'boolean',
-            'discapacidad_descripcion' => 'required_if:discapacidad,true|nullable|string',
-            'certificado_discapacidad' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'is_facturador' => 'boolean',
             'fact_nombre' => 'nullable|string|max:255',
             'fact_documento' => 'nullable|string|max:50',
@@ -104,16 +96,7 @@ class CreateUser extends Component
         'cedula.required' => 'La cédula es obligatoria',
         'cedula.unique' => 'Esta cédula ya está registrada',
         'role_id.required' => 'Debe seleccionar un rol',
-        'discapacidad_descripcion.required_if' => 'Describa la discapacidad',
     ];
-
-    public function updatedDiscapacidad($value)
-    {
-        if (!$value) {
-            $this->discapacidad_descripcion = null;
-            $this->certificado_discapacidad = null;
-        }
-    }
 
     public function updatedIsFacturador($value)
     {
@@ -261,18 +244,13 @@ class CreateUser extends Component
             $profilePhotoPath = $this->profile_photo->store('users-data/profile-photos', 'public');
         }
 
-        $certificadoPath = null;
-        if ($this->certificado_discapacidad) {
-            $certificadoPath = $this->certificado_discapacidad->store('users-data/certificados-discapacidad', 'public');
-        }
-
         // Capturar antes de Hash::make() dentro de la transacción
         $plainPassword = $this->password;
 
         $user = null;
         $role = null;
 
-        DB::transaction(function () use ($profilePhotoPath, $certificadoPath, &$user, &$role) {
+        DB::transaction(function () use ($profilePhotoPath, &$user, &$role) {
             $user = User::create([
                 'name' => $this->first_name . ' ' . $this->last_name,
                 'first_name' => $this->first_name,
@@ -295,9 +273,6 @@ class CreateUser extends Component
                 'contacto_emergencia' => $this->contacto_emergencia,
                 'tipo_sangre' => $this->tipo_sangre,
                 'observaciones_medicas' => $this->observaciones_medicas,
-                'discapacidad' => $this->discapacidad,
-                'discapacidad_descripcion' => $this->discapacidad_descripcion,
-                'certificado_discapacidad_path' => $certificadoPath,
                 'is_facturador' => $this->is_facturador,
                 'fact_nombre' => $this->fact_nombre,
                 'fact_documento' => $this->fact_documento,

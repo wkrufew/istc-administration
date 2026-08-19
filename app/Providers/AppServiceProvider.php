@@ -80,7 +80,8 @@ class AppServiceProvider extends ServiceProvider
                 if (!$user->hasAnyPermission([
                     'acceso_administrativo',
                     'acceso_docencia',
-                    'acceso_estudiantil'
+                    'acceso_estudiantil',
+                    'acceso_admision',
                 ])) {
                     session()->flash('error', 'Acceso denegado. No tienes permisos para acceder al sistema.');
                     return null;
