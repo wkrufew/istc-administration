@@ -54,6 +54,14 @@ class UsersEliminados extends Component
                 Storage::disk('public')->delete($user->profile_photo_path);
             }
 
+            if ($user->certificado_discapacidad_path) {
+                Storage::disk('public')->delete($user->certificado_discapacidad_path);
+            }
+
+            $aspirante = $user->aspirante()->withTrashed()->first();
+            if ($aspirante) {
+                Storage::disk('public')->deleteDirectory("aspirantes/{$aspirante->id}");
+            }
 
             $nombre = $user->name;
             $user->forceDelete();

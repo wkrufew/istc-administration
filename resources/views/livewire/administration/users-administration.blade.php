@@ -86,6 +86,38 @@
                 </a>
                 @endcan
 
+                @can('gestionar_estudiantes')
+                <a href="{{ route('administracion.administrativa.users.reporte.estudiantes') }}"
+                   x-data="{ cargando: false }"
+                   @click="cargando = true; setTimeout(() => cargando = false, 5000)"
+                   :class="cargando ? 'opacity-60 pointer-events-none' : ''"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
+                           text-emerald-700 dark:text-emerald-300/90
+                           bg-emerald-500/10 border border-emerald-500/25
+                           hover:bg-emerald-500/20 hover:border-emerald-400/40 hover:text-emerald-800 dark:hover:text-emerald-200
+                           hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/20
+                           active:translate-y-0 transition-all duration-200">
+                    <span x-show="!cargando" class="flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        Reportes
+                    </span>
+                    <span x-show="cargando" class="flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                        Generando…
+                    </span>
+                </a>
+                @endcan
+
                 @can('eliminar_usuarios')
                 <a href="{{ route('administracion.administrativa.users.eliminados') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase

@@ -106,6 +106,7 @@ Route::middleware([
         // GESTIÓN DE USUARIOS
         //Route::middleware('permission:gestionar_usuarios')->group(function () {
         Route::get('users/eliminados', \App\Livewire\Administration\UsersEliminados::class)->name('users.eliminados');
+        Route::get('users/reporte/estudiantes', [UserController::class, 'reporteEstudiantes'])->name('users.reporte.estudiantes');
         Route::resource('users', UserController::class)->names('users')->only('index', 'edit', 'update');
         //});
         // Perfil de usuario (disponible para todos los administrativos)

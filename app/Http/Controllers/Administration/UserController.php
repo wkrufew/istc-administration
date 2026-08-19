@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Administration;
 
+use App\Exports\EstudiantesReporteExport;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -54,5 +56,14 @@ class UserController extends Controller
     public function profile()
     {
         return view('administracion.users.profile');
+    }
+
+    public function reporteEstudiantes()
+    {
+        abort_unless(auth()->user()->can('gestionar_estudiantes'), 403);
+
+        $filename = 'reporte-estudiantes-' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(new EstudiantesReporteExport(), $filename);
     }
 }

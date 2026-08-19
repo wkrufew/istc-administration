@@ -360,7 +360,8 @@ class PortalAspirante extends Component
     public function subirCedula(): void
     {
         $aspirante = $this->aspirante();
-        if (! in_array($aspirante->estado, ['pendiente', 'proceso'], true)) return;
+        if (! (in_array($aspirante->estado, ['pendiente', 'proceso'], true) ||
+               ($aspirante->estado === 'verificacion' && $aspirante->cedula_estado === 'rechazado'))) return;
         $this->validate(['archivoCedula' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'],
             ['archivoCedula.required' => 'Selecciona un archivo.', 'archivoCedula.mimes' => 'Solo PDF, JPG o PNG.', 'archivoCedula.max' => 'Máx. 5 MB.']);
         $path = $this->archivoCedula->store("aspirantes/{$aspirante->id}/cedula", 'public');
@@ -372,7 +373,8 @@ class PortalAspirante extends Component
     public function subirBachiller(): void
     {
         $aspirante = $this->aspirante();
-        if (! in_array($aspirante->estado, ['pendiente', 'proceso'], true)) return;
+        if (! (in_array($aspirante->estado, ['pendiente', 'proceso'], true) ||
+               ($aspirante->estado === 'verificacion' && $aspirante->bachiller_estado === 'rechazado'))) return;
         $this->validate(['archivoBachiller' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'],
             ['archivoBachiller.required' => 'Selecciona un archivo.', 'archivoBachiller.mimes' => 'Solo PDF, JPG o PNG.', 'archivoBachiller.max' => 'Máx. 5 MB.']);
         $path = $this->archivoBachiller->store("aspirantes/{$aspirante->id}/bachiller", 'public');
@@ -384,7 +386,8 @@ class PortalAspirante extends Component
     public function subirHabilitante(): void
     {
         $aspirante = $this->aspirante();
-        if (! in_array($aspirante->estado, ['pendiente', 'proceso'], true)) return;
+        if (! (in_array($aspirante->estado, ['pendiente', 'proceso'], true) ||
+               ($aspirante->estado === 'verificacion' && $aspirante->habilitante_estado === 'rechazado'))) return;
         $this->validate(['archivoHabilitante' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'],
             ['archivoHabilitante.required' => 'Selecciona un archivo.', 'archivoHabilitante.mimes' => 'Solo PDF, JPG o PNG.', 'archivoHabilitante.max' => 'Máx. 5 MB.']);
         $path = $this->archivoHabilitante->store("aspirantes/{$aspirante->id}/habilitante", 'public');
@@ -396,7 +399,8 @@ class PortalAspirante extends Component
     public function subirPago(): void
     {
         $aspirante = $this->aspirante();
-        if (! in_array($aspirante->estado, ['pendiente', 'proceso'], true)) return;
+        if (! (in_array($aspirante->estado, ['pendiente', 'proceso'], true) ||
+               ($aspirante->estado === 'verificacion' && $aspirante->pago_estado === 'rechazado'))) return;
         $this->validate([
             'archivoPago' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'pagoMonto'   => 'nullable|numeric|min:0',
@@ -411,7 +415,8 @@ class PortalAspirante extends Component
     public function subirHojaVida(): void
     {
         $aspirante = $this->aspirante();
-        if (! in_array($aspirante->estado, ['pendiente', 'proceso'], true)) return;
+        if (! (in_array($aspirante->estado, ['pendiente', 'proceso'], true) ||
+               ($aspirante->estado === 'verificacion' && $aspirante->hoja_vida_estado === 'rechazado'))) return;
         $this->validate(['archivoHojaVida' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'],
             ['archivoHojaVida.required' => 'Selecciona un archivo.', 'archivoHojaVida.mimes' => 'Solo PDF, JPG o PNG.', 'archivoHojaVida.max' => 'Máx. 5 MB.']);
         $path = $this->archivoHojaVida->store("aspirantes/{$aspirante->id}/hoja_vida", 'public');
@@ -423,7 +428,8 @@ class PortalAspirante extends Component
     public function subirCertLaborales(): void
     {
         $aspirante = $this->aspirante();
-        if (! in_array($aspirante->estado, ['pendiente', 'proceso'], true)) return;
+        if (! (in_array($aspirante->estado, ['pendiente', 'proceso'], true) ||
+               ($aspirante->estado === 'verificacion' && $aspirante->cert_laborales_estado === 'rechazado'))) return;
         $this->validate(['archivoCertLaborales' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'],
             ['archivoCertLaborales.required' => 'Selecciona un archivo.', 'archivoCertLaborales.mimes' => 'Solo PDF, JPG o PNG.', 'archivoCertLaborales.max' => 'Máx. 5 MB.']);
         $path = $this->archivoCertLaborales->store("aspirantes/{$aspirante->id}/cert_laborales", 'public');
@@ -435,7 +441,8 @@ class PortalAspirante extends Component
     public function subirCertCursos(): void
     {
         $aspirante = $this->aspirante();
-        if (! in_array($aspirante->estado, ['pendiente', 'proceso'], true)) return;
+        if (! (in_array($aspirante->estado, ['pendiente', 'proceso'], true) ||
+               ($aspirante->estado === 'verificacion' && $aspirante->cert_cursos_estado === 'rechazado'))) return;
         $this->validate(['archivoCertCursos' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120'],
             ['archivoCertCursos.required' => 'Selecciona un archivo.', 'archivoCertCursos.mimes' => 'Solo PDF, JPG o PNG.', 'archivoCertCursos.max' => 'Máx. 5 MB.']);
         $path = $this->archivoCertCursos->store("aspirantes/{$aspirante->id}/cert_cursos", 'public');

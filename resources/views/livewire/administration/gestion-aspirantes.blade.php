@@ -69,7 +69,9 @@
                        text-slate-800 dark:text-slate-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lime-500/40">
             <option value="">Todos los estados</option>
             @foreach(\App\Models\Aspirante::ESTADOS as $key => $label)
+                @if($key !== 'matriculado')
                 <option value="{{ $key }}">{{ $label }}</option>
+                @endif
             @endforeach
         </select>
     </div>
@@ -216,7 +218,7 @@
             'pendiente'    => ['proceso' => 'Poner en proceso', 'rechazado' => 'Rechazar'],
             'proceso'      => [/* 'verificacion' => 'Marcar verificando', */ 'rechazado' => 'Rechazar'],
             'verificacion' => ['aprobado' => 'Aprobar', 'rechazado' => 'Rechazar'],
-            'aprobado'     => ['matriculado' => 'Marcar como matriculado'],
+            'aprobado'     => [],
         ];
         $transicionesPosibles = $transiciones[$asp->estado] ?? [];
 

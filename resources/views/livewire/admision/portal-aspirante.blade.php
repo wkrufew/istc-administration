@@ -733,7 +733,11 @@
                     <span class="text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 rounded-full">Puedes subir documentos</span>
                     @endif
                 </div>
-                @php $puedeSubir = in_array($aspirante->estado, ['pendiente', 'proceso']); @endphp
+                @php
+                $puedeSubir    = in_array($aspirante->estado, ['pendiente', 'proceso']);
+                $puedeSubirDoc = fn(string $campo) => $puedeSubir
+                    || ($aspirante->estado === 'verificacion' && $aspirante->{"${campo}_estado"} === 'rechazado');
+                @endphp
                 <div class="p-4 space-y-3">
 
                     {{-- ── Banner documentos rechazados ── --}}
@@ -782,7 +786,7 @@
                             Ver documento
                         </a>
                         @endif
-                        @if($puedeSubir)
+                        @if($puedeSubirDoc('cedula'))
                         <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors group">
                             @if($archivoCedula)
                                 <span class="text-xs text-blue-700 font-medium truncate flex-1">{{ $archivoCedula->getClientOriginalName() }}</span>
@@ -817,7 +821,7 @@
                             Ver documento
                         </a>
                         @endif
-                        @if($puedeSubir)
+                        @if($puedeSubirDoc('bachiller'))
                         <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors group">
                             @if($archivoBachiller)
                                 <span class="text-xs text-blue-700 font-medium truncate flex-1">{{ $archivoBachiller->getClientOriginalName() }}</span>
@@ -861,7 +865,7 @@
                                 Ver documento
                             </a>
                             @endif
-                            @if($puedeSubir)
+                            @if($puedeSubirDoc('habilitante'))
                             <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-amber-300 hover:bg-amber-50/40 cursor-pointer transition-colors group">
                                 @if($archivoHabilitante)
                                     <span class="text-xs text-amber-700 font-medium truncate flex-1">{{ $archivoHabilitante->getClientOriginalName() }}</span>
@@ -902,7 +906,7 @@
                             Ver comprobante
                         </a>
                         @endif
-                        @if($puedeSubir)
+                        @if($puedeSubirDoc('pago'))
                         <div class="space-y-2">
                             <input wire:model="pagoMonto" type="number" step="0.01" min="0" placeholder="Monto pagado (ej: 50.00)"
                                    class="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
@@ -959,7 +963,7 @@
                                     Ver documento
                                 </a>
                                 @endif
-                                @if($puedeSubir)
+                                @if($puedeSubirDoc('hoja_vida'))
                                 <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:bg-indigo-50/40 cursor-pointer transition-colors group">
                                     @if($archivoHojaVida)
                                         <span class="text-xs text-indigo-700 font-medium truncate flex-1">{{ $archivoHojaVida->getClientOriginalName() }}</span>
@@ -997,7 +1001,7 @@
                                     Ver documento
                                 </a>
                                 @endif
-                                @if($puedeSubir)
+                                @if($puedeSubirDoc('cert_laborales'))
                                 <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:bg-indigo-50/40 cursor-pointer transition-colors group">
                                     @if($archivoCertLaborales)
                                         <span class="text-xs text-indigo-700 font-medium truncate flex-1">{{ $archivoCertLaborales->getClientOriginalName() }}</span>
@@ -1035,7 +1039,7 @@
                                     Ver documento
                                 </a>
                                 @endif
-                                @if($puedeSubir)
+                                @if($puedeSubirDoc('cert_cursos'))
                                 <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:bg-indigo-50/40 cursor-pointer transition-colors group">
                                     @if($archivoCertCursos)
                                         <span class="text-xs text-indigo-700 font-medium truncate flex-1">{{ $archivoCertCursos->getClientOriginalName() }}</span>
