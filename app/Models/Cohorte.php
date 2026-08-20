@@ -10,7 +10,6 @@ class Cohorte extends Model
 {
     protected $fillable = [
         'nombre',
-        'carrera_id',
         'fecha_inicio_matriculacion',
         'fecha_inicio_clases',
         'estado',
@@ -22,11 +21,6 @@ class Cohorte extends Model
         'fecha_inicio_matriculacion' => 'date',
         'fecha_inicio_clases'        => 'date',
     ];
-
-    public function carrera(): BelongsTo
-    {
-        return $this->belongsTo(Carrera::class);
-    }
 
     public function creadoPor(): BelongsTo
     {

@@ -215,6 +215,7 @@ Route::middleware([
         Route::get('cohortes', \App\Livewire\Administration\GestionCohortes::class)->name('cohortes.index');
         Route::get('aspirantes/registrar', \App\Livewire\Administration\RegistrarAspirante::class)->name('aspirantes.registrar');
         Route::get('aspirantes/papelera', \App\Livewire\Administration\BandejaAspirantes::class)->name('aspirantes.papelera');
+        Route::get('aspirantes/reporte-cohorte/{cohorte}', \App\Http\Controllers\Administration\ReporteCohorteAspirantesController::class)->name('aspirantes.reporte-cohorte');
         Route::get('aspirantes/{id}/eliminar', \App\Livewire\Administration\EliminarAspirantePermanente::class)->name('aspirantes.eliminar');
         Route::get('aspirantes', \App\Livewire\Administration\GestionAspirantes::class)->name('aspirantes.index');
 

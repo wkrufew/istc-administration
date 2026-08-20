@@ -7,6 +7,14 @@
         </div>
         @can('gestionar_aspirantes')
         <div class="flex items-center gap-2">
+            <button wire:click="$set('showIndicadores', true)"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700
+                           text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+                </svg>
+                Indicadores
+            </button>
             <a href="{{ route('administracion.administrativa.aspirantes.papelera') }}"
                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700
                       text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium transition-colors">
@@ -913,4 +921,169 @@
         </div>
     </div>
     @endif
+
+    {{-- ══ MODAL INDICADORES ══════════════════════════════════════════════ --}}
+    @if($showIndicadores)
+    @php $ind = $this->indicadores; @endphp
+    <div class="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 bg-black/50 backdrop-blur-sm overflow-y-auto"
+         x-data x-cloak>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl mb-10"
+             @click.outside="$wire.set('showIndicadores', false)">
+
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+                    </svg>
+                    <h2 class="text-base font-semibold text-slate-800 dark:text-white">Indicadores de admisión</h2>
+                    <span class="text-xs text-slate-400 dark:text-slate-500">— todos los periodos</span>
+                </div>
+                <button wire:click="$set('showIndicadores', false)"
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="px-6 py-5 space-y-6">
+
+                {{-- ── KPI CARDS ────────────────────────────────────────────── --}}
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    @foreach([
+                        ['Total inscritos',       $ind['total'],    'text-slate-700 dark:text-slate-200',   'bg-slate-100 dark:bg-slate-700'],
+                        ['En proceso activo',     $ind['activos'],  'text-blue-700 dark:text-blue-300',     'bg-blue-50 dark:bg-blue-900/30'],
+                        ['Aprobados',             $ind['aprobados'],'text-emerald-700 dark:text-emerald-300','bg-emerald-50 dark:bg-emerald-900/30'],
+                        ['Inscritos (7 días)',    $ind['ultimos_7_dias'], 'text-indigo-700 dark:text-indigo-300','bg-indigo-50 dark:bg-indigo-900/30'],
+                    ] as [$label, $valor, $textClass, $bgClass])
+                    <div class="rounded-2xl border border-slate-200 dark:border-slate-700 p-4 {{ $bgClass }}">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">{{ $label }}</p>
+                        <p class="text-3xl font-black {{ $textClass }}">{{ $valor }}</p>
+                    </div>
+                    @endforeach
+                </div>
+
+                {{-- ── FILA 2: Tasa + Tipo + Docs ──────────────────────────── --}}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                    {{-- Tasa de aprobación --}}
+                    <div class="rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Resolución</p>
+                        <div class="space-y-2">
+                            @if($ind['tasa_aprobacion'] !== null)
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <span class="text-slate-600 dark:text-slate-400">Tasa aprobación</span>
+                                <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ $ind['tasa_aprobacion'] }}%</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                <div class="h-full rounded-full bg-emerald-500" style="width: {{ $ind['tasa_aprobacion'] }}%"></div>
+                            </div>
+                            @endif
+                            <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+                                <span>✓ {{ $ind['aprobados'] }} aprobados</span>
+                                <span>✗ {{ $ind['rechazados'] }} rechazados</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Tipo de proceso --}}
+                    <div class="rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Tipo de proceso</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">Regular</span>
+                                <span class="text-xl font-bold text-slate-700 dark:text-slate-200">{{ $ind['regular'] }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">Validación conocim.</span>
+                                <span class="text-xl font-bold text-amber-600 dark:text-amber-400">{{ $ind['validacion'] }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Documentación --}}
+                    <div class="rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Documentación aprobada</p>
+                        <div class="space-y-2.5">
+                            @foreach([
+                                ['Cédula',        $ind['docs_cedula_pct']],
+                                ['Bach./Hab.',     $ind['docs_bachiller_pct']],
+                                ['Pago',          $ind['docs_pago_pct']],
+                            ] as [$doc, $pct])
+                            <div>
+                                <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-0.5">
+                                    <span>{{ $doc }}</span>
+                                    <span class="font-medium">{{ $pct }}%</span>
+                                </div>
+                                <div class="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                    <div class="h-full rounded-full {{ $pct >= 80 ? 'bg-emerald-500' : ($pct >= 40 ? 'bg-amber-400' : 'bg-red-400') }}"
+                                         style="width: {{ $pct }}%"></div>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                </div>
+
+                {{-- ── POR CARRERA ──────────────────────────────────────────── --}}
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Distribución por carrera</p>
+                    <div class="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700">
+                                        <th class="text-left px-4 py-2.5 font-medium text-slate-500 dark:text-slate-400">Carrera</th>
+                                        <th class="text-center px-3 py-2.5 font-medium text-slate-500 dark:text-slate-400">Total</th>
+                                        <th class="text-center px-3 py-2.5 font-medium text-slate-400 dark:text-slate-500">Pend.</th>
+                                        <th class="text-center px-3 py-2.5 font-medium text-blue-500">Proceso</th>
+                                        <th class="text-center px-3 py-2.5 font-medium text-amber-500">Verif.</th>
+                                        <th class="text-center px-3 py-2.5 font-medium text-emerald-500">Aprobado</th>
+                                        <th class="text-center px-3 py-2.5 font-medium text-red-400">Rechaz.</th>
+                                        <th class="px-4 py-2.5 w-28"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
+                                    @forelse($ind['por_carrera'] as $fila)
+                                    @php
+                                        $pctAprobado = $fila['total'] > 0 ? round($fila['aprobado'] / $fila['total'] * 100) : 0;
+                                    @endphp
+                                    <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-700/30">
+                                        <td class="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{{ $fila['nombre'] }}</td>
+                                        <td class="px-3 py-2.5 text-center font-bold text-slate-800 dark:text-slate-200">{{ $fila['total'] }}</td>
+                                        <td class="px-3 py-2.5 text-center text-slate-400">{{ $fila['pendiente'] ?: '—' }}</td>
+                                        <td class="px-3 py-2.5 text-center text-blue-600 dark:text-blue-400">{{ $fila['proceso'] ?: '—' }}</td>
+                                        <td class="px-3 py-2.5 text-center text-amber-600 dark:text-amber-400">{{ $fila['verificacion'] ?: '—' }}</td>
+                                        <td class="px-3 py-2.5 text-center text-emerald-600 dark:text-emerald-400">{{ $fila['aprobado'] ?: '—' }}</td>
+                                        <td class="px-3 py-2.5 text-center text-red-500">{{ $fila['rechazado'] ?: '—' }}</td>
+                                        <td class="px-4 py-2.5">
+                                            <div class="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                                <div class="h-full rounded-full bg-emerald-500" style="width: {{ $pctAprobado }}%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr><td colspan="8" class="px-4 py-6 text-center text-sm text-slate-400">Sin datos</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>{{-- /body --}}
+
+            <div class="flex justify-end px-6 py-4 border-t border-slate-200 dark:border-slate-700">
+                <button wire:click="$set('showIndicadores', false)"
+                        class="px-5 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+    @endif
+
 </div>

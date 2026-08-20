@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Administration;
 
-use App\Models\Carrera;
 use App\Models\Cohorte;
 use App\Traits\WithAuthorization;
 use Livewire\Attributes\Computed;
@@ -16,7 +15,6 @@ class GestionCohortes extends Component
     // ── Filtros ────────────────────────────────────────────────────────────────
     public string $buscar           = '';
     public string $filtroEstado     = '';
-    public string $filtroCarrera    = '';
 
     // ── Modal ─────────────────────────────────────────────────────────────────
     public bool $showModal      = false;
@@ -25,7 +23,6 @@ class GestionCohortes extends Component
 
     // ── Formulario ─────────────────────────────────────────────────────────────
     public string $nombre                    = '';
-    public ?int   $carrera_id               = null;
     public string $fecha_inicio_matriculacion = '';
     public string $fecha_inicio_clases        = '';
     public string $estado                    = 'abierto';
@@ -35,7 +32,6 @@ class GestionCohortes extends Component
     {
         return [
             'nombre'                     => 'required|string|max:255',
-            'carrera_id'                 => 'required|exists:carreras,id',
             'fecha_inicio_matriculacion' => 'nullable|date',
             'fecha_inicio_clases'        => 'nullable|date',
             'estado'                     => 'required|in:abierto,cerrado',
@@ -43,31 +39,18 @@ class GestionCohortes extends Component
         ];
     }
 
-    protected $messages = [
-        'nombre.required'   => 'El nombre es obligatorio.',
-        'carrera_id.required' => 'Selecciona una carrera.',
-        'carrera_id.exists' => 'La carrera seleccionada no existe.',
-    ];
-
     public function mount(): void
     {
         $this->requierePermiso('gestionar_cohortes');
     }
 
     #[Computed]
-    public function carreras()
-    {
-        return Carrera::orderBy('name')->get(['id', 'name']);
-    }
-
-    #[Computed]
     public function cohortes()
     {
-        return Cohorte::with(['carrera', 'creadoPor'])
+        return Cohorte::with(['creadoPor'])
             ->withCount('aspirantes')
             ->when($this->buscar, fn ($q) => $q->where('nombre', 'like', "%{$this->buscar}%"))
             ->when($this->filtroEstado, fn ($q) => $q->where('estado', $this->filtroEstado))
-            ->when($this->filtroCarrera, fn ($q) => $q->where('carrera_id', $this->filtroCarrera))
             ->orderByDesc('created_at')
             ->get();
     }
@@ -77,7 +60,6 @@ class GestionCohortes extends Component
     {
         return view('livewire.administration.gestion-cohortes', [
             'cohortes' => $this->cohortes,
-            'carreras' => $this->carreras,
         ]);
     }
 
@@ -129,7 +111,6 @@ class GestionCohortes extends Component
         $cohorte = Cohorte::findOrFail($id);
         $this->editingId                   = $id;
         $this->nombre                      = $cohorte->nombre;
-        $this->carrera_id                  = $cohorte->carrera_id;
         $this->fecha_inicio_matriculacion  = $cohorte->fecha_inicio_matriculacion?->format('Y-m-d') ?? '';
         $this->fecha_inicio_clases         = $cohorte->fecha_inicio_clases?->format('Y-m-d') ?? '';
         $this->estado                      = $cohorte->estado;
@@ -191,7 +172,6 @@ class GestionCohortes extends Component
     private function resetForm(): void
     {
         $this->nombre                    = '';
-        $this->carrera_id               = null;
         $this->fecha_inicio_matriculacion = '';
         $this->fecha_inicio_clases        = '';
         $this->estado                    = 'abierto';

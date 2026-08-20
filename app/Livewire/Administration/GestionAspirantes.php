@@ -11,6 +11,7 @@ use App\Models\Cohorte;
 use App\Models\User;
 use App\Services\SettingService;
 use App\Traits\WithAuthorization;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -66,6 +67,9 @@ class GestionAspirantes extends Component
     public bool   $showEntryModal     = false;
     public string $cedulaModalInput   = '';
     public array  $cedulaModalData    = [];
+
+    // ── Indicadores ──────────────────────────────────────────────────────
+    public bool   $showIndicadores   = false;
 
     // ── Editar datos básicos del aspirante ────────────────────────────────
     public bool   $showEditar        = false;
@@ -126,6 +130,63 @@ class GestionAspirantes extends Component
     public function verificacionCount(): int
     {
         return Aspirante::where('estado', 'verificacion')->count();
+    }
+
+    #[Computed]
+    public function indicadores(): array
+    {
+        $porEstado = Aspirante::select('estado', DB::raw('count(*) as total'))
+            ->groupBy('estado')
+            ->pluck('total', 'estado')
+            ->toArray();
+
+        $total      = array_sum($porEstado);
+        $aprobados  = $porEstado['aprobado']  ?? 0;
+        $rechazados = $porEstado['rechazado'] ?? 0;
+        $resueltos  = $aprobados + $rechazados;
+
+        $porCarrera = Aspirante::with('carrera:id,name')
+            ->select('carrera_id', 'estado', DB::raw('count(*) as total'))
+            ->groupBy('carrera_id', 'estado')
+            ->get()
+            ->groupBy('carrera_id')
+            ->map(fn ($rows) => [
+                'nombre'       => $rows->first()->carrera?->name ?? 'Sin carrera asignada',
+                'total'        => $rows->sum('total'),
+                'pendiente'    => $rows->where('estado', 'pendiente')->sum('total'),
+                'proceso'      => $rows->where('estado', 'proceso')->sum('total'),
+                'verificacion' => $rows->where('estado', 'verificacion')->sum('total'),
+                'aprobado'     => $rows->where('estado', 'aprobado')->sum('total'),
+                'rechazado'    => $rows->where('estado', 'rechazado')->sum('total'),
+            ])
+            ->sortByDesc('total')
+            ->values();
+
+        $porTipo = Aspirante::select('tipo_proceso', DB::raw('count(*) as total'))
+            ->groupBy('tipo_proceso')
+            ->pluck('total', 'tipo_proceso')
+            ->toArray();
+
+        $cedula    = $total > 0 ? Aspirante::whereNotNull('cedula_path')->where('cedula_estado', 'aprobado')->count() : 0;
+        $bachiller = $total > 0 ? Aspirante::where(fn ($q) => $q->whereNotNull('bachiller_path')->where('bachiller_estado', 'aprobado')
+                                                                 ->orWhereNotNull('habilitante_path')->where('habilitante_estado', 'aprobado'))->count() : 0;
+        $pago      = $total > 0 ? Aspirante::whereNotNull('pago_comprobante_path')->where('pago_estado', 'verificado')->count() : 0;
+
+        return [
+            'total'              => $total,
+            'activos'            => ($porEstado['pendiente'] ?? 0) + ($porEstado['proceso'] ?? 0) + ($porEstado['verificacion'] ?? 0),
+            'resueltos'          => $resueltos,
+            'aprobados'          => $aprobados,
+            'rechazados'         => $rechazados,
+            'tasa_aprobacion'    => $resueltos > 0 ? round($aprobados / $resueltos * 100) : null,
+            'por_carrera'        => $porCarrera,
+            'regular'            => $porTipo['regular'] ?? 0,
+            'validacion'         => $porTipo['validacion_conocimientos'] ?? 0,
+            'docs_cedula_pct'    => $total > 0 ? round($cedula    / $total * 100) : 0,
+            'docs_bachiller_pct' => $total > 0 ? round($bachiller / $total * 100) : 0,
+            'docs_pago_pct'      => $total > 0 ? round($pago      / $total * 100) : 0,
+            'ultimos_7_dias'     => Aspirante::where('created_at', '>=', now()->subDays(7))->count(),
+        ];
     }
 
     #[Layout('layouts.admin')]
