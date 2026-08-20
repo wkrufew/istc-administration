@@ -25,6 +25,7 @@ class Aspirante extends Model
     protected $fillable = [
         'user_id',
         'cohorte_id',
+        'carrera_id',
         'tipo_proceso',
         'estado',
         'motivo_rechazo',
@@ -78,6 +79,11 @@ class Aspirante extends Model
     public function cohorte(): BelongsTo
     {
         return $this->belongsTo(Cohorte::class);
+    }
+
+    public function carrera(): BelongsTo
+    {
+        return $this->belongsTo(Carrera::class);
     }
 
     public function registradoPor(): BelongsTo

@@ -2,9 +2,9 @@
 @php
     $pasos = [
         ['key' => 'pendiente',    'label' => 'Solicitud recibida'],
-        ['key' => 'proceso',      'label' => 'En proceso'],
-        ['key' => 'verificacion', 'label' => 'Verificación'],
-        ['key' => 'aprobado',     'label' => 'Admitido'],
+        ['key' => 'proceso',      'label' => 'En revisión'],
+        ['key' => 'verificacion', 'label' => 'Verificación docs.'],
+        ['key' => 'aprobado',     'label' => 'Pre-matrícula aprobada'],
     ];
     $ordenEstados = array_column($pasos, 'key');
     $indiceActual = $aspirante ? array_search($aspirante->estado, $ordenEstados) : -1;
@@ -77,7 +77,7 @@
     $barColor       = $progreso >= 100 ? 'bg-teal-500' : ($progreso >= 75 ? 'bg-emerald-500' : ($progreso >= 40 ? 'bg-amber-400' : 'bg-red-400'));
 @endphp
 
-<x-slot name="header">Mi proceso de admisión</x-slot>
+<x-slot name="header">Mi solicitud de ingreso</x-slot>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
 
@@ -95,14 +95,14 @@
             <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </div>
         <div>
-            <h3 class="font-semibold text-red-800 dark:text-red-300">Solicitud no admitida</h3>
+            <h3 class="font-semibold text-red-800 dark:text-red-300">Tu solicitud no fue aprobada</h3>
             @if($aspirante->motivo_rechazo)<p class="text-sm text-red-700 mt-1">{{ $aspirante->motivo_rechazo }}</p>@endif
             <p class="text-xs text-red-500 mt-1">Si tienes dudas, comunícate con secretaría.</p>
         </div>
     </div>
     @elseif($aspirante->estado === 'aprobado')
     <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 text-center font-medium text-emerald-800 dark:text-emerald-300">
-        ¡Felicitaciones! Has sido admitido. Secretaría se pondrá en contacto para completar tu matrícula.
+        ¡Tu solicitud ha sido aprobada! Secretaría se pondrá en contacto contigo para coordinar tu matrícula.
     </div>
     @elseif($aspirante->estado === 'matriculado')
     <div class="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 text-center font-medium text-purple-800 dark:text-purple-300">
@@ -110,7 +110,7 @@
     </div>
     @elseif($aspirante->estado === 'verificacion')
     <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 text-center font-medium text-blue-800 dark:text-blue-300">
-        Tu ficha y documentos están siendo revisados por el equipo de admisión. Te notificaremos pronto.
+        Tu ficha y documentos están siendo revisados por el equipo de secretaría. Te notificaremos pronto.
     </div>
     @endif
 
@@ -202,28 +202,28 @@
                 {{-- Header con gradiente --}}
                 <div class="bg-gradient-to-br from-blue-600 to-indigo-700 px-5 py-4">
                     <p class="text-[10px] font-bold text-blue-300 uppercase tracking-widest mb-1">Mi cohorte</p>
-                    <h2 class="text-base font-bold text-white leading-tight">{{ $aspirante->cohorte->nombre ?? '—' }}</h2>
-                    <p class="text-sm text-blue-200 mt-0.5 mb-3 leading-snug">{{ $aspirante->cohorte->carrera->name ?? '—' }}</p>
+                    <h2 class="text-base font-bold text-white leading-tight">{{ $aspirante->cohorte?->nombre ?? '—' }}</h2>
+                    <p class="text-sm text-blue-200 mt-0.5 mb-3 leading-snug">{{ $aspirante->carrera?->name ?? '—' }}</p>
 
                     {{-- Pills: tipo + modalidad --}}
-                    @if($aspirante->cohorte)
+                    @if($aspirante->carrera)
                     <div class="flex flex-wrap gap-1.5">
-                        @if($aspirante->cohorte->carrera->tipo ?? false)
+                        @if($aspirante->carrera->tipo ?? false)
                         <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-100 ring-1 ring-indigo-300/30">
                             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/></svg>
-                            {{ $aspirante->cohorte->carrera->tipo_label }}
+                            {{ $aspirante->carrera->tipo_label }}
                         </span>
                         @endif
-                        @if($aspirante->cohorte->carrera->modalidad ?? false)
+                        @if($aspirante->carrera->modalidad ?? false)
                         <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-500/30 text-teal-100 ring-1 ring-teal-300/30">
                             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                            {{ $aspirante->cohorte->carrera->modalidad }}
+                            {{ $aspirante->carrera->modalidad }}
                         </span>
                         @endif
-                        @if($aspirante->cohorte->carrera->duracion_semestres ?? false)
+                        @if($aspirante->carrera->duracion_semestres ?? false)
                         <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/30 text-blue-100 ring-1 ring-blue-300/30">
                             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            {{ $aspirante->cohorte->carrera->duracion_semestres }} semestres
+                            {{ $aspirante->carrera->duracion_semestres }} semestres
                         </span>
                         @endif
                     </div>

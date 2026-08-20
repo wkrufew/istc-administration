@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bienvenido al proceso de admisión</title>
+<title>Bienvenido al proceso de ingreso</title>
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;">
 
@@ -20,7 +20,7 @@
                    style="height:52px;object-fit:contain;margin-bottom:16px;border-radius:8px;">
             @endif
             <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">
-              ¡Bienvenido al proceso de admisión!
+              ¡Bienvenido a tu proceso de ingreso!
             </h1>
             <p style="margin:8px 0 0;color:rgba(255,255,255,0.75);font-size:14px;">
               {{ $instituto['nombre_largo'] }}
@@ -36,9 +36,9 @@
               Hola <strong>{{ $user->name }}</strong>,
             </p>
             <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
-              Tu solicitud de admisión ha sido registrada en el sistema de
+              Tu solicitud de ingreso ha sido registrada en el sistema de
               <strong>{{ $instituto['nombre_largo'] }}</strong>.
-              A continuación encontrarás tus credenciales de acceso al portal de admisión:
+              A continuación encontrarás tus credenciales de acceso al portal:
             </p>
 
             {{-- Credenciales --}}
@@ -66,7 +66,7 @@
               Con estas credenciales podrás ingresar al portal y:
             </p>
             <ul style="margin:0 0 28px;padding-left:20px;font-size:14px;color:#64748b;line-height:1.8;">
-              <li>Ver el estado de tu proceso de admisión</li>
+              <li>Ver el estado de tu solicitud de ingreso</li>
               <li>Subir los documentos requeridos (cédula, título de bachiller, comprobante de pago)</li>
               <li>Enviar tu documentación para revisión</li>
             </ul>

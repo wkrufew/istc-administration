@@ -40,7 +40,7 @@
             <p class="text-sm text-slate-500">{{ $aspirante->user->cedula }}</p>
             @if($aspirante->cohorte)
             <p class="text-xs text-slate-400 mt-2">
-                {{ $aspirante->cohorte->nombre }} · {{ $aspirante->cohorte->carrera->name ?? '—' }}
+                {{ $aspirante->cohorte->nombre }} · {{ $aspirante->carrera?->name ?? '—' }}
             </p>
             @endif
         </div>

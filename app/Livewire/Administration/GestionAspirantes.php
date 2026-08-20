@@ -6,9 +6,14 @@ use App\Jobs\EnviarEmailBienvenidaAspirante;
 use App\Jobs\NotificarEstadoAspirante;
 use App\Jobs\NotificarObservacionDocumentoAspirante;
 use App\Models\Aspirante;
+use App\Models\Carrera;
 use App\Models\Cohorte;
+use App\Models\User;
+use App\Services\SettingService;
 use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -41,9 +46,40 @@ class GestionAspirantes extends Component
     public string  $nuevoEstado       = '';
     public string  $observacion       = '';
 
+    // ── Modal registrar aspirante ─────────────────────────────────────────
+    public bool   $showRegistrar    = false;
+    public string $regFirstName     = '';
+    public string $regLastName      = '';
+    public string $regCedula        = '';
+    public string $regEmail         = '';
+    public string $regCohorteId     = '';
+    public string $regCarreraId     = '';
+    public string $regGenero        = '';
+    public string $regEstadoCivil   = '';
+    public string $regFechaNac      = '';
+    public string $regNacionalidad  = '';
+    public string $regPadre         = '';
+    public string $regMadre         = '';
+
+    // Modal cédula (igual que CreateUser)
+    public bool   $apiActiva          = false;
+    public bool   $showEntryModal     = false;
+    public string $cedulaModalInput   = '';
+    public array  $cedulaModalData    = [];
+
+    // ── Editar datos básicos del aspirante ────────────────────────────────
+    public bool   $showEditar        = false;
+    public string $editFirstName     = '';
+    public string $editLastName      = '';
+    public string $editCedula        = '';
+    public string $editEmail         = '';
+    public string $editCarreraId     = '';
+    public string $editCohorteId     = '';
+
     public function mount(): void
     {
         $this->requierePermiso('gestionar_aspirantes');
+        $this->apiActiva = ! empty(SettingService::get('cedula_api.token', ''));
     }
 
     public function updatedBuscar(): void       { $this->resetPage(); }
@@ -53,13 +89,19 @@ class GestionAspirantes extends Component
     #[Computed]
     public function cohortes()
     {
-        return Cohorte::with('carrera')->orderByDesc('created_at')->get(['id', 'nombre', 'carrera_id', 'estado']);
+        return Cohorte::orderByDesc('created_at')->get(['id', 'nombre', 'estado']);
+    }
+
+    #[Computed]
+    public function carreras()
+    {
+        return Carrera::orderBy('name')->get(['id', 'name']);
     }
 
     #[Computed]
     public function aspirantes()
     {
-        return Aspirante::with(['user', 'cohorte.carrera', 'registradoPor'])
+        return Aspirante::with(['user', 'carrera', 'cohorte', 'registradoPor'])
             ->when($this->buscar, function ($q) {
                 $q->whereHas('user', fn ($u) =>
                     $u->where('name', 'like', "%{$this->buscar}%")
@@ -77,7 +119,7 @@ class GestionAspirantes extends Component
     public function aspiranteSeleccionado(): ?Aspirante
     {
         if (! $this->aspiranteId) return null;
-        return Aspirante::with(['user', 'cohorte.carrera', 'registradoPor'])->find($this->aspiranteId);
+        return Aspirante::with(['user', 'carrera', 'cohorte', 'registradoPor'])->find($this->aspiranteId);
     }
 
     #[Computed]
@@ -92,6 +134,7 @@ class GestionAspirantes extends Component
         return view('livewire.administration.gestion-aspirantes', [
             'aspirantes'        => $this->aspirantes,
             'cohortes'          => $this->cohortes,
+            'carreras'          => $this->carreras,
             'aspiranteDetalle'  => $this->aspiranteSeleccionado,
             'verificacionCount' => $this->verificacionCount,
         ]);
@@ -200,6 +243,259 @@ class GestionAspirantes extends Component
             'title' => 'Aspirante eliminado',
             'text'  => 'Movido a la papelera. Puedes restaurarlo desde allí.',
             'timer' => 3000,
+        ]);
+    }
+
+    // ── Registrar aspirante ───────────────────────────────────────────────
+
+    public function abrirRegistrar(): void
+    {
+        $this->showRegistrar    = true;
+        $this->showEntryModal   = true;
+        $this->cedulaModalInput = '';
+        $this->cedulaModalData  = [];
+        $this->resetErrorBag();
+    }
+
+    public function cerrarRegistrar(): void
+    {
+        $this->showRegistrar   = false;
+        $this->showEntryModal  = false;
+        $this->cedulaModalInput = '';
+        $this->cedulaModalData  = [];
+        $this->regFirstName     = '';
+        $this->regLastName      = '';
+        $this->regCedula        = '';
+        $this->regEmail         = '';
+        $this->regCohorteId     = '';
+        $this->regCarreraId     = '';
+        $this->regGenero        = '';
+        $this->regEstadoCivil   = '';
+        $this->regFechaNac      = '';
+        $this->regNacionalidad  = '';
+        $this->regPadre         = '';
+        $this->regMadre         = '';
+        $this->resetErrorBag();
+    }
+
+    public function consultarCedulaRegistro(): void
+    {
+        $this->resetErrorBag('cedulaModal');
+
+        if (! trim($this->cedulaModalInput)) {
+            $this->addError('cedulaModal', 'Ingrese el número de cédula o documento.');
+            return;
+        }
+
+        $token = SettingService::get('cedula_api.token', '');
+        $url   = SettingService::get('cedula_api.url', '');
+
+        if (! $token || ! $url) {
+            $this->addError('cedulaModal', 'API no configurada. Ve a Ajustes → API Cédula.');
+            return;
+        }
+
+        try {
+            $response = Http::withToken($token)
+                ->timeout(10)
+                ->get(rtrim($url, '/') . '/' . trim($this->cedulaModalInput));
+
+            if ($response->successful() && ! empty($response->json('identificacion'))) {
+                $this->cedulaModalData = $response->json();
+            } else {
+                $this->cedulaModalData = [];
+                $this->addError('cedulaModal', 'Cédula no encontrada en el sistema.');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('consultarCedulaRegistro error', ['cedula' => $this->cedulaModalInput, 'error' => $e->getMessage()]);
+            $this->addError('cedulaModal', 'No se pudo conectar con el servicio. Intente nuevamente.');
+        }
+    }
+
+    public function aplicarCedulaRegistro(): void
+    {
+        if (empty($this->cedulaModalData)) return;
+
+        $d = $this->cedulaModalData;
+
+        $this->regCedula = trim($this->cedulaModalInput);
+
+        $palabras = preg_split('/\s+/', trim($d['nombres'] ?? ''));
+        $total    = count($palabras);
+        if ($total >= 4) {
+            $this->regLastName  = ucwords(strtolower($palabras[0] . ' ' . $palabras[1]));
+            $this->regFirstName = ucwords(strtolower(implode(' ', array_slice($palabras, 2))));
+        } elseif ($total === 3) {
+            $this->regLastName  = ucwords(strtolower($palabras[0] . ' ' . $palabras[1]));
+            $this->regFirstName = ucwords(strtolower($palabras[2]));
+        } elseif ($total === 2) {
+            $this->regLastName  = ucwords(strtolower($palabras[0]));
+            $this->regFirstName = ucwords(strtolower($palabras[1]));
+        } else {
+            $this->regFirstName = ucwords(strtolower($d['nombres'] ?? ''));
+        }
+
+        $generoApi         = strtoupper($d['genero'] ?? $d['sexo'] ?? '');
+        $this->regGenero   = match(true) {
+            in_array($generoApi, ['HOMBRE', 'MASCULINO', 'M']) => 'Masculino',
+            in_array($generoApi, ['MUJER', 'FEMENINO', 'F'])   => 'Femenino',
+            default                                             => '',
+        };
+
+        $ec = strtoupper($d['estadoCivil'] ?? '');
+        $this->regEstadoCivil = match(true) {
+            str_contains($ec, 'SOLTERO') || str_contains($ec, 'SOLTERA') => 'Soltero/a',
+            str_contains($ec, 'CASADO')  || str_contains($ec, 'CASADA')  => 'Casado/a',
+            str_contains($ec, 'DIVOR')                                    => 'Divorciado/a',
+            str_contains($ec, 'VIUDO')   || str_contains($ec, 'VIUDA')   => 'Viudo/a',
+            str_contains($ec, 'UNION')   || str_contains($ec, 'LIBRE')   => 'Unión libre',
+            default                                                        => '',
+        };
+
+        $this->regFechaNac    = ! empty($d['fechaNacimiento']) ? $d['fechaNacimiento'] : '';
+        $this->regNacionalidad = ucfirst(strtolower($d['nacionalidad'] ?? ''));
+        $this->regPadre        = ! empty($d['nombrePadre']) ? ucwords(strtolower($d['nombrePadre'])) : '';
+        $this->regMadre        = ! empty($d['nombreMadre']) ? ucwords(strtolower($d['nombreMadre'])) : '';
+
+        $this->showEntryModal  = false;
+        $this->cedulaModalInput = '';
+        $this->cedulaModalData  = [];
+    }
+
+    public function omitirCedula(): void
+    {
+        $this->showEntryModal  = false;
+        $this->cedulaModalInput = '';
+        $this->cedulaModalData  = [];
+    }
+
+    public function guardarAspirante(): void
+    {
+        if ($this->sinPermiso('gestionar_aspirantes')) return;
+
+        $this->validate([
+            'regFirstName'  => 'required|string|max:255',
+            'regLastName'   => 'required|string|max:255',
+            'regCedula'     => 'required|string|max:20|unique:users,cedula',
+            'regEmail'      => 'required|email|max:255|unique:users,email',
+            'regCohorteId'  => 'required|exists:cohortes,id',
+            'regCarreraId'  => 'required|exists:carreras,id',
+        ], [
+            'regFirstName.required'  => 'El nombre es obligatorio.',
+            'regLastName.required'   => 'El apellido es obligatorio.',
+            'regCedula.required'     => 'La cédula/documento es obligatorio.',
+            'regCedula.unique'       => 'Esta cédula ya está registrada.',
+            'regEmail.required'      => 'El correo es obligatorio.',
+            'regEmail.unique'        => 'Este correo ya está registrado.',
+            'regCohorteId.required'  => 'Selecciona una cohorte.',
+            'regCarreraId.required'  => 'Selecciona una carrera.',
+        ]);
+
+        $user = User::create([
+            'name'           => $this->regFirstName . ' ' . $this->regLastName,
+            'first_name'     => $this->regFirstName,
+            'last_name'      => $this->regLastName,
+            'cedula'         => $this->regCedula,
+            'email'          => $this->regEmail,
+            'password'       => Hash::make(Str::random(16)),
+            'genero'         => $this->regGenero ?: null,
+            'estado_civil'   => $this->regEstadoCivil ?: null,
+            'fecha_nacimiento'=> $this->regFechaNac ?: null,
+            'nacionalidad'   => $this->regNacionalidad ?: null,
+            'padre'          => $this->regPadre ?: null,
+            'madre'          => $this->regMadre ?: null,
+            'is_active'      => true,
+        ]);
+
+        $user->assignRole('Admision');
+
+        Aspirante::create([
+            'user_id'       => $user->id,
+            'cohorte_id'    => $this->regCohorteId,
+            'carrera_id'    => $this->regCarreraId,
+            'estado'        => 'pendiente',
+            'registrado_por'=> auth()->id(),
+        ]);
+
+        unset($this->aspirantes);
+        $this->cerrarRegistrar();
+
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => 'Aspirante registrado',
+            'text'  => $this->regFirstName . ' ' . $this->regLastName . ' fue registrado como aspirante en estado Pendiente.',
+            'timer' => 4000,
+        ]);
+    }
+
+    // ── Editar datos básicos del aspirante ────────────────────────────────
+
+    public function abrirEditar(): void
+    {
+        $asp = $this->aspiranteSeleccionado;
+        if (! $asp || $asp->estado === 'matriculado') return;
+
+        $this->editFirstName  = $asp->user->first_name ?? '';
+        $this->editLastName   = $asp->user->last_name  ?? '';
+        $this->editCedula     = $asp->user->cedula     ?? '';
+        $this->editEmail      = $asp->user->email      ?? '';
+        $this->editCarreraId  = (string) ($asp->carrera_id ?? '');
+        $this->editCohorteId  = (string) ($asp->cohorte_id ?? '');
+        $this->showEditar     = true;
+        $this->resetErrorBag();
+    }
+
+    public function cerrarEditar(): void
+    {
+        $this->showEditar = false;
+        $this->resetErrorBag();
+    }
+
+    public function guardarEdicion(): void
+    {
+        if ($this->sinPermiso('gestionar_aspirantes')) return;
+
+        $asp = Aspirante::with('user')->findOrFail($this->aspiranteId);
+        if ($asp->estado === 'matriculado') return;
+
+        $userId = $asp->user_id;
+
+        $this->validate([
+            'editFirstName' => 'required|string|max:255',
+            'editLastName'  => 'required|string|max:255',
+            'editCedula'    => "required|string|max:20|unique:users,cedula,{$userId}",
+            'editEmail'     => "required|email|max:255|unique:users,email,{$userId}",
+            'editCohorteId' => 'required|exists:cohortes,id',
+            'editCarreraId' => 'required|exists:carreras,id',
+        ], [
+            'editFirstName.required' => 'El nombre es obligatorio.',
+            'editLastName.required'  => 'El apellido es obligatorio.',
+            'editCedula.unique'      => 'Esta cédula ya está en uso.',
+            'editEmail.unique'       => 'Este correo ya está en uso.',
+            'editCohorteId.required' => 'Selecciona una cohorte.',
+            'editCarreraId.required' => 'Selecciona una carrera.',
+        ]);
+
+        $asp->user->update([
+            'first_name' => $this->editFirstName,
+            'last_name'  => $this->editLastName,
+            'name'       => $this->editFirstName . ' ' . $this->editLastName,
+            'cedula'     => $this->editCedula,
+            'email'      => $this->editEmail,
+        ]);
+
+        $asp->update([
+            'cohorte_id' => $this->editCohorteId,
+            'carrera_id' => $this->editCarreraId,
+        ]);
+
+        unset($this->aspiranteSeleccionado, $this->aspirantes);
+        $this->showEditar = false;
+
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => 'Datos actualizados',
+            'timer' => 2500,
         ]);
     }
 

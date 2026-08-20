@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Solicitud de admisión recibida</title>
+<title>Solicitud de ingreso recibida</title>
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;">
 
@@ -37,9 +37,9 @@
               Hola <strong>{{ $aspirante->user->name }}</strong>,
             </p>
             <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
-              Hemos recibido tu solicitud de admisión a
-              <strong>{{ $aspirante->cohorte?->carrera?->name ?? $instituto['nombre_corto'] }}</strong>.
-              En este momento estamos analizando la información que compartiste y pronto tendrás noticias de parte del equipo de admisión.
+              Hemos recibido tu solicitud de ingreso a
+              <strong>{{ $aspirante->carrera?->name ?? $instituto['nombre_corto'] }}</strong>.
+              En este momento estamos analizando la información que compartiste y pronto tendrás noticias de parte del equipo de secretaría.
             </p>
 
             {{-- Info de la cohorte --}}
@@ -73,7 +73,7 @@
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
               @foreach([
-                  ['num' => '1', 'title' => 'Revisión de solicitud', 'desc' => 'El equipo de admisión revisará tu información.'],
+                  ['num' => '1', 'title' => 'Revisión de solicitud', 'desc' => 'El equipo de secretaría revisará tu información.'],
                   ['num' => '2', 'title' => 'Acceso al portal', 'desc' => 'Recibirás un correo con tus credenciales para ingresar al portal y subir los documentos requeridos.'],
                   ['num' => '3', 'title' => 'Entrega de documentos', 'desc' => 'Cédula, título de bachiller o equivalente, y comprobante de pago.'],
                   ['num' => '4', 'title' => 'Resultado', 'desc' => 'Te notificaremos por correo cuando tengamos un resultado de tu proceso.'],
@@ -103,7 +103,7 @@
             <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;">
               <p style="margin:0;font-size:13px;color:#15803d;line-height:1.5;">
                 <strong>Importante:</strong> Pronto recibirás otro correo con tus credenciales de acceso
-                al portal de admisión. Revisa también tu carpeta de spam.
+                al portal. Revisa también tu carpeta de spam.
               </p>
             </div>
 

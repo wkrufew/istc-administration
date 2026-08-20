@@ -61,7 +61,7 @@
                        text-slate-800 dark:text-slate-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lime-500/40">
             <option value="">Todas las cohortes</option>
             @foreach($cohortes as $cohorte)
-                <option value="{{ $cohorte->id }}">{{ $cohorte->nombre }} ({{ $cohorte->carrera->name ?? '—' }})</option>
+                <option value="{{ $cohorte->id }}">{{ $cohorte->nombre }}</option>
             @endforeach
         </select>
         <select wire:model.live="filtroEstado"
@@ -117,8 +117,8 @@
                                 <p class="text-xs text-slate-400 mt-0.5">{{ $asp->user->cedula }} · {{ $asp->user->email }}</p>
                             </td>
                             <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                <p>{{ $asp->cohorte->nombre ?? '—' }}</p>
-                                <p class="text-xs text-slate-400">{{ $asp->cohorte->carrera->name ?? '—' }}</p>
+                                <p>{{ $asp->carrera?->name ?? '—' }}</p>
+                                <p class="text-xs text-slate-400">{{ $asp->cohorte?->nombre ?? '—' }}</p>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-1.5 flex-wrap">
@@ -564,10 +564,24 @@
 
                     {{-- ─ Registro ─ --}}
                     <div class="border-t border-slate-100 dark:border-slate-700 pt-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inscripción</p>
+                            @if($asp->estado !== 'matriculado')
+                            @can('gestionar_aspirantes')
+                            <button wire:click="abrirEditar"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium
+                                           text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700
+                                           hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+                                Editar
+                            </button>
+                            @endcan
+                            @endif
+                        </div>
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             @foreach([
-                                ['Cohorte', $asp->cohorte->nombre ?? '—'],
-                                ['Carrera', $asp->cohorte->carrera->name ?? '—'],
+                                ['Cohorte', $asp->cohorte?->nombre ?? '—'],
+                                ['Carrera', $asp->carrera?->name ?? '—'],
                                 ['Registrado por', $asp->registradoPor->name ?? 'Sistema'],
                                 ['Fecha de registro', $asp->created_at->format('d/m/Y H:i')],
                             ] as [$label, $valor])
@@ -578,6 +592,80 @@
                             @endforeach
                         </div>
                     </div>
+
+                    {{-- ─ Panel edición ─ --}}
+                    @if($showEditar)
+                    <div class="border-t border-indigo-200 dark:border-indigo-700 pt-4 space-y-4">
+                        <p class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Editar datos del aspirante</p>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Nombres</label>
+                                <input wire:model="editFirstName" type="text"
+                                       class="w-full rounded-xl border text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors
+                                              {{ $errors->has('editFirstName') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                                @error('editFirstName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Apellidos</label>
+                                <input wire:model="editLastName" type="text"
+                                       class="w-full rounded-xl border text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors
+                                              {{ $errors->has('editLastName') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                                @error('editLastName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Cédula</label>
+                                <input wire:model="editCedula" type="text"
+                                       class="w-full rounded-xl border text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors
+                                              {{ $errors->has('editCedula') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                                @error('editCedula') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Correo</label>
+                                <input wire:model="editEmail" type="email"
+                                       class="w-full rounded-xl border text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors
+                                              {{ $errors->has('editEmail') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                                @error('editEmail') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Carrera</label>
+                                <select wire:model="editCarreraId"
+                                        class="w-full rounded-xl border text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors
+                                               {{ $errors->has('editCarreraId') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                                    <option value="">Selecciona carrera</option>
+                                    @foreach($carreras as $car)
+                                        <option value="{{ $car->id }}">{{ $car->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('editCarreraId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Cohorte</label>
+                                <select wire:model="editCohorteId"
+                                        class="w-full rounded-xl border text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors
+                                               {{ $errors->has('editCohorteId') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                                    <option value="">Selecciona cohorte</option>
+                                    @foreach($cohortes as $coh)
+                                        <option value="{{ $coh->id }}">{{ $coh->nombre }}</option>
+                                    @endforeach
+                                </select>
+                                @error('editCohorteId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button wire:click="cerrarEditar"
+                                    class="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                Cancelar
+                            </button>
+                            <button wire:click="guardarEdicion" wire:loading.attr="disabled"
+                                    class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium transition-colors">
+                                <span wire:loading.remove wire:target="guardarEdicion">Guardar cambios</span>
+                                <span wire:loading wire:target="guardarEdicion">Guardando…</span>
+                            </button>
+                        </div>
+                    </div>
+                    @endif
 
                 </div>
             </div>

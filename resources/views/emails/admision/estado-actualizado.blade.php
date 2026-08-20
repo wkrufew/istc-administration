@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Actualización de tu proceso de admisión</title>
+<title>Actualización de tu proceso de ingreso</title>
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;">
 
@@ -23,9 +23,9 @@ $config = match($nuevoEstado) {
         'gradient'    => 'linear-gradient(135deg,#064e3b 0%,#065f46 60%,#047857 100%)',
         'badge_bg'    => '#d1fae5',
         'badge_color' => '#065f46',
-        'badge_label' => 'Aprobado',
+        'badge_label' => 'Pre-matrícula aprobada',
         'icon'        => '&#9989;',
-        'titulo'      => '¡Felicitaciones! Has sido aprobado',
+        'titulo'      => '¡Tu pre-matrícula ha sido aprobada!',
         'cta_bg'      => '#047857',
         'mostrar_portal' => true,
     ],
@@ -33,9 +33,9 @@ $config = match($nuevoEstado) {
         'gradient'    => 'linear-gradient(135deg,#7f1d1d 0%,#991b1b 60%,#b91c1c 100%)',
         'badge_bg'    => '#fee2e2',
         'badge_color' => '#991b1b',
-        'badge_label' => 'No aprobado',
+        'badge_label' => 'Solicitud no aprobada',
         'icon'        => '&#10060;',
-        'titulo'      => 'Resultado de tu solicitud de admisión',
+        'titulo'      => 'Resultado de tu solicitud de ingreso',
         'cta_bg'      => '#dc2626',
         'mostrar_portal' => false,
     ],
@@ -105,8 +105,8 @@ $config = match($nuevoEstado) {
             {{-- Mensaje según estado --}}
             @if($nuevoEstado === 'proceso')
               <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">
-                Hemos recibido tu documentación y tu solicitud de admisión a
-                <strong>{{ $aspirante->cohorte?->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
+                Hemos recibido tu documentación y tu solicitud de ingreso a
+                <strong>{{ $aspirante->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
                 está actualmente <strong>en proceso de revisión</strong>.
               </p>
               <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
@@ -116,23 +116,23 @@ $config = match($nuevoEstado) {
 
             @elseif($nuevoEstado === 'aprobado')
               <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">
-                Es un placer informarte que tu solicitud de admisión a
-                <strong>{{ $aspirante->cohorte?->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
-                ha sido <strong>aprobada</strong>.
+                Tu solicitud de ingreso a
+                <strong>{{ $aspirante->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
+                ha sido <strong>aprobada</strong>. Estás habilitado para continuar con el proceso de matrícula.
               </p>
               <p style="margin:0 0 8px;font-size:14px;color:#64748b;line-height:1.6;">
                 Los próximos pasos son:
               </p>
               <ul style="margin:0 0 28px;padding-left:20px;font-size:14px;color:#64748b;line-height:1.8;">
-                <li>Esperar a que se asiente la matrícula</li>
-                <li>Luego de la matrícula esperar credenciales para el acceso al sistema como estudiante</li>
-                <li>Consulta la fecha de inicio de clases en el portal</li>
+                <li>Secretaría se pondrá en contacto contigo para coordinar tu matrícula</li>
+                <li>Una vez matriculado recibirás tus credenciales de acceso al portal estudiantil</li>
+                <li>Ahí podrás consultar tu horario, clases y actividades</li>
               </ul>
 
             @elseif($nuevoEstado === 'rechazado')
               <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">
-                Lamentamos informarte que tu solicitud de admisión a
-                <strong>{{ $aspirante->cohorte?->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
+                Lamentamos informarte que tu solicitud de ingreso a
+                <strong>{{ $aspirante->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
                 no pudo ser aprobada en este proceso.
               </p>
               @if(!empty($aspirante->motivo_rechazo))
@@ -152,7 +152,7 @@ $config = match($nuevoEstado) {
             @elseif($nuevoEstado === 'matriculado')
               <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">
                 Te confirmamos que tu matrícula en
-                <strong>{{ $aspirante->cohorte?->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
+                <strong>{{ $aspirante->carrera?->name ?? $instituto['nombre_corto'] }}</strong>
                 ha sido registrada exitosamente en el sistema.
               </p>
               <p style="margin:0 0 8px;font-size:14px;color:#64748b;line-height:1.6;">
@@ -166,7 +166,7 @@ $config = match($nuevoEstado) {
 
             @else
               <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
-                Tu proceso de admisión ha sido actualizado. Ingresa al portal para ver los detalles.
+                Tu proceso de ingreso ha sido actualizado. Ingresa al portal para ver los detalles.
               </p>
             @endif
 

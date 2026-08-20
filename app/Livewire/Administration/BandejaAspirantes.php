@@ -28,7 +28,7 @@ class BandejaAspirantes extends Component
     public function eliminados()
     {
         return Aspirante::onlyTrashed()
-            ->with(['user', 'cohorte.carrera', 'registradoPor'])
+            ->with(['user', 'carrera', 'cohorte', 'registradoPor'])
             ->when($this->buscar, function ($q) {
                 $q->whereHas('user', fn ($u) =>
                     $u->where('name', 'like', "%{$this->buscar}%")

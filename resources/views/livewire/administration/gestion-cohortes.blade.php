@@ -58,7 +58,6 @@
                     <thead>
                         <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
                             <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Nombre</th>
-                            <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Carrera</th>
                             <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Inicio Matrícula</th>
                             <th class="text-left px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Inicio Clases</th>
                             <th class="text-center px-4 py-3 font-medium text-slate-600 dark:text-slate-400">Aspirantes</th>
@@ -74,9 +73,6 @@
                                 @if($cohorte->descripcion)
                                     <p class="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]">{{ $cohorte->descripcion }}</p>
                                 @endif
-                            </td>
-                            <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                {{ $cohorte->carrera->name ?? '—' }}
                             </td>
                             <td class="px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                 {{ $cohorte->fecha_inicio_matriculacion?->format('d/m/Y') ?? '—' }}

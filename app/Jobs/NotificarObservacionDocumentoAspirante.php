@@ -30,7 +30,7 @@ class NotificarObservacionDocumentoAspirante implements ShouldQueue
             return;
         }
 
-        $aspirante = Aspirante::withTrashed()->with(['user', 'cohorte.carrera'])->find($this->aspiranteId);
+        $aspirante = Aspirante::withTrashed()->with(['user', 'carrera'])->find($this->aspiranteId);
 
         if (! $aspirante || ! $aspirante->user?->email) {
             Log::warning('NotificarObservacionDocumentoAspirante: aspirante no encontrado o sin correo', [

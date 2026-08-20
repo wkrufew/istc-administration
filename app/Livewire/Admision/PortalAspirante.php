@@ -148,8 +148,8 @@ class PortalAspirante extends Component
 
     public function render()
     {
-        $aspirante      = auth()->user()?->aspirante?->load(['cohorte.carrera.semestres.materias']);
-        $primerSemestre = $aspirante?->cohorte?->carrera?->semestres?->first();
+        $aspirante      = auth()->user()?->aspirante?->load(['cohorte', 'carrera.semestres.materias']);
+        $primerSemestre = $aspirante?->carrera?->semestres?->first();
         $certPath       = auth()->user()?->certificado_discapacidad_path;
 
         return view('livewire.admision.portal-aspirante', compact('aspirante', 'primerSemestre', 'certPath'))

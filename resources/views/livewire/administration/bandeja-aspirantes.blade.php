@@ -51,8 +51,8 @@
                                 <p class="text-xs text-slate-400 mt-0.5">{{ $asp->user->cedula }} · {{ $asp->user->email }}</p>
                             </td>
                             <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                <p>{{ $asp->cohorte->nombre ?? '—' }}</p>
-                                <p class="text-xs text-slate-400">{{ $asp->cohorte->carrera->name ?? '—' }}</p>
+                                <p>{{ $asp->cohorte?->nombre ?? '—' }}</p>
+                                <p class="text-xs text-slate-400">{{ $asp->carrera?->name ?? '—' }}</p>
                             </td>
                             <td class="px-4 py-3">
                                 <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold

@@ -38,7 +38,7 @@
             </p>
 
             <p style="margin:0 0 20px;font-size:15px;color:#475569;line-height:1.6;">
-              El equipo de admisiones de
+              El equipo de secretaría de
               <strong>{{ $instituto['nombre_corto'] }}</strong>
               ha revisado tu documentación y encontró un problema en el siguiente documento que debes corregir:
             </p>
@@ -64,7 +64,7 @@
               ¿Qué debes hacer?
             </p>
             <ol style="margin:0 0 28px;padding-left:20px;font-size:14px;color:#64748b;line-height:1.8;">
-              <li>Ingresa al portal de admisión con tus credenciales</li>
+              <li>Ingresa al portal con tus credenciales</li>
               <li>Ve a la sección <strong>Mis documentos</strong></li>
               <li>Busca el documento marcado y sube la versión corregida</li>
               <li>Asegúrate de que el archivo sea claro, legible y en el formato correcto</li>

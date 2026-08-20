@@ -21,7 +21,7 @@ class EliminarAspirantePermanente extends Component
     {
         $this->requierePermiso('gestionar_aspirantes');
 
-        $this->aspirante       = Aspirante::onlyTrashed()->with(['user', 'cohorte.carrera'])->findOrFail($id);
+        $this->aspirante       = Aspirante::onlyTrashed()->with(['user', 'carrera', 'cohorte'])->findOrFail($id);
         $this->codigoSeguridad = random_int(10, 99);
     }
 

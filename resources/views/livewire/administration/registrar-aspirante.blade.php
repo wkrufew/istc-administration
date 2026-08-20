@@ -1,4 +1,88 @@
 <div>
+    {{-- ══ MODAL CÉDULA ════════════════════════════════════════════════════ --}}
+    @if($showEntryModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" wire:click="cerrarEntryModal"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-base font-semibold text-slate-800 dark:text-white">Consultar datos por cédula</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Ingresa el número de cédula para auto-completar nombres y datos personales.
+                    </p>
+                </div>
+                <button wire:click="cerrarEntryModal"
+                        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            @if(!$apiActiva)
+            <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-xs text-amber-700 dark:text-amber-300">
+                La API de cédulas no está configurada. Ve a <strong>Ajustes → API Cédula</strong> para activarla.
+            </div>
+            @endif
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                        Número de cédula
+                    </label>
+                    <div class="flex gap-2">
+                        <input wire:model="cedulaModalInput" type="text"
+                               wire:keydown.enter="consultarEnModal"
+                               placeholder="Ej. 0601234567"
+                               {{ !$apiActiva ? 'disabled' : '' }}
+                               class="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700
+                                      text-slate-800 dark:text-slate-200 text-sm px-3 py-2.5 focus:outline-none
+                                      focus:ring-2 focus:ring-lime-500/40 disabled:opacity-50 transition-colors">
+                        <button wire:click="consultarEnModal"
+                                wire:loading.attr="disabled"
+                                {{ !$apiActiva ? 'disabled' : '' }}
+                                class="px-4 py-2.5 rounded-xl bg-lime-600 hover:bg-lime-700 disabled:opacity-50 text-white text-sm font-medium transition-colors whitespace-nowrap">
+                            <span wire:loading.remove wire:target="consultarEnModal">Buscar</span>
+                            <span wire:loading wire:target="consultarEnModal">…</span>
+                        </button>
+                    </div>
+                    @error('cedulaModal')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Resultado de la consulta --}}
+                @if(!empty($cedulaModalData))
+                <div class="p-3.5 rounded-xl bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-700 space-y-1">
+                    <p class="text-xs font-semibold text-lime-800 dark:text-lime-300 uppercase tracking-wide">Datos encontrados</p>
+                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ $cedulaModalData['nombres'] ?? '—' }}</p>
+                    @if(!empty($cedulaModalData['fechaNacimiento']))
+                    <p class="text-xs text-slate-500">Nacimiento: {{ $cedulaModalData['fechaNacimiento'] }}</p>
+                    @endif
+                    @if(!empty($cedulaModalData['genero'] ?? $cedulaModalData['sexo'] ?? null))
+                    <p class="text-xs text-slate-500">Género: {{ $cedulaModalData['genero'] ?? $cedulaModalData['sexo'] }}</p>
+                    @endif
+                </div>
+                @endif
+            </div>
+
+            <div class="flex justify-between gap-3 pt-1">
+                <button wire:click="cerrarEntryModal"
+                        class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors underline underline-offset-2">
+                    Rellenar manualmente
+                </button>
+                @if(!empty($cedulaModalData))
+                <button wire:click="aplicarDesdeModal"
+                        class="px-5 py-2 rounded-xl bg-lime-600 hover:bg-lime-700 text-white text-sm font-medium transition-colors shadow-sm">
+                    Aplicar datos
+                </button>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- ══ HEADER ══════════════════════════════════════════════════════════ --}}
     <div class="flex items-center gap-4 mb-6 mt-2">
         <a href="{{ route('administracion.administrativa.aspirantes.index') }}"
@@ -23,6 +107,21 @@
                 </svg>
                 <p>Se enviará un correo de confirmación al registrar. Las credenciales de acceso al portal se enviarán automáticamente cuando la solicitud pase a <strong>proceso</strong>.</p>
             </div>
+
+            {{-- Botón consultar cédula (si ya cerró el modal) --}}
+            @if(!$showEntryModal)
+            <div class="flex justify-end">
+                <button wire:click="abrirEntryModal"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium
+                               text-lime-700 dark:text-lime-300 bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-700
+                               hover:bg-lime-100 dark:hover:bg-lime-900/40 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
+                    </svg>
+                    Consultar cédula
+                </button>
+            </div>
+            @endif
 
             {{-- Fila 1: Nombre | Apellido --}}
             <div class="grid grid-cols-2 gap-4">
@@ -79,16 +178,32 @@
                 </div>
             </div>
 
-            {{-- Fila 3: Correo | Cohorte --}}
+            {{-- Fila 3: Correo --}}
+            <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                    Correo electrónico <span class="text-red-500">*</span>
+                </label>
+                <input wire:model="email" type="email" placeholder="aspirante@correo.com"
+                       class="w-full rounded-xl border text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lime-500/40 transition-colors
+                              {{ $errors->has('email') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                @error('email') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Fila 4: Carrera | Cohorte --}}
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                        Correo electrónico <span class="text-red-500">*</span>
+                        Carrera <span class="text-red-500">*</span>
                     </label>
-                    <input wire:model="email" type="email" placeholder="aspirante@correo.com"
-                           class="w-full rounded-xl border text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lime-500/40 transition-colors
-                                  {{ $errors->has('email') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
-                    @error('email') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    <select wire:model="carrera_id"
+                            class="w-full rounded-xl border text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-lime-500/40 transition-colors
+                                   {{ $errors->has('carrera_id') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
+                        <option value="">Selecciona una carrera</option>
+                        @foreach($carreras as $carrera)
+                            <option value="{{ $carrera->id }}">{{ $carrera->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('carrera_id') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
@@ -99,9 +214,7 @@
                                    {{ $errors->has('cohorte_id') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200' }}">
                         <option value="">Selecciona una cohorte</option>
                         @foreach($cohortes as $cohorte)
-                            <option value="{{ $cohorte->id }}">
-                                {{ $cohorte->nombre }} — {{ $cohorte->carrera->name ?? '—' }}
-                            </option>
+                            <option value="{{ $cohorte->id }}">{{ $cohorte->nombre }}</option>
                         @endforeach
                     </select>
                     @error('cohorte_id') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror

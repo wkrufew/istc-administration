@@ -30,7 +30,7 @@ class EnviarConfirmacionRegistroAspirante implements ShouldQueue
             return;
         }
 
-        $aspirante = Aspirante::withTrashed()->with(['user', 'cohorte.carrera'])->find($this->aspiranteId);
+        $aspirante = Aspirante::withTrashed()->with(['user', 'carrera', 'cohorte'])->find($this->aspiranteId);
 
         if (! $aspirante || ! $aspirante->user?->email) {
             Log::warning('EnviarConfirmacionRegistroAspirante: aspirante no encontrado o sin correo', [
