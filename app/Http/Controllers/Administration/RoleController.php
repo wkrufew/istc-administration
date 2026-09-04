@@ -30,6 +30,7 @@ class RoleController extends Controller
                 'users_count'
             )
             ->whereNotIn('name', ['Super Admin'])
+            ->orderBy('roles.name')
             ->paginate(10);
 
         return view('administracion.roles.index', compact('roles'));
