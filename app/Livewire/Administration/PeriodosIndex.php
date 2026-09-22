@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Administration;
 
+use App\Models\BecaAplicada;
 use App\Models\Carrera;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Periodo;
@@ -57,7 +58,7 @@ class PeriodosIndex extends Component
             ->where('cp.is_current', false)
             ->where('p.fecha_inicio', '>', $periodo->fecha_fin)
             ->orderBy('p.fecha_inicio')
-            ->select('cp.*', 'p.code as p_code', 'p.fecha_limite_pago as p_fecha_limite_pago')
+            ->select('cp.*', 'p.code as p_code')
             ->first();
 
         if (! $cpSiguiente) {
@@ -67,40 +68,30 @@ class PeriodosIndex extends Component
 
         DB::beginTransaction();
         try {
-            $fechaLimitePago = $cpSiguiente->fecha_limite_pago ?? $cpSiguiente->p_fecha_limite_pago;
-            $codeSiguiente   = $cpSiguiente->p_code;
-
-            $obligacionesPendientes = ObligacionesFinanciera::where('periodo_id', $periodo->id)
+            $obligacionesPendientes = ObligacionesFinanciera::with('pagos')
+                ->where('periodo_id', $periodo->id)
                 ->where('tipo', 'COLEGIATURA')
                 ->where('estado', '!=', 'Pagado')
-                ->with('matricula.carrera')
                 ->get();
 
+            // Recoger becas antes de actualizar las obligaciones
+            $becasADesactivar = $obligacionesPendientes
+                ->whereNotNull('beca_aplicada_id')
+                ->pluck('beca_aplicada_id')
+                ->unique()
+                ->values();
+
+            // Marcar obligaciones impagas como Vencido
+            $numVencidas = 0;
             foreach ($obligacionesPendientes as $obligacion) {
-                $saldoPendiente = $obligacion->saldo;
-                if ($saldoPendiente <= 0) continue;
-
-                $matricula = $obligacion->matricula;
-                $carrera   = $matricula?->carrera;
-                if (! $carrera) continue;
-
-                $semestres        = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
-                $nuevaColegiatura = round($carrera->costo_carrera / $semestres, 2);
-
-                ObligacionesFinanciera::create([
-                    'user_id'           => $obligacion->user_id,
-                    'periodo_id'        => $cpSiguiente->periodo_id,
-                    'matricula_id'      => $obligacion->matricula_id,
-                    'tipo'              => 'COLEGIATURA',
-                    'monto_original'    => $nuevaColegiatura + $saldoPendiente,
-                    'descuento'         => 0,
-                    'monto_final'       => $nuevaColegiatura + $saldoPendiente,
-                    'estado'            => 'Pendiente',
-                    'fecha_vencimiento' => $fechaLimitePago,
-                    'descripcion'       => "Colegiatura {$codeSiguiente} + \${$saldoPendiente} pendiente de {$periodo->code}",
-                ]);
-
+                if ($obligacion->saldo <= 0) continue;
                 $obligacion->update(['estado' => 'Vencido']);
+                $numVencidas++;
+            }
+
+            // Desactivar becas vinculadas al período cerrado
+            if ($becasADesactivar->isNotEmpty()) {
+                BecaAplicada::whereIn('id', $becasADesactivar)->update(['is_active' => false]);
             }
 
             DB::table('carrera_periodo')
@@ -114,10 +105,13 @@ class PeriodosIndex extends Component
 
             DB::commit();
 
-            $carreraObj = Carrera::find($carreraId);
+            $carreraObj  = Carrera::find($carreraId);
+            $numBecas    = $becasADesactivar->count();
+            $sufijoBecas = $numBecas > 0 ? " · {$numBecas} beca(s) desactivada(s)" : '';
+
             $this->dispatch('toast', [
                 'tipo'    => 'success',
-                'mensaje' => "Periodo {$periodo->code} cerrado para {$carreraObj->name}. Saldos arrastrados al período {$codeSiguiente}.",
+                'mensaje' => "Período {$periodo->code} cerrado para {$carreraObj->name}. {$numVencidas} obligación(es) marcada(s) como Vencido{$sufijoBecas}. Siguiente: {$cpSiguiente->p_code}.",
             ]);
 
         } catch (\Exception $e) {

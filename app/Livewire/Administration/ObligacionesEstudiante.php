@@ -64,6 +64,17 @@ class ObligacionesEstudiante extends Component
     public $descripcionPago = '';
 
     // -------------------------------------------------------------------------
+    // MODAL PAGO GENERAL
+    // -------------------------------------------------------------------------
+    public bool  $showModalPagoGeneral = false;
+    public       $montoTotalPG         = '';
+    public string $metodoPagoPG        = 'Efectivo';
+    public       $referenciaPG         = '';
+    public       $comprobantePG        = null;
+    public       $descripcionPG        = '';
+    public array $distribucionPG       = [];
+
+    // -------------------------------------------------------------------------
     // MODAL HISTORIAL DE CUOTAS
     // -------------------------------------------------------------------------
     public $showModalHistorial        = false;
@@ -111,6 +122,7 @@ class ObligacionesEstudiante extends Component
             'periodo',
             'matricula.carrera',
             'pagos',
+            'becaAplicada.tipoBeca',
         ])
             ->when($this->filtroEstudiante,       fn($q) => $q->where('user_id', $this->filtroEstudiante))
             ->when($this->filtroTipo,             fn($q) => $q->where('tipo', $this->filtroTipo))
@@ -164,6 +176,19 @@ class ObligacionesEstudiante extends Component
             ->orderBy('name')
             ->limit(8)
             ->get(['id', 'name', 'cedula']);
+    }
+
+    #[Computed]
+    public function obligacionesPendientesPG()
+    {
+        if (! $this->filtroEstudiante) return collect();
+
+        return ObligacionesFinanciera::with('pagos')
+            ->where('user_id', $this->filtroEstudiante)
+            ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
+            ->where('tipo', 'COLEGIATURA')
+            ->orderBy('fecha_vencimiento')
+            ->get();
     }
 
     // =========================================================================
@@ -442,6 +467,191 @@ class ObligacionesEstudiante extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             $this->addError('pago_general', 'Error al registrar el pago: ' . $e->getMessage());
+        }
+    }
+
+    // =========================================================================
+    // MODAL PAGO GENERAL
+    // =========================================================================
+    public function abrirModalPagoGeneral(): void
+    {
+        if (! $this->filtroEstudiante) {
+            $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Seleccione un estudiante primero.']);
+            return;
+        }
+
+        unset($this->obligacionesPendientesPG);
+        if ($this->obligacionesPendientesPG->isEmpty()) {
+            $this->dispatch('swal', ['icon' => 'info', 'title' => 'El estudiante no tiene obligaciones de colegiatura pendientes.']);
+            return;
+        }
+
+        $this->montoTotalPG   = '';
+        $this->metodoPagoPG   = 'Efectivo';
+        $this->referenciaPG   = '';
+        $this->comprobantePG  = null;
+        $this->descripcionPG  = '';
+        $this->distribucionPG = [];
+        $this->showModalPagoGeneral = true;
+        $this->dispatch('modal-opened');
+    }
+
+    public function cerrarModalPagoGeneral(): void
+    {
+        $this->dispatch('modal-closed');
+        $this->showModalPagoGeneral = false;
+        $this->reset(['montoTotalPG', 'metodoPagoPG', 'referenciaPG', 'comprobantePG', 'descripcionPG', 'distribucionPG']);
+        unset($this->obligacionesPendientesPG);
+    }
+
+    public function updatedMontoTotalPG(): void
+    {
+        $this->recalcularDistribucionPG();
+    }
+
+    public function recalcularDistribucionPG(): void
+    {
+        $monto = (float) $this->montoTotalPG;
+        if ($monto <= 0) {
+            $this->distribucionPG = [];
+            return;
+        }
+
+        $restante = $monto;
+        $dist     = [];
+
+        foreach ($this->obligacionesPendientesPG as $ob) {
+            if ($restante <= 0) break;
+            $saldo = (float) $ob->saldo;
+            if ($saldo <= 0) continue;
+
+            $pagaEsta = round(min($saldo, $restante), 2);
+            $restante = round($restante - $pagaEsta, 2);
+
+            $dist[] = [
+                'id'           => $ob->id,
+                'descripcion'  => $ob->descripcion,
+                'vencimiento'  => $ob->fecha_vencimiento->format('d/m/Y'),
+                'saldo'        => $saldo,
+                'pago'         => $pagaEsta,
+                'queda_pagado' => $pagaEsta >= $saldo,
+            ];
+        }
+
+        $this->distribucionPG = $dist;
+    }
+
+    public function guardarPagoGeneral(): void
+    {
+        if ($this->sinPermiso('registrar_pagos')) return;
+
+        unset($this->obligacionesPendientesPG);
+        $pendientes = $this->obligacionesPendientesPG;
+        $totalDeuda = $pendientes->sum(fn($ob) => $ob->saldo);
+
+        $this->validate([
+            'montoTotalPG'  => ['required', 'numeric', 'min:0.01', 'max:' . $totalDeuda],
+            'metodoPagoPG'  => 'required|in:Efectivo,Tarjeta,Transferencia,Deposito,Payphone',
+            'referenciaPG'  => 'nullable|string|max:100',
+            'comprobantePG' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'descripcionPG' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Recalcular distribución con datos frescos de DB — evita usar montos stale del cliente
+            $pendientesFrescos = ObligacionesFinanciera::with('pagos')
+                ->where('user_id', $this->filtroEstudiante)
+                ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
+                ->where('tipo', 'COLEGIATURA')
+                ->orderBy('fecha_vencimiento')
+                ->get();
+
+            $montoRestante = (float) $this->montoTotalPG;
+            $distribucion  = [];
+            foreach ($pendientesFrescos as $ob) {
+                if ($montoRestante <= 0) break;
+                $saldo = (float) $ob->saldo;
+                if ($saldo <= 0) continue;
+                $pagaEsta      = round(min($saldo, $montoRestante), 2);
+                $montoRestante = round($montoRestante - $pagaEsta, 2);
+                $distribucion[] = ['ob' => $ob, 'pago' => $pagaEsta];
+            }
+
+            if (empty($distribucion)) {
+                DB::rollBack();
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Sin obligaciones pendientes con saldo al momento de guardar.']);
+                return;
+            }
+
+            $comprobantePath = null;
+            if ($this->comprobantePG) {
+                $est          = User::find($this->filtroEstudiante);
+                $nombreLimpio = preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', $est->name));
+                $nombreArchivo = 'PG_' . $nombreLimpio . '_' . now()->format('Ymd_His')
+                    . '.' . $this->comprobantePG->getClientOriginalExtension();
+                $comprobantePath = $this->comprobantePG->storeAs('pagos/comprobantes', $nombreArchivo, 'public');
+            }
+
+            // Primer pago para obtener el ID base del lote
+            $primerDistItem = $distribucion[0];
+            $ob0   = $primerDistItem['ob'];
+            $cuota0 = Pago::where('obligacion_id', $ob0->id)
+                ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
+                ->count() + 1;
+
+            $pagoPrimero = Pago::create([
+                'numero_comprobante' => 'TEMP',
+                'codigo_referencia'  => $this->referenciaPG ?: null,
+                'obligacion_id'      => $ob0->id,
+                'monto'              => $primerDistItem['pago'],
+                'metodo_pago'        => $this->metodoPagoPG,
+                'estado'             => Pago::ESTADO_APROBADO,
+                'numero_cuota'       => $cuota0,
+                'fecha_pago'         => now(),
+                'descripcion'        => $this->descripcionPG ?: 'Pago general de obligaciones',
+                'comprobante_path'   => $comprobantePath,
+            ]);
+
+            $loteRef = 'ISTC-PG-' . now()->year . '-' . str_pad($pagoPrimero->id, 5, '0', STR_PAD_LEFT);
+            $pagoPrimero->update(['numero_comprobante' => $loteRef]);
+
+            // Pagos restantes del lote
+            foreach (array_slice($distribucion, 1) as $distItem) {
+                $ob    = $distItem['ob'];
+                $cuota = Pago::where('obligacion_id', $ob->id)
+                    ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
+                    ->count() + 1;
+
+                Pago::create([
+                    'numero_comprobante' => $loteRef,
+                    'codigo_referencia'  => $this->referenciaPG ?: null,
+                    'obligacion_id'      => $ob->id,
+                    'monto'              => $distItem['pago'],
+                    'metodo_pago'        => $this->metodoPagoPG,
+                    'estado'             => Pago::ESTADO_APROBADO,
+                    'numero_cuota'       => $cuota,
+                    'fecha_pago'         => now(),
+                    'descripcion'        => $this->descripcionPG ?: 'Pago general — lote ' . $loteRef,
+                    'comprobante_path'   => $comprobantePath,
+                ]);
+            }
+
+            DB::commit();
+
+            $numProcesadas = count($distribucion);
+            $this->cerrarModalPagoGeneral();
+            unset($this->obligaciones);
+            $this->dispatch('swal', [
+                'icon'  => 'success',
+                'title' => "Pago general registrado. {$numProcesadas} obligación(es) procesada(s).",
+                'timer' => 3000,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->addError('pg_error', 'Error al registrar el pago: ' . $e->getMessage());
         }
     }
 

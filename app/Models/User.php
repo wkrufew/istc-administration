@@ -90,6 +90,9 @@ class User extends Authenticatable
         'formacion_padre',
         'formacion_madre',
         'parentesco_emergencia',
+
+        // Estado académico
+        'estado_academico',
     ];
 
     /**
@@ -129,6 +132,7 @@ class User extends Authenticatable
             'moodle_suspended'     => 'boolean',
             'tiene_discapacidad'   => 'boolean',
             'porcentaje_discapacidad' => 'integer',
+            'estado_academico'        => 'string',
         ];
     }
 

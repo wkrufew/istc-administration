@@ -22,12 +22,30 @@
                 <p class="text-gray-500 text-sm mt-1">Consulta el estado de tus obligaciones y registra tus pagos</p>
             </div>
 
+            {{-- AVISO: vencidas de otros períodos ya incluidas en la lista --}}
+            @if($deudaVencidaGlobal > 0 && $filtroPeriodo)
+            <div class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+                <svg class="w-5 h-5 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div class="flex-1">
+                    <p class="text-sm font-semibold text-red-700">Tienes obligaciones vencidas de períodos anteriores</p>
+                    <p class="text-xs text-red-600 mt-0.5">
+                        Se muestran junto con las de este período. Deuda vencida: <strong>${{ number_format($deudaVencidaGlobal, 2) }}</strong>.
+                    </p>
+                </div>
+            </div>
+            @endif
+
             {{-- TABLERO DE MÉTRICAS --}}
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Deuda del Periodo</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            {{ $filtroPeriodo ? 'Deuda Pendiente' : 'Deuda Total' }}
+                        </p>
                         <span class="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center">
                             <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -38,12 +56,16 @@
                     <p class="text-3xl font-bold {{ $deudaPeriodoActual > 0 ? 'text-red-600' : 'text-green-600' }}">
                         ${{ number_format($deudaPeriodoActual, 2) }}
                     </p>
-                    <p class="text-xs text-gray-400 mt-1">Saldo pendiente por pagar</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        {{ $filtroPeriodo ? 'Período seleccionado + vencidas anteriores' : 'Saldo pendiente en todos los períodos' }}
+                    </p>
                 </div>
 
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pagado este Periodo</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            {{ $filtroPeriodo ? 'Pagado este Período' : 'Total Pagado' }}
+                        </p>
                         <span class="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center">
                             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
@@ -52,12 +74,10 @@
                             </svg>
                         </span>
                     </div>
-                    <div class="flex space-x-4">
-                        <p class="text-3xl font-bold text-green-600">${{ number_format($totalPagadoPeriodo, 2) }}</p>
-                        {{-- tambien cuales  --}}
-                    </div>
-                    {{-- <p class="text-3xl font-bold text-green-600">${{ number_format($totalPagadoPeriodo, 2) }}</p> --}}
-                    <p class="text-xs text-gray-400 mt-1">Total abonado en pagos aprobados</p>
+                    <p class="text-3xl font-bold text-green-600">${{ number_format($totalPagadoPeriodo, 2) }}</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        {{ $filtroPeriodo ? 'Total abonado en pagos aprobados' : 'Pagos aprobados en todos los períodos' }}
+                    </p>
                 </div>
 
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
@@ -159,6 +179,20 @@
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $estadoColors[$ob->estado] ?? '' }}">
                                         {{ $ob->estado }}
                                     </span>
+                                    @if ($ob->becaAplicada)
+                                        @if ((float)$ob->monto_final <= 0)
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800"
+                                                  title="{{ $ob->becaAplicada->tipoBeca->nombre ?? 'Beca' }} — 100%">
+                                                GRATUIDAD
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"
+                                                  title="{{ $ob->becaAplicada->tipoBeca->nombre ?? 'Beca' }}">
+                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                                                Beca {{ number_format($ob->becaAplicada->porcentaje_aplicado, 0) }}%
+                                            </span>
+                                        @endif
+                                    @endif
                                     @if ($ob->fecha_vencimiento && $ob->fecha_vencimiento->isPast() && $ob->estado !== 'Pagado')
                                         <span
                                             class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">

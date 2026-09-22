@@ -58,24 +58,34 @@ class ConvalidacionesIndex extends Component
     {
         if (strlen(trim($this->busqueda)) < 2) return collect();
 
-        return User::permission('acceso_estudiantil')
-            ->where(fn($q) => $q
-                ->where('name',    'like', "%{$this->busqueda}%")
-                ->orWhere('email', 'like', "%{$this->busqueda}%")
-                ->orWhere('cedula','like', "%{$this->busqueda}%")
+        return User::where(fn($q) => $q
+            // Estudiantes registrados directamente o ya matriculados (con o sin is_active)
+            ->whereHas('roles', fn($r) => $r->whereHas('permissions', fn($p) => $p->where('name', 'acceso_estudiantil')))
+            ->orWhereHas('permissions', fn($p) => $p->where('name', 'acceso_estudiantil'))
+            // Aspirantes aprobados con proceso de validación de conocimientos (aún no son estudiantes)
+            ->orWhereHas('aspirante', fn($a) => $a
+                ->where('tipo_proceso', 'validacion_conocimientos')
+                ->whereIn('estado', ['aprobado', 'verificacion', 'proceso'])
             )
-            ->with([
-                'matriculas' => fn($q) => $q
-                    ->whereIn('tipo', ['Nueva', 'Renovacion', 'Arrastre'])
-                    ->where('estado', 'Habilitada')
-                    ->latest()
-                    ->limit(1),
-                'matriculas.carrera:id,name',
-                'convalidaciones' => fn($q) => $q->where('estado', 'Confirmada')->limit(1),
-            ])
-            ->orderBy('name')
-            ->limit(10)
-            ->get();
+        )
+        ->where(fn($q) => $q
+            ->where('name',    'like', "%{$this->busqueda}%")
+            ->orWhere('email', 'like', "%{$this->busqueda}%")
+            ->orWhere('cedula','like', "%{$this->busqueda}%")
+        )
+        ->with([
+            'matriculas' => fn($q) => $q
+                ->whereIn('tipo', ['Nueva', 'Renovacion', 'Arrastre'])
+                ->where('estado', 'Habilitada')
+                ->latest()
+                ->limit(1),
+            'matriculas.carrera:id,name',
+            'convalidaciones' => fn($q) => $q->where('estado', 'Confirmada')->limit(1),
+            'aspirante:id,user_id,tipo_proceso,estado',
+        ])
+        ->orderBy('name')
+        ->limit(10)
+        ->get();
     }
 
     #[Computed]

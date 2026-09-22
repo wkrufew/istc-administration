@@ -61,6 +61,7 @@ class GestionAspirantes extends Component
     public string $regNacionalidad  = '';
     public string $regPadre         = '';
     public string $regMadre         = '';
+    public string $regTipoProceso   = 'regular';
 
     // Modal cédula (igual que CreateUser)
     public bool   $apiActiva          = false;
@@ -336,6 +337,7 @@ class GestionAspirantes extends Component
         $this->regNacionalidad  = '';
         $this->regPadre         = '';
         $this->regMadre         = '';
+        $this->regTipoProceso   = 'regular';
         $this->resetErrorBag();
     }
 
@@ -413,7 +415,15 @@ class GestionAspirantes extends Component
             default                                                        => '',
         };
 
-        $this->regFechaNac    = ! empty($d['fechaNacimiento']) ? $d['fechaNacimiento'] : '';
+        if (! empty($d['fechaNacimiento'])) {
+            try {
+                $this->regFechaNac = \Carbon\Carbon::createFromFormat('d/m/Y', $d['fechaNacimiento'])->format('Y-m-d');
+            } catch (\Exception) {
+                $this->regFechaNac = '';
+            }
+        } else {
+            $this->regFechaNac = '';
+        }
         $this->regNacionalidad = ucfirst(strtolower($d['nacionalidad'] ?? ''));
         $this->regPadre        = ! empty($d['nombrePadre']) ? ucwords(strtolower($d['nombrePadre'])) : '';
         $this->regMadre        = ! empty($d['nombreMadre']) ? ucwords(strtolower($d['nombreMadre'])) : '';
@@ -475,6 +485,7 @@ class GestionAspirantes extends Component
             'cohorte_id'    => $this->regCohorteId,
             'carrera_id'    => $this->regCarreraId,
             'estado'        => 'pendiente',
+            'tipo_proceso'  => $this->regTipoProceso,
             'registrado_por'=> auth()->id(),
         ]);
 

@@ -41,7 +41,7 @@
     {{-- ══ INDICADOR DE PASOS ══ --}}
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
         <div class="flex items-center justify-between">
-            @foreach ([1 => 'Datos generales', 2 => 'Materias y notas', 3 => 'Confirmación'] as $num => $label)
+            @foreach ([1 => 'Datos generales', 2 => 'Materias y notas', 3 => 'Confirmar'] as $num => $label)
                 <div class="flex items-center {{ $num < 3 ? 'flex-1' : '' }}">
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
@@ -162,9 +162,9 @@
             {{-- Semestres --}}
             @foreach ($this->semestres as $semestre)
                 @php
-                    $totalSem      = $semestre->materias->count();
-                    $selecSem      = $semestre->materias->filter(fn($m) => isset($this->seleccionadas[(string)$m->id]))->count();
-                    $completo      = $this->semestreCompleto($semestre);
+                    $totalSem  = $semestre->materias->count();
+                    $selecSem  = $semestre->materias->filter(fn($m) => isset($this->seleccionadas[(string)$m->id]))->count();
+                    $completo  = $this->semestreCompleto($semestre);
                 @endphp
 
                 <div x-data="{ open: true }"
@@ -224,35 +224,45 @@
                         <div class="divide-y divide-gray-50 dark:divide-gray-700/50">
                             @foreach ($semestre->materias as $materia)
                                 @php
-                                    $key       = (string) $materia->id;
-                                    $marcada   = isset($this->seleccionadas[$key]);
-                                    $notaMin   = floatval($materia->nota_minima_aprobacion ?? 7.00);
-                                    $nota      = floatval($this->seleccionadas[$key]['nota'] ?? 0);
-                                    $estadoM   = $marcada && $nota > 0
+                                    $key        = (string) $materia->id;
+                                    $marcada    = isset($this->seleccionadas[$key]);
+                                    $yaAprobada = in_array($key, $this->materiasAprobadas);
+                                    $notaMin    = floatval($materia->nota_minima_aprobacion ?? 7.00);
+                                    $nota       = floatval($this->seleccionadas[$key]['nota'] ?? 0);
+                                    $estadoM    = $marcada && $nota > 0
                                                     ? ($nota >= $notaMin ? 'Aprobado' : 'Reprobado')
                                                     : null;
                                 @endphp
                                 <div class="flex items-center gap-4 px-5 py-3
-                                            {{ $marcada ? 'bg-green-50/50 dark:bg-green-900/10' : '' }}
+                                            {{ $yaAprobada ? 'bg-blue-50/40 dark:bg-blue-900/10' : ($marcada ? 'bg-green-50/50 dark:bg-green-900/10' : '') }}
                                             transition-colors">
 
-                                    {{-- Checkbox --}}
-                                    <button type="button"
-                                            wire:click="toggleMateria({{ $materia->id }})"
-                                            class="w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors
-                                                   {{ $marcada
-                                                       ? 'bg-green-600 border-green-600'
-                                                       : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-green-400' }}">
-                                        @if ($marcada)
-                                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {{-- Checkbox (deshabilitado si ya aprobada) --}}
+                                    @if ($yaAprobada)
+                                        <div class="w-5 h-5 rounded flex-shrink-0 border-2 border-blue-300 dark:border-blue-600
+                                                    bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center opacity-60 cursor-not-allowed">
+                                            <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                                             </svg>
-                                        @endif
-                                    </button>
+                                        </div>
+                                    @else
+                                        <button type="button"
+                                                wire:click="toggleMateria({{ $materia->id }})"
+                                                class="w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors
+                                                       {{ $marcada
+                                                           ? 'bg-green-600 border-green-600'
+                                                           : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-green-400' }}">
+                                            @if ($marcada)
+                                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            @endif
+                                        </button>
+                                    @endif
 
                                     {{-- Nombre materia --}}
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                        <p class="text-sm font-medium {{ $yaAprobada ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100' }} truncate">
                                             {{ $materia->name }}
                                         </p>
                                         <p class="text-xs text-gray-400 dark:text-gray-500">
@@ -262,8 +272,13 @@
                                         </p>
                                     </div>
 
-                                    {{-- Input nota --}}
-                                    @if ($marcada)
+                                    {{-- Badge ya aprobada o input nota --}}
+                                    @if ($yaAprobada)
+                                        <span class="px-2 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/40
+                                                     text-blue-700 dark:text-blue-300 text-xs font-semibold whitespace-nowrap flex-shrink-0">
+                                            Ya aprobada
+                                        </span>
+                                    @elseif ($marcada)
                                         <div class="flex items-center gap-2 flex-shrink-0">
                                             <input type="number"
                                                    wire:model.blur="seleccionadas.{{ $materia->id }}.nota"
@@ -272,8 +287,6 @@
                                                    class="w-20 text-center rounded-lg border-gray-200 dark:border-gray-600
                                                           dark:bg-gray-700 dark:text-gray-100 text-sm shadow-sm
                                                           focus:border-green-500 focus:ring-green-500">
-
-                                            {{-- Badge estado --}}
                                             @if ($estadoM === 'Aprobado')
                                                 <span class="px-2 py-1 rounded-lg bg-green-100 dark:bg-green-900/40
                                                              text-green-700 dark:text-green-300 text-xs font-semibold whitespace-nowrap">
@@ -301,25 +314,22 @@
         </div>
     @endif
 
-    {{-- ══ PASO 3 — CONFIRMACIÓN ══ --}}
+    {{-- ══ PASO 3 — CONFIRMAR ══ --}}
     @if ($paso === 3)
-        @php $res = $this->resumen(); @endphp
+        @php $res = $this->resumen(); $exonerados = $this->semestresExonerados(); @endphp
         <div class="space-y-4">
 
-            {{-- Resumen de números --}}
+            {{-- Métricas académicas --}}
             <div class="grid grid-cols-3 gap-4">
-                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700
-                            shadow-sm p-4 text-center">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 text-center">
                     <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $res['total'] }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Materias seleccionadas</p>
                 </div>
-                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700
-                            shadow-sm p-4 text-center">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 text-center">
                     <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ $res['aprobadas'] }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Aprobadas</p>
                 </div>
-                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700
-                            shadow-sm p-4 text-center">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 text-center">
                     <p class="text-2xl font-bold {{ $res['reprobadas'] > 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-300 dark:text-gray-600' }}">
                         {{ $res['reprobadas'] }}
                     </p>
@@ -327,22 +337,34 @@
                 </div>
             </div>
 
-            {{-- Detalle por semestre --}}
+            {{-- Banner semestres exonerados --}}
+            @if ($exonerados > 0)
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-2xl p-4 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-green-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-green-800 dark:text-green-300">
+                            {{ $exonerados }} semestre{{ $exonerados !== 1 ? 's' : '' }} exonerado{{ $exonerados !== 1 ? 's' : '' }}
+                        </p>
+                        <p class="text-xs text-green-700 dark:text-green-400">
+                            El estudiante ingresa en el semestre {{ $exonerados + 1 }}
+                        </p>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Detalle de materias por semestre --}}
             @foreach ($this->semestres as $semestre)
-                @php
-                    $materiasSelec = $semestre->materias->filter(fn($m) => isset($this->seleccionadas[(string)$m->id]));
-                @endphp
+                @php $materiasSelec = $semestre->materias->filter(fn($m) => isset($this->seleccionadas[(string)$m->id])); @endphp
                 @if ($materiasSelec->isNotEmpty())
                     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                        <div class="px-5 py-3 bg-gray-50 dark:bg-gray-750 border-b border-gray-100 dark:border-gray-700
-                                    flex items-center justify-between">
-                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                {{ strtoupper($semestre->name) }}
-                            </span>
+                        <div class="px-5 py-3 bg-gray-50 dark:bg-gray-750 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ strtoupper($semestre->name) }}</span>
                             @if ($this->semestreCompleto($semestre))
-                                <span class="text-xs font-semibold text-green-600 dark:text-green-400">
-                                    ✓ Semestre completo
-                                </span>
+                                <span class="text-xs font-semibold text-green-600 dark:text-green-400">✓ Semestre completo — exonerado</span>
                             @endif
                         </div>
                         <div class="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -362,9 +384,8 @@
                                             {{ number_format($nota, 2) }}
                                         </span>
                                         <span class="px-2 py-0.5 rounded-md text-xs font-semibold
-                                            {{ $ap
-                                                ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                                                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' }}">
+                                            {{ $ap ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                                                    : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' }}">
                                             {{ $ap ? 'Aprobado' : 'Reprobado' }}
                                         </span>
                                     </div>
@@ -375,19 +396,33 @@
                 @endif
             @endforeach
 
+            {{-- Nota informativa sobre obligaciones --}}
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="text-sm text-blue-800 dark:text-blue-300">
+                    <p class="font-semibold mb-1">Paso siguiente tras confirmar</p>
+                    <p class="text-blue-700 dark:text-blue-400">
+                        Las obligaciones financieras (matrícula y colegiatura) se generarán en el módulo de
+                        <strong>Matriculación</strong> cuando se inscriba al estudiante en el semestre correspondiente.
+                        El sistema detectará automáticamente que es un estudiante de validación y aplicará los aranceles correctos.
+                    </p>
+                </div>
+            </div>
+
             {{-- Advertencia --}}
-            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800
-                        rounded-2xl p-4 flex items-start gap-3">
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-start gap-3">
                 <svg class="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
                 <div class="text-sm text-amber-800 dark:text-amber-300">
-                    <p class="font-semibold mb-1">Al confirmar se generará lo siguiente:</p>
+                    <p class="font-semibold mb-1">Al confirmar se generará:</p>
                     <ul class="space-y-0.5 text-amber-700 dark:text-amber-400">
-                        <li>• Una matrícula de tipo <strong>Validación</strong> en el período activo</li>
-                        <li>• Registros de calificación para cada materia seleccionada</li>
-                        <li>• El estudiante podrá matricularse normalmente en las materias restantes</li>
+                        <li>• Registro de convalidación con las notas ingresadas</li>
+                        <li>• Matrícula de tipo <strong>Validación</strong> con calificaciones permanentes</li>
                     </ul>
                     <p class="mt-2 font-medium">Esta acción no puede deshacerse fácilmente.</p>
                 </div>
@@ -407,7 +442,7 @@
             ← Anterior
         </button>
 
-        @if ($paso < $totalPasos)
+        @if ($paso < 3)
             <button type="button"
                     wire:click="siguientePaso"
                     wire:loading.attr="disabled"
@@ -417,13 +452,24 @@
                 <span wire:loading wire:target="siguientePaso">Procesando...</span>
             </button>
         @else
+            {{-- Paso 3: confirmar con SweetAlert --}}
             <button type="button"
-                    wire:click="confirmar"
+                    x-data
+                    @click="Swal.fire({
+                        icon: 'question',
+                        title: '¿Confirmar validación?',
+                        html: 'Se registrarán las calificaciones y la matrícula de validación.<br><br><strong>Esta acción no puede deshacerse fácilmente.</strong>',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, confirmar validación',
+                        cancelButtonText: 'Revisar antes',
+                        confirmButtonColor: '#16a34a',
+                        cancelButtonColor: '#6b7280',
+                        focusCancel: true,
+                    }).then(result => { if (result.isConfirmed) $wire.confirmar() })"
                     wire:loading.attr="disabled"
-                    wire:confirm="¿Confirmas la generación de registros de validación? Esta acción creará calificaciones permanentes."
                     class="px-6 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold
                            transition-colors shadow-sm disabled:opacity-60">
-                <span wire:loading.remove wire:target="confirmar">✓ Confirmar y generar registros</span>
+                <span wire:loading.remove wire:target="confirmar">✓ Confirmar validación</span>
                 <span wire:loading wire:target="confirmar">Generando...</span>
             </button>
         @endif
@@ -448,7 +494,6 @@
                             class="w-full flex items-center justify-between px-5 py-4 text-left
                                    hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                         <div class="flex items-center gap-3">
-                            {{-- Estado badge --}}
                             <span class="px-2.5 py-1 rounded-lg text-xs font-semibold
                                 {{ $conv->estado === 'Confirmada'
                                     ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'

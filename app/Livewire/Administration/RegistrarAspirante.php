@@ -187,7 +187,15 @@ class RegistrarAspirante extends Component
             default                                                        => '',
         };
 
-        $this->fechaNac    = ! empty($d['fechaNacimiento']) ? $d['fechaNacimiento'] : '';
+        if (! empty($d['fechaNacimiento'])) {
+            try {
+                $this->fechaNac = \Carbon\Carbon::createFromFormat('d/m/Y', $d['fechaNacimiento'])->format('Y-m-d');
+            } catch (\Exception) {
+                $this->fechaNac = '';
+            }
+        } else {
+            $this->fechaNac = '';
+        }
         $this->nacionalidad = ucfirst(strtolower($d['nacionalidad'] ?? ''));
         $this->padre        = ! empty($d['nombrePadre']) ? ucwords(strtolower($d['nombrePadre'])) : '';
         $this->madre        = ! empty($d['nombreMadre']) ? ucwords(strtolower($d['nombreMadre'])) : '';

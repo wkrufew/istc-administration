@@ -23,6 +23,7 @@ class ObligacionesFinanciera extends Model
         'fecha_vencimiento',
         'descripcion',
         'solicitud_id',
+        'beca_aplicada_id',
     ];
 
     protected $casts = [
@@ -70,6 +71,12 @@ class ObligacionesFinanciera extends Model
     public function solicitud()
     {
         return $this->belongsTo(Solicitud::class);
+    }
+
+    // 🔹 Beca que generó el descuento
+    public function becaAplicada()
+    {
+        return $this->belongsTo(BecaAplicada::class, 'beca_aplicada_id');
     }
 
     /*

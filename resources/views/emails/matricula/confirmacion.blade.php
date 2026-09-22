@@ -470,42 +470,58 @@
                         </table>
                         @endif
 
-                        {{-- ── ARANCEL SEMESTRAL ────────────────────── --}}
-                        @if($montoArancel && !$esEdicion)
+                        {{-- ── ARANCEL SEMESTRAL — 5 cuotas ───────── --}}
+                        @if($montoArancel && !$esEdicion && isset($obligColegiaturas) && $obligColegiaturas->isNotEmpty())
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                               style="background-color:#eff6ff;border:2px solid #93c5fd;border-radius:10px;margin-bottom:32px;">
+                               style="background-color:#eff6ff;border:2px solid #93c5fd;border-radius:10px;margin-bottom:32px;overflow:hidden;">
                             <tr>
-                                <td style="padding:20px 24px;">
-                                    <p style="margin:0 0 14px;font-size:11px;font-weight:700;color:#1d4ed8;
+                                <td style="padding:16px 24px 0;">
+                                    <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#1d4ed8;
                                                text-transform:uppercase;letter-spacing:0.13em;">
-                                        Arancel Semestral — A Pagar durante el Semestre
+                                        Arancel Semestral — Plan de Pago
                                     </p>
-                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                                        <tr>
-                                            <td style="vertical-align:top;">
-                                                <p style="margin:0;font-size:12px;color:#1d4ed8;">
-                                                        Valor del semestre{{ isset($numCuotasArancel) && $numCuotasArancel > 1 ? ' (' . $numCuotasArancel . ' cuotas)' : '' }}
-                                                    </p>
-                                                <p style="margin:4px 0 0;font-size:34px;font-weight:800;color:#1e40af;line-height:1;">
-                                                    ${{ $montoArancel }}
-                                                </p>
-                                            </td>
-                                            <td style="text-align:right;vertical-align:top;">
-                                                <p style="margin:0;font-size:12px;color:#1d4ed8;">Fecha límite</p>
-                                                <p style="margin:4px 0 0;font-size:22px;font-weight:700;color:#1e40af;">
-                                                    {{ $fechaArancel ?? '—' }}
-                                                </p>
-                                            </td>
-                                        </tr>
+                                    <p style="margin:0 0 14px;font-size:12px;color:#3b82f6;">
+                                        Total del semestre:
+                                        <strong style="color:#1e40af;">${{ $montoArancel }}</strong>
+                                        en {{ $obligColegiaturas->count() }} cuotas
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0 24px 20px;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                                           style="border:1px solid #bfdbfe;border-radius:8px;overflow:hidden;">
+                                        <thead>
+                                            <tr style="background-color:#1d4ed8;">
+                                                <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;
+                                                           color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.08em;">Cuota</th>
+                                                <th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:600;
+                                                           color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.08em;">Vencimiento</th>
+                                                <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:600;
+                                                           color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.08em;">Valor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($obligColegiaturas as $i => $cuota)
+                                            <tr style="background-color:{{ $i % 2 === 0 ? '#eff6ff' : '#dbeafe' }};border-top:1px solid #bfdbfe;">
+                                                <td style="padding:9px 14px;font-size:13px;color:#1e40af;font-weight:600;">
+                                                    {{ $i + 1 }}/{{ $obligColegiaturas->count() }}
+                                                </td>
+                                                <td style="padding:9px 14px;font-size:13px;color:#1e293b;text-align:center;">
+                                                    {{ $cuota->fecha_vencimiento ? \Carbon\Carbon::parse($cuota->fecha_vencimiento)->format('d/m/Y') : '—' }}
+                                                </td>
+                                                <td style="padding:9px 14px;font-size:13px;font-weight:700;color:#1e40af;text-align:right;">
+                                                    ${{ number_format((float) $cuota->monto_final, 2) }}
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
                                     </table>
-                                    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #bfdbfe;">
-                                        <p style="margin:0;font-size:12px;color:#1d4ed8;line-height:1.6;">
-                                            Este valor corresponde al arancel del semestre en curso y debe ser cancelado
-                                            durante el transcurso del período
-                                            <strong style="color:#1e3a8a;">{{ $matricula->periodo?->code }}</strong>.
-                                            Puede realizarlo en cuotas. Consulte con secretaría su plan de pago.
-                                        </p>
-                                    </div>
+                                    <p style="margin:12px 0 0;font-size:12px;color:#1d4ed8;line-height:1.6;">
+                                        Las cuotas están distribuidas proporcionalmente dentro del período
+                                        <strong style="color:#1e3a8a;">{{ $matricula->periodo?->code }}</strong>.
+                                        Puede realizar sus pagos en secretaría.
+                                    </p>
                                 </td>
                             </tr>
                         </table>

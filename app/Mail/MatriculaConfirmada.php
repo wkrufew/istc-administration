@@ -94,6 +94,7 @@ class MatriculaConfirmada extends Mailable
                     ? number_format((float) $obligMatricula->monto_final, 2) : null,
                 'fechaLimite'        => $obligMatricula?->fecha_vencimiento
                     ? Carbon::parse($obligMatricula->fecha_vencimiento)->format('d/m/Y') : null,
+                'obligColegiaturas'   => $obligColegiaturas,
                 'montoArancel'        => $totalArancel > 0 ? number_format($totalArancel, 2) : null,
                 'numCuotasArancel'    => $numCuotasArancel,
                 'fechaArancel'        => $obligColegiatura?->fecha_vencimiento

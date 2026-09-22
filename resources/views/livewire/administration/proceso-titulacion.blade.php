@@ -306,6 +306,60 @@
                                     </p>
                                 </div>
                             </div>
+
+                            {{-- INDICADORES DE APTITUD --}}
+                            <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-700/60">
+                                {{-- Malla --}}
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
+                                    {{ $mallaCompleta ? 'bg-green-100 text-green-700' : ($semestresOk / max($semestresTotal,1) >= 0.75 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') }}">
+                                    @if($mallaCompleta)
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                        Malla completa
+                                    @else
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>
+                                        Malla {{ $semestresOk }}/{{ $semestresTotal }} semestres
+                                    @endif
+                                </div>
+
+                                {{-- Prácticas (75% = al menos 3 de 4 semestres) --}}
+                                @php $pct75 = $semestresTotal > 0 && ($semestresOk / $semestresTotal) >= 0.75; @endphp
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
+                                    {{ $pct75 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                    @if($pct75)
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                        Apto para prácticas
+                                    @else
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        No apto para prácticas
+                                    @endif
+                                </div>
+
+                                {{-- Obligaciones --}}
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
+                                    {{ $obligacionesAlDia ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                    @if($obligacionesAlDia)
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                        Obligaciones al día
+                                    @else
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>
+                                        Tiene deudas vencidas
+                                    @endif
+                                </div>
+
+                                {{-- Botón Marcar Egresado (solo si malla completa y aún es Activo) --}}
+                                @if($mallaCompleta)
+                                <button wire:click="marcarEgresado"
+                                    wire:confirm="¿Marcar a este estudiante como Egresado? Dejará de aparecer en las listas de matrícula y becas."
+                                    class="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold
+                                           bg-indigo-600 hover:bg-indigo-700 text-white transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                    </svg>
+                                    Marcar Egresado
+                                </button>
+                                @endif
+                            </div>
                         </div>
 
                         {{-- ================================================
@@ -714,9 +768,10 @@
                                 </button>
                                 <div class="flex gap-2">
                                     @if ($aprobado)
-                                        <button disabled
-                                            class="px-5 py-2 text-sm font-semibold text-white bg-green-600 rounded-xl opacity-60 cursor-not-allowed">
-                                            Generar Acta (próximamente)
+                                        <button wire:click="marcarTitulado"
+                                            wire:confirm="¿Confirmar que este estudiante ha completado todo el proceso de titulación? Se marcará como Titulado y dejará de aparecer en este módulo."
+                                            class="px-5 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-xl transition">
+                                            Marcar como Titulado
                                         </button>
                                     @endif
                                     <button wire:click="cerrarModal"

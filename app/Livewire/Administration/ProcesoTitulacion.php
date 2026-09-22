@@ -5,6 +5,7 @@ namespace App\Livewire\Administration;
 use App\Models\Carrera;
 use App\Models\Comunitaria;
 use App\Models\NotaTitulacion;
+use App\Models\ObligacionesFinanciera;
 use App\Models\PracticaPreprofesional;
 use App\Models\User;
 use Livewire\Component;
@@ -37,6 +38,9 @@ class ProcesoTitulacion extends Component
     public $mallaCompleta       = false;
     public $promedioMalla       = null;
     public $semestresDetalle    = [];
+    public int $semestresOk     = 0;
+    public int $semestresTotal  = 0;
+    public bool $obligacionesAlDia = true; // sin deudas vencidas
 
     // -------------------------------------------------------------------------
     // PASO 1 — PRÁCTICAS PREPROFESIONALES
@@ -78,10 +82,17 @@ class ProcesoTitulacion extends Component
     public function estudiantes()
     {
         return User::role('estudiante')
-            ->whereHas(
-                'matriculas',
-                fn($q) =>
-                $q->where('estado', 'Habilitada')
+            ->when($this->soloAptos,
+                // Solo malla completa = solo Egresados (estado confirma malla terminada)
+                fn($q) => $q->whereIn('estado_academico', ['Egresado']),
+                // Todos: Egresados siempre + Activos con matrícula Habilitada
+                fn($q) => $q->where(function ($q2) {
+                    $q2->whereIn('estado_academico', ['Egresado'])
+                       ->orWhere(fn($q3) =>
+                           $q3->where('estado_academico', 'Activo')
+                              ->whereHas('matriculas', fn($mq) => $mq->where('estado', 'Habilitada'))
+                       );
+                })
             )
             ->when(strlen($this->busqueda) >= 3, function ($q) {
                 $q->where(
@@ -92,9 +103,8 @@ class ProcesoTitulacion extends Component
                 );
             })
             ->with([
-                'matriculas' => fn($q) => $q->where('estado', 'Habilitada')
-                    ->with('carrera')
-                    ->latest(),
+                // Carga la última matrícula sin importar estado — Egresados no tienen Habilitada
+                'matriculas' => fn($q) => $q->with('carrera')->latest(),
             ])
             ->orderBy('name')
             ->paginate(12);
@@ -155,12 +165,15 @@ class ProcesoTitulacion extends Component
         $this->resetModal();
 
         $estudiante = User::with([
-            'matriculas' => fn($q) => $q->where('estado', 'Habilitada')->with('carrera')->latest(),
+            // Sin filtro de estado — Egresados tienen su última matrícula en estado anterior
+            'matriculas' => fn($q) => $q->with('carrera')->latest(),
         ])->find($estudianteId);
 
         if (! $estudiante) return;
 
-        $matricula = $estudiante->matriculas->first();
+        // Preferimos la matrícula Habilitada; si no existe (Egresado), tomamos la última
+        $matricula = $estudiante->matriculas->firstWhere('estado', 'Habilitada')
+            ?? $estudiante->matriculas->first();
         if (! $matricula) return;
 
         $this->estudianteId     = $estudianteId;
@@ -169,9 +182,16 @@ class ProcesoTitulacion extends Component
 
         // Calcular malla
         $estadoMalla = $this->estadoMallaEstudiante($estudianteId, $this->carreraId);
-        $this->mallaCompleta  = $estadoMalla['completa'];
-        $this->promedioMalla  = NotaTitulacion::calcularPromedioMalla($estudianteId, $this->carreraId);
+        $this->mallaCompleta    = $estadoMalla['completa'];
+        $this->semestresOk      = $estadoMalla['semestres_ok'];
+        $this->semestresTotal   = $estadoMalla['semestres_total'];
+        $this->promedioMalla    = NotaTitulacion::calcularPromedioMalla($estudianteId, $this->carreraId);
         $this->semestresDetalle = $this->calcularDetalleSemestres($estudianteId, $this->carreraId);
+
+        // Verificar obligaciones al día (sin vencidas)
+        $this->obligacionesAlDia = ! ObligacionesFinanciera::where('user_id', $estudianteId)
+            ->where('estado', 'Vencido')
+            ->exists();
 
         // Cargar práctica si existe
         $practica = $this->estadoPracticaEstudiante($estudianteId, $this->carreraId);
@@ -297,6 +317,16 @@ class ProcesoTitulacion extends Component
     // =========================================================================
     public function guardarTitulacion()
     {
+        if (! $this->mallaCompleta) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El estudiante no ha completado la malla curricular.']);
+            return;
+        }
+
+        if (! $this->obligacionesAlDia) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El estudiante tiene obligaciones financieras vencidas. Deben estar al día para registrar la titulación.']);
+            return;
+        }
+
         $this->validate([
             'titulacionTipo'          => 'required|in:Examen_Complexivo,Proyecto_Investigacion',
             'titulacionNota'          => 'nullable|numeric|min:0|max:10',
@@ -430,6 +460,50 @@ class ProcesoTitulacion extends Component
         $this->titulacionObservaciones = $t->observaciones ?? '';
     }
 
+    // =========================================================================
+    // MARCAR EGRESADO
+    // =========================================================================
+    public function marcarEgresado(): void
+    {
+        if ($this->sinPermiso('gestionar_titulacion')) return;
+
+        if (! $this->mallaCompleta) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El estudiante debe tener la malla completa para ser marcado como Egresado.']);
+            return;
+        }
+
+        $estudiante = User::find($this->estudianteId);
+        if (! $estudiante) return;
+
+        $estudiante->update(['estado_academico' => 'Egresado']);
+
+        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => "{$estudiante->name} ha sido marcado como Egresado correctamente."]);
+        unset($this->estudiantes);
+    }
+
+    // =========================================================================
+    // MARCAR TITULADO (cuando el acta es generada)
+    // =========================================================================
+    public function marcarTitulado(): void
+    {
+        if ($this->sinPermiso('gestionar_titulacion')) return;
+
+        $titulacion = NotaTitulacion::find($this->titulacionId);
+        if (! $titulacion || ! $titulacion->nota_final) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El proceso de titulación debe estar completo con nota final para marcar como Titulado.']);
+            return;
+        }
+
+        $estudiante = User::find($this->estudianteId);
+        if (! $estudiante) return;
+
+        $estudiante->update(['estado_academico' => 'Titulado']);
+
+        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => "{$estudiante->name} ha sido marcado como Titulado."]);
+        $this->cerrarModal();
+        unset($this->estudiantes);
+    }
+
     private function resetModal(): void
     {
         $this->reset([
@@ -439,6 +513,9 @@ class ProcesoTitulacion extends Component
             'estudianteNombre',
             'carreraId',
             'mallaCompleta',
+            'semestresOk',
+            'semestresTotal',
+            'obligacionesAlDia',
             'promedioMalla',
             'semestresDetalle',
             'practicaId',

@@ -98,7 +98,7 @@ class DashboardEstudiante extends Component
             ->get();
     }
 
-    // Resumen financiero del periodo
+    // Resumen financiero del periodo seleccionado
     #[Computed]
     public function resumenFinanciero()
     {
@@ -113,6 +113,26 @@ class DashboardEstudiante extends Component
             'total_pagado'   => $obligaciones->sum(fn($o) => $o->total_pagado),
             'tiene_vencidas' => $obligaciones->where('estado', 'Vencido')->count() > 0,
             'obligaciones'   => $obligaciones,
+        ];
+    }
+
+    // Deuda global cross-período: visible aunque el período seleccionado no tenga deuda
+    #[Computed]
+    public function deudaGlobal(): array
+    {
+        $todas = ObligacionesFinanciera::where('user_id', $this->idUser)
+            ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
+            ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
+            ->get();
+
+        $vencidas = $todas->where('estado', 'Vencido');
+        $total    = $todas->sum(fn($o) => max(0, $o->monto_final - ($o->pagado ?? 0)));
+        $vencido  = $vencidas->sum(fn($o) => max(0, $o->monto_final - ($o->pagado ?? 0)));
+
+        return [
+            'total'          => $total,
+            'vencido'        => $vencido,
+            'tiene_vencidas' => $vencidas->count() > 0,
         ];
     }
 
@@ -151,12 +171,23 @@ class DashboardEstudiante extends Component
         $pctConvenio = $convenio ? (float) $convenio->porcentaje_aplicado : 0;
         $pctTotal    = min(100, $pctBeca + $pctConvenio);
 
+        // Colegiatura del período seleccionado con beca aplicada (para el desglose financiero)
+        $colegiaturaBeca = null;
+        if ($beca && $this->periodoSeleccionado) {
+            $colegiaturaBeca = ObligacionesFinanciera::where('user_id', $this->idUser)
+                ->where('periodo_id', $this->periodoSeleccionado)
+                ->where('tipo', 'COLEGIATURA')
+                ->whereNotNull('beca_aplicada_id')
+                ->first();
+        }
+
         return [
-            'beca'       => $beca,
-            'convenio'   => $convenio,
-            'pct_total'  => $pctTotal,
-            'gratuidad'  => $pctTotal >= 100,
-            'tiene_algo' => $beca || $convenio,
+            'beca'             => $beca,
+            'convenio'         => $convenio,
+            'pct_total'        => $pctTotal,
+            'gratuidad'        => $pctTotal >= 100,
+            'tiene_algo'       => $beca || $convenio,
+            'colegiatura_beca' => $colegiaturaBeca,
         ];
     }
 
@@ -189,6 +220,7 @@ class DashboardEstudiante extends Component
             'stats'               => $this->stats,
             'estudiante'          => Auth::user(),
             'becaYConvenio'       => $this->becaYConvenio,
+            'deudaGlobal'         => $this->deudaGlobal,
         ]);
     }
 }

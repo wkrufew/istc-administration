@@ -3,6 +3,7 @@
 namespace App\Livewire\Administration;
 
 use App\Models\AuditoriaAnulacionMatricula;
+use App\Models\BecaAplicada;
 use App\Models\Convalidacion;
 use App\Models\DetalleMatricula;
 use App\Models\Matricula;
@@ -168,8 +169,19 @@ class AnularMatricula extends Component
                     }
                 }
 
-                // 3. Obligaciones financieras
+                // 3. Obligaciones financieras — recoger becas vinculadas antes de borrar
+                $becasADesactivar = $matricula->obligacionesFinancieras
+                    ->whereNotNull('beca_aplicada_id')
+                    ->pluck('beca_aplicada_id')
+                    ->unique()
+                    ->values();
+
                 $matricula->obligacionesFinancieras()->delete();
+
+                // 3b. Desactivar becas que estaban aplicadas a esta matrícula
+                if ($becasADesactivar->isNotEmpty()) {
+                    BecaAplicada::whereIn('id', $becasADesactivar)->update(['is_active' => false]);
+                }
 
                 // 4. Convalidación (si existe)
                 $convalidacion = Convalidacion::where('matricula_id', $matriculaId)->first();

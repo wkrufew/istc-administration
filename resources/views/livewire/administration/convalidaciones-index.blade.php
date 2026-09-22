@@ -263,6 +263,7 @@
                             @php
                                 $matriculaActiva    = $est->matriculas->first();
                                 $tieneConvalidacion = $est->convalidaciones->isNotEmpty();
+                                $esAspiranteVal     = $est->aspirante?->tipo_proceso === 'validacion_conocimientos';
                             @endphp
                             <button type="button"
                                     wire:click="irAConvalidacion({{ $est->id }})"
@@ -289,6 +290,12 @@
 
                                 {{-- Badges estado --}}
                                 <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                    @if ($esAspiranteVal)
+                                        <span class="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/30
+                                                     text-indigo-600 dark:text-indigo-400 text-xs font-semibold whitespace-nowrap">
+                                            Aspirante Val.Conoc.
+                                        </span>
+                                    @endif
                                     @if ($tieneConvalidacion)
                                         <span class="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/30
                                                      text-blue-600 dark:text-blue-400 text-xs font-semibold whitespace-nowrap">
@@ -300,7 +307,7 @@
                                                      text-green-600 dark:text-green-400 text-xs whitespace-nowrap">
                                             {{ $matriculaActiva->carrera->name ?? 'Matriculado' }}
                                         </span>
-                                    @else
+                                    @elseif (!$esAspiranteVal)
                                         <span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700
                                                      text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
                                             Sin matrícula

@@ -446,19 +446,34 @@
 
         Livewire.on('confirmCerrar', (params) => {
             const d = Array.isArray(params) ? params[0] : params;
+            const isDark = document.documentElement.classList.contains('dark');
             Swal.fire({
-                title: `¿Cerrar periodo ${d.periodoCod}?`,
-                html: `El periodo se cerrará para <strong>${d.carreraNombre}</strong>.<br>Los saldos COLEGIATURA pendientes se arrastrarán al siguiente periodo.`,
+                title: `¿Cerrar período ${d.periodoCod}?`,
+                html: `El período se cerrará para <strong>${d.carreraNombre}</strong>.<br><br>
+                       <ul style="text-align:left;font-size:0.85em;line-height:2">
+                         <li>✓ Obligaciones pendientes → <strong>Vencido</strong></li>
+                         <li>✓ Becas activas del período → desactivadas</li>
+                         <li>✓ Período siguiente activado automáticamente</li>
+                       </ul>`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ea580c',
                 cancelButtonColor: '#6b7280',
-                confirmButtonText: 'Sí, cerrar',
+                confirmButtonText: 'Sí, cerrar período',
                 cancelButtonText: 'Cancelar',
-                ...{background: document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff',
-                    color:      document.documentElement.classList.contains('dark') ? '#f9fafb'  : '#111827'},
+                background: isDark ? '#111827' : '#ffffff',
+                color:      isDark ? '#f9fafb'  : '#111827',
             }).then(r => {
                 if (r.isConfirmed) {
+                    Swal.fire({
+                        title: 'Cerrando período...',
+                        html: 'Procesando obligaciones y becas, por favor espere.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => { Swal.showLoading(); },
+                        background: isDark ? '#111827' : '#ffffff',
+                        color:      isDark ? '#f9fafb'  : '#111827',
+                    });
                     Livewire.dispatch('cerrarPeriodo', { periodoId: d.periodoId, carreraId: d.carreraId });
                 }
             });
@@ -471,8 +486,9 @@
 
         Livewire.on('toast', (params) => {
             const d = Array.isArray(params) ? params[0] : params;
+            Swal.close();
             const Toast = Swal.mixin({
-                toast: true, position: 'top-end', showConfirmButton: false, timer: 4000, timerProgressBar: true,
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true,
             });
             Toast.fire({ icon: d.tipo, title: d.mensaje });
         });

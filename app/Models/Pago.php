@@ -15,15 +15,17 @@ class Pago extends Model
         'numero_cuota',
         'estado',
         'fecha_pago',
+        'fecha_vencimiento',
         'descripcion',
         'datos_gateway',
         'comprobante_path',
     ];
 
     protected $casts = [
-        'monto'        => 'decimal:2',
-        'fecha_pago'   => 'datetime',
-        'datos_gateway' => 'array',
+        'monto'            => 'decimal:2',
+        'fecha_pago'       => 'datetime',
+        'fecha_vencimiento' => 'date',
+        'datos_gateway'    => 'array',
     ];
 
     /*

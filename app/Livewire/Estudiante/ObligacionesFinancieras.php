@@ -49,9 +49,9 @@ class ObligacionesFinancieras extends Component
     public function mount()
     {
         $this->idUser = Auth::id();
-        $ultimaMatricula  = Auth::user()->matriculas()->with('carrera')->latest()->first();
-        $periodoDeCarrera = $ultimaMatricula?->carrera?->periodoActual();
-        $this->filtroPeriodo = $periodoDeCarrera?->id ?? '';
+        // Default: mostrar todos los períodos para que deudas de períodos anteriores
+        // sean visibles inmediatamente, especialmente para egresados sin nueva matrícula.
+        $this->filtroPeriodo = '';
     }
 
     // =========================================================================
@@ -73,11 +73,15 @@ class ObligacionesFinancieras extends Component
     #[Computed]
     public function obligaciones()
     {
-        return ObligacionesFinanciera::with(['periodo', 'matricula.carrera', 'pagos'])
+        return ObligacionesFinanciera::with(['periodo', 'matricula.carrera', 'pagos', 'becaAplicada.tipoBeca'])
             ->where('user_id', $this->idUser)
             ->when($this->filtroTipo,    fn($q) => $q->where('tipo', $this->filtroTipo))
             ->when($this->filtroEstado,  fn($q) => $q->where('estado', $this->filtroEstado))
-            ->when($this->filtroPeriodo, fn($q) => $q->where('periodo_id', $this->filtroPeriodo))
+            ->when($this->filtroPeriodo, fn($q) => $q->where(function ($sub) {
+                // Muestra obligaciones del período seleccionado + vencidas de cualquier período
+                $sub->where('periodo_id', $this->filtroPeriodo)
+                    ->orWhere('estado', 'Vencido');
+            }))
             ->orderByRaw("FIELD(estado, 'Pendiente', 'Parcial', 'Vencido', 'Pagado')")
             ->orderBy('fecha_vencimiento')
             ->paginate(10);
@@ -86,18 +90,19 @@ class ObligacionesFinancieras extends Component
     // -------------------------------------------------------------------------
     // MÉTRICAS DEL TABLERO
     // -------------------------------------------------------------------------
+
+    /**
+     * Deuda pendiente según el filtro activo.
+     * Si no hay filtro de período, calcula sobre TODOS los períodos (global).
+     */
     #[Computed]
     public function deudaPeriodoActual()
     {
-        $periodoId = $this->filtroPeriodo ?: (function () {
-            $ultimaMatricula = Auth::user()->matriculas()->with('carrera')->latest()->first();
-            return $ultimaMatricula?->carrera?->periodoActual()?->id;
-        })();
-
-        if (! $periodoId) return 0;
-
         return ObligacionesFinanciera::where('user_id', $this->idUser)
-            ->where('periodo_id', $periodoId)
+            ->when($this->filtroPeriodo, fn($q) => $q->where(function ($sub) {
+                $sub->where('periodo_id', $this->filtroPeriodo)
+                    ->orWhere('estado', 'Vencido');
+            }))
             ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
             ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
             ->get()
@@ -107,18 +112,28 @@ class ObligacionesFinancieras extends Component
     #[Computed]
     public function totalPagadoPeriodo()
     {
-        $periodoId = $this->filtroPeriodo ?: (function () {
-            $ultimaMatricula = Auth::user()->matriculas()->with('carrera')->latest()->first();
-            return $ultimaMatricula?->carrera?->periodoActual()?->id;
-        })();
-
-        if (! $periodoId) return 0;
-
         return ObligacionesFinanciera::where('user_id', $this->idUser)
-            ->where('periodo_id', $periodoId)
+            ->when($this->filtroPeriodo, fn($q) => $q->where(function ($sub) {
+                $sub->where('periodo_id', $this->filtroPeriodo)
+                    ->orWhere('estado', 'Vencido');
+            }))
             ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
             ->get()
             ->sum(fn($ob) => $ob->pagado ?? 0);
+    }
+
+    /**
+     * Obligaciones vencidas en todos los períodos, independientemente del filtro.
+     * Usado para mostrar alerta crítica cuando hay deuda vencida en otros períodos.
+     */
+    #[Computed]
+    public function deudaVencidaGlobal()
+    {
+        return ObligacionesFinanciera::where('user_id', $this->idUser)
+            ->where('estado', 'Vencido')
+            ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
+            ->get()
+            ->sum(fn($ob) => max(0, $ob->monto_final - ($ob->pagado ?? 0)));
     }
 
     #[Computed]
@@ -288,6 +303,7 @@ class ObligacionesFinancieras extends Component
             'deudaPeriodoActual' => $this->deudaPeriodoActual,
             'totalPagadoPeriodo' => $this->totalPagadoPeriodo,
             'saldoCarrera'       => $this->saldoCarrera,
+            'deudaVencidaGlobal' => $this->deudaVencidaGlobal,
         ]);
     }
 }

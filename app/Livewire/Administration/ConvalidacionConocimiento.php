@@ -27,7 +27,6 @@ class ConvalidacionConocimiento extends Component
     public int $paso       = 1;
     public int $totalPasos = 3;
 
-    // Estudiante recibido por ruta
     public int $userId;
 
     // Paso 1
@@ -35,7 +34,7 @@ class ConvalidacionConocimiento extends Component
     public string $observaciones = '';
     public $documento           = null;
 
-    // Paso 2 — ['materia_id' => ['nota' => '']]
+    // Paso 2
     public array $seleccionadas = [];
 
     public function mount(int $userId): void
@@ -86,12 +85,22 @@ class ConvalidacionConocimiento extends Component
             ->get();
     }
 
+    #[Computed]
+    public function materiasAprobadas(): array
+    {
+        return DetalleMatricula::where('user_id', $this->userId)
+            ->whereHas('calificaciones', fn($q) => $q->where('estado_final', 'Aprobado'))
+            ->pluck('materia_id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
+    }
+
     // ── Watchers ──────────────────────────────────────────────────────────────
 
     public function updatedCarreraId(): void
     {
         $this->seleccionadas = [];
-        unset($this->semestres);
+        unset($this->semestres, $this->materiasAprobadas);
     }
 
     // ── Helpers para la vista ─────────────────────────────────────────────────
@@ -128,7 +137,7 @@ class ConvalidacionConocimiento extends Component
 
     public function resumen(): array
     {
-        $aprobadas = 0;
+        $aprobadas  = 0;
         $reprobadas = 0;
 
         foreach ($this->seleccionadas as $materiaId => $datos) {
@@ -143,6 +152,11 @@ class ConvalidacionConocimiento extends Component
             'aprobadas'  => $aprobadas,
             'reprobadas' => $reprobadas,
         ];
+    }
+
+    public function semestresExonerados(): int
+    {
+        return $this->semestres->filter(fn($s) => $this->semestreCompleto($s))->count();
     }
 
     // ── Navegación entre pasos ────────────────────────────────────────────────
@@ -188,25 +202,41 @@ class ConvalidacionConocimiento extends Component
     {
         if (empty($this->seleccionadas)) return;
 
+        // Guard: ninguna materia debe tener ya una calificación aprobada
+        $materiasIds = array_map('intval', array_keys($this->seleccionadas));
+        $conflicto   = DetalleMatricula::where('user_id', $this->userId)
+            ->whereIn('materia_id', $materiasIds)
+            ->whereHas('calificaciones', fn($q) => $q->where('estado_final', 'Aprobado'))
+            ->exists();
+
+        if ($conflicto) {
+            $this->dispatch('swal', [
+                'icon'  => 'error',
+                'title' => 'Conflicto de calificaciones',
+                'text'  => 'Una o más materias seleccionadas ya tienen calificaciones aprobadas registradas para este estudiante.',
+            ]);
+            return;
+        }
+
+        $periodo = Periodo::periodoActivoGlobal();
+        if (! $periodo) {
+            $this->dispatch('swal', [
+                'icon'  => 'error',
+                'title' => 'Sin período activo',
+                'text'  => 'No hay un período académico activo. Activa uno antes de continuar.',
+            ]);
+            return;
+        }
+
         DB::beginTransaction();
         try {
-            $periodo = Periodo::periodoActivoGlobal();
-            if (! $periodo) {
-                $this->dispatch('swal', [
-                    'icon'  => 'error',
-                    'title' => 'Sin período activo',
-                    'text'  => 'No hay un período académico activo. Activa uno antes de continuar.',
-                ]);
-                return;
-            }
 
-            // Guardar documento
             $documentoPath = null;
             if ($this->documento) {
                 $documentoPath = $this->documento->store('convalidaciones', 'public');
             }
 
-            // 1 — Crear Convalidacion
+            // 1 — Convalidacion
             $convalidacion = Convalidacion::create([
                 'user_id'        => $this->userId,
                 'carrera_id'     => $this->carreraId,
@@ -217,14 +247,14 @@ class ConvalidacionConocimiento extends Component
                 'estado'         => 'Confirmada',
             ]);
 
-            // 2 — Crear Matrícula tipo Validacion
-            $ultimaId     = Matricula::max('id') ?? 0;
+            // 2 — Matrícula tipo Validacion (estado Completada: no interfiere con el dashboard del estudiante)
+            $ultimaId      = Matricula::max('id') ?? 0;
             $matriculaCode = 'ISTC-VAL-' . str_pad($ultimaId + 1, 5, '0', STR_PAD_LEFT);
 
             $matricula = Matricula::create([
                 'code'            => $matriculaCode,
                 'tipo'            => Matricula::TIPO_VALIDACION,
-                'estado'          => 'Habilitada',
+                'estado'          => 'Completada',
                 'fecha_matricula' => now()->toDateString(),
                 'periodo_id'      => $periodo->id,
                 'carrera_id'      => $this->carreraId,
@@ -232,7 +262,7 @@ class ConvalidacionConocimiento extends Component
                 'observaciones'   => 'Generada automáticamente — Validación de Conocimientos.',
             ]);
 
-            // 3 — Por cada materia: DetalleMatricula + Calificacion + ConvalidacionDetalle
+            // 3 — DetalleMatricula + Calificacion + ConvalidacionDetalle por materia
             foreach ($this->seleccionadas as $materiaId => $datos) {
                 $materia = Materia::find((int) $materiaId);
                 if (! $materia) continue;
@@ -277,20 +307,17 @@ class ConvalidacionConocimiento extends Component
 
             DB::commit();
 
-            // Resetear estado
-            $this->paso          = 1;
-            $this->carreraId     = null;
-            $this->seleccionadas = [];
-            $this->observaciones = '';
-            $this->documento     = null;
-            unset($this->semestres, $this->historial);
+            unset($this->semestres, $this->historial, $this->materiasAprobadas);
 
             $this->dispatch('swal', [
-                'icon'  => 'success',
-                'title' => '¡Convalidación registrada!',
-                'text'  => 'Las calificaciones se generaron. El estudiante puede proceder a matricularse normalmente.',
-                'timer' => 4000,
+                'icon'             => 'success',
+                'title'            => '¡Validación registrada!',
+                'text'             => 'Las calificaciones y la matrícula de validación han sido generadas. Procede a matricular al estudiante en el módulo de Matriculación para generar las obligaciones financieras.',
+                'timer'            => 6000,
+                'timerProgressBar' => true,
             ]);
+
+            $this->finalizarWizard();
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -303,6 +330,16 @@ class ConvalidacionConocimiento extends Component
                 'text'  => 'Ocurrió un error inesperado. Revisa el log del sistema.',
             ]);
         }
+    }
+
+    private function finalizarWizard(): void
+    {
+        $this->paso          = 1;
+        $this->carreraId     = null;
+        $this->seleccionadas = [];
+        $this->observaciones = '';
+        $this->documento     = null;
+        unset($this->semestres, $this->historial, $this->materiasAprobadas);
     }
 
     #[Layout('layouts.admin')]

@@ -473,6 +473,27 @@
 
                         {{-- ── PASO 1: Información ── --}}
                         @if ($paso == 1)
+
+                            {{-- Aviso: estudiante de val. conocimientos sin convalidación confirmada --}}
+                            @if ($pendienteConvalidacion)
+                            <div class="mt-3 flex items-start gap-3 rounded-xl border border-amber-300/60 dark:border-amber-600/40 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+                                <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-semibold text-amber-700 dark:text-amber-300">Validación de conocimientos pendiente</p>
+                                    <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                        Este estudiante ingresó por proceso de validación de conocimientos y aún no tiene una convalidación confirmada.
+                                        Registra la convalidación primero en
+                                        <a href="{{ route('administracion.administrativa.convalidacion.conocimiento', ['userId' => $estudiante->id]) }}"
+                                           class="font-semibold underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-200"
+                                           wire:navigate>Validación de Conocimientos</a>
+                                        antes de continuar con la matrícula.
+                                    </p>
+                                </div>
+                            </div>
+                            @endif
+
                             <div class="pt-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                                 {{-- Info estudiante --}}
@@ -1090,19 +1111,22 @@
 
                                                 {{-- Cuotas --}}
                                                 <div class="pt-1">
-                                                    <label class="text-[0.6rem] text-amber-400/60 uppercase tracking-wide block mb-1">
+                                                    <span class="text-[0.6rem] text-amber-400/60 uppercase tracking-wide block mb-1">
                                                         Cuotas del arancel
-                                                    </label>
-                                                    <select wire:model.live="num_cuotas_arancel"
-                                                        class="w-full text-xs rounded bg-slate-900 border border-white/10 text-white/70 px-2 py-1 focus:outline-none focus:border-amber-500/50">
-                                                        @foreach([1,2,3,4,6] as $n)
-                                                            <option value="{{ $n }}">{{ $n }} cuota{{ $n > 1 ? 's' : '' }}{{ $n > 1 ? ' — $' . number_format($montoArancel / $n, 2) . ' c/u' : '' }}</option>
-                                                        @endforeach
-                                                    </select>
+                                                    </span>
+                                                    @if($esGratuidad)
+                                                        <span class="inline-block text-xs font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
+                                                            GRATUIDAD — $0.00
+                                                        </span>
+                                                    @else
+                                                        <p class="text-xs font-semibold text-amber-300">
+                                                            5 cuotas — ${{ number_format($montoArancel / 5, 2) }} c/u
+                                                        </p>
+                                                    @endif
                                                 </div>
 
                                                 <p class="text-[0.6rem] text-amber-400/50 leading-relaxed">
-                                                    Valor a pagar durante el transcurso del semestre.
+                                                    Distribuidas proporcionalmente en el período de la carrera.
                                                 </p>
                                             </div>
 
@@ -2241,13 +2265,15 @@
                                                             <span>${{ number_format($montoArancel, 2) }}</span>
                                                         </div>
                                                         <div class="mt-2">
-                                                            <label class="block text-xs font-medium text-gray-600 mb-1">Cuotas del arancel</label>
-                                                            <select wire:model.live="num_cuotas_arancel"
-                                                                class="w-full text-sm rounded border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
-                                                                @foreach([1,2,3,4,6] as $n)
-                                                                    <option value="{{ $n }}">{{ $n }} cuota{{ $n > 1 ? 's' : '' }}{{ $n > 1 ? ' — $' . number_format($montoArancel / $n, 2) . ' c/u' : '' }}</option>
-                                                                @endforeach
-                                                            </select>
+                                                            @if($esGratuidad)
+                                                                <span class="inline-block text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
+                                                                    GRATUIDAD — Arancel $0.00
+                                                                </span>
+                                                            @else
+                                                                <p class="text-xs text-gray-600">
+                                                                    <span class="font-medium">5 cuotas</span> — ${{ number_format($montoArancel / 5, 2) }} c/u, distribuidas en el período
+                                                                </p>
+                                                            @endif
                                                         </div>
                                                     </div>
                                                 </div>

@@ -31,6 +31,17 @@
                 <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Gestión de pagos y verificación de comprobantes</p>
             </div>
             <div class="flex items-center space-x-3">
+                @if ($filtroEstudiante)
+                <button wire:click="abrirModalPagoGeneral"
+                    class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl
+                           font-medium text-sm shadow-sm transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Pago General
+                </button>
+                @endif
                 <button wire:click="abrirModalObligacion"
                     class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl
                            font-medium text-sm shadow-sm transition">
@@ -256,6 +267,20 @@
                                         class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $tipoColors[$ob->tipo] ?? 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-300' }}">
                                         {{ $ob->tipo }}
                                     </span>
+                                    @if ($ob->becaAplicada)
+                                        @if ((float)$ob->monto_final <= 0)
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+                                                  title="{{ $ob->becaAplicada->tipoBeca->nombre ?? 'Beca' }} — 100%">
+                                                GRATUIDAD
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                                                  title="{{ $ob->becaAplicada->tipoBeca->nombre ?? 'Beca' }}">
+                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                                                Beca {{ number_format($ob->becaAplicada->porcentaje_aplicado, 0) }}%
+                                            </span>
+                                        @endif
+                                    @endif
                                     @if ($ob->descripcion)
                                         <p class="text-gray-400 dark:text-gray-500 text-xs mt-0.5 max-w-xs truncate">
                                             {{ $ob->descripcion }}</p>
@@ -1032,6 +1057,163 @@
                                 Cerrar
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- ======================================================================
+             MODAL: PAGO GENERAL
+             ====================================================================== --}}
+        @if ($showModalPagoGeneral)
+            @php
+                $pendientesPG = $this->obligacionesPendientesPG;
+                $totalDeudaPG = $pendientesPG->sum(fn($ob) => $ob->saldo);
+            @endphp
+            <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="z-index:99999">
+                <div class="fixed inset-0 bg-gray-900 bg-opacity-60 dark:bg-opacity-80" wire:click="cerrarModalPagoGeneral"></div>
+
+                <div class="relative bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+
+                    {{-- Header --}}
+                    <div class="flex-shrink-0 bg-gray-800 dark:bg-slate-800 px-6 py-4 rounded-t-xl flex justify-between items-center">
+                        <div>
+                            <h3 class="text-white font-semibold">Pago General de Obligaciones</h3>
+                            <p class="text-gray-400 text-xs mt-0.5">Distribución automática — de más antigua a más reciente</p>
+                        </div>
+                        <button wire:click="cerrarModalPagoGeneral" class="text-gray-400 hover:text-white transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-6 space-y-5">
+
+                        {{-- Resumen deuda total --}}
+                        <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+                            <div class="grid grid-cols-2 gap-4 text-center">
+                                <div>
+                                    <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide mb-1">Cuotas pendientes</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $pendientesPG->count() }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide mb-1">Deuda total</p>
+                                    <p class="text-2xl font-bold text-red-600 dark:text-red-400">${{ number_format($totalDeudaPG, 2) }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Monto a pagar --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Monto total a registrar *
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 font-semibold text-sm">$</span>
+                                <input wire:model.live.debounce.400ms="montoTotalPG"
+                                    type="number" step="0.01" min="0.01" max="{{ $totalDeudaPG }}"
+                                    placeholder="0.00"
+                                    class="w-full pl-7 pr-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
+                            </div>
+                            @error('montoTotalPG') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Preview distribución --}}
+                        @if (!empty($distribucionPG))
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                                    Cómo se distribuirá el pago
+                                </p>
+                                <div class="space-y-2">
+                                    @foreach ($distribucionPG as $item)
+                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-lg px-3 py-2.5 border border-gray-100 dark:border-slate-700">
+                                            <div class="flex-1 min-w-0 pr-3">
+                                                <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ $item['descripcion'] }}</p>
+                                                <p class="text-xs text-gray-400 mt-0.5">
+                                                    Vence: {{ $item['vencimiento'] }}
+                                                    · Saldo: ${{ number_format($item['saldo'], 2) }}
+                                                </p>
+                                            </div>
+                                            <div class="text-right flex-shrink-0">
+                                                <p class="font-bold text-sm {{ $item['queda_pagado'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                                    ${{ number_format($item['pago'], 2) }}
+                                                </p>
+                                                <span class="text-xs {{ $item['queda_pagado'] ? 'text-emerald-500' : 'text-amber-500' }}">
+                                                    {{ $item['queda_pagado'] ? '✓ Pagado' : 'Parcial' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                @php $excedentePG = round((float)$montoTotalPG - collect($distribucionPG)->sum('pago'), 2); @endphp
+                                @if ($excedentePG > 0.01)
+                                    <p class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                                        ⚠ Excedente no aplicado: ${{ number_format($excedentePG, 2) }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endif
+
+                        {{-- Método de pago --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Método de pago *</label>
+                            <select wire:model="metodoPagoPG"
+                                class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 transition">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Deposito">Depósito</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                                <option value="Payphone">Payphone</option>
+                            </select>
+                            @error('metodoPagoPG') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Referencia --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Referencia / N.º comprobante
+                            </label>
+                            <input wire:model="referenciaPG" type="text" placeholder="Nro. transferencia, referencia bancaria…"
+                                class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 transition">
+                        </div>
+
+                        {{-- Descripción --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observación</label>
+                            <textarea wire:model="descripcionPG" rows="2" placeholder="Observaciones del pago…"
+                                class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 transition resize-none"></textarea>
+                        </div>
+
+                        {{-- Comprobante --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Comprobante <span class="font-normal text-gray-400">(PDF, JPG, PNG — máx. 5MB)</span>
+                            </label>
+                            <input wire:model="comprobantePG" type="file" accept="image/*,.pdf"
+                                class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition cursor-pointer">
+                            @error('comprobantePG') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                        </div>
+
+                        @error('pg_error')
+                            <div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                                {{ $message }}
+                            </div>
+                        @enderror
+
+                    </div>
+
+                    {{-- Footer --}}
+                    <div class="flex-shrink-0 px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3">
+                        <button wire:click="cerrarModalPagoGeneral"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition">
+                            Cancelar
+                        </button>
+                        <button wire:click="guardarPagoGeneral" wire:loading.attr="disabled"
+                            class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition disabled:opacity-50">
+                            <span wire:loading.remove wire:target="guardarPagoGeneral">Registrar Pago General</span>
+                            <span wire:loading wire:target="guardarPagoGeneral">Procesando…</span>
+                        </button>
                     </div>
                 </div>
             </div>
