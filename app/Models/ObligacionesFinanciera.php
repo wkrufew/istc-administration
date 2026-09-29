@@ -110,6 +110,8 @@ class ObligacionesFinanciera extends Model
 
     public function actualizarEstado()
     {
+        if ($this->estado === 'Invalidado') return;
+
         if ($this->saldo <= 0) {
             $this->estado = 'Pagado';
         } elseif ($this->total_pagado > 0) {

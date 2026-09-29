@@ -22,8 +22,10 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::statement('ALTER TABLE paralelos ADD CONSTRAINT chk_paralelos_cupos
-            CHECK (cupo_actual >= 0 AND cupo_actual <= cupo_maximo)');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE paralelos ADD CONSTRAINT chk_paralelos_cupos
+                CHECK (cupo_actual >= 0 AND cupo_actual <= cupo_maximo)');
+        }
     }
 
     /**

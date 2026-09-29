@@ -25,7 +25,10 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Prácticas Preprofesionales</h2>
-                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Gestión de prácticas de estudiantes con malla completa</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                    Requiere: <span class="font-semibold text-indigo-600 dark:text-indigo-400">2 semestres aprobados</span> (Tecnológica) ·
+                    <span class="font-semibold text-purple-600 dark:text-purple-400">1 semestre aprobado</span> (Tecnicatura)
+                </p>
             </div>
             <button wire:click="abrirModalCrear"
                 class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700
@@ -112,10 +115,38 @@
                                                     flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                                             {{ strtoupper(substr($p->estudiante?->name ?? '?', 0, 1)) }}
                                         </div>
-                                        <div>
+                                        <div class="min-w-0">
                                             <p class="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                                                 {{ $p->estudiante?->name ?? '—' }}</p>
                                             <p class="text-xs text-gray-400 dark:text-slate-500">{{ $p->estudiante?->cedula ?? '' }}</p>
+                                            {{-- Indicador de progreso de semestres --}}
+                                            @if ($p->carrera)
+                                                @php
+                                                    $semComp  = \App\Models\Carrera::contarSemestresCompletados($p->user_id, $p->carrera_id);
+                                                    $semTotal = $p->carrera->duracion_semestres ?? 0;
+                                                    $umbral   = match($p->carrera->tipo) {
+                                                        'Tecnologica' => 2,
+                                                        'Tecnicatura' => 1,
+                                                        default       => 1,
+                                                    };
+                                                @endphp
+                                                <div class="flex items-center gap-1.5 mt-1.5">
+                                                    @for ($i = 1; $i <= $semTotal; $i++)
+                                                        <div title="{{ $i <= $semComp ? 'Semestre '.$i.' aprobado' : 'Semestre '.$i.' pendiente' }}"
+                                                            class="h-1.5 rounded-full w-4
+                                                            {{ $i <= $semComp
+                                                                ? 'bg-green-500 dark:bg-green-400'
+                                                                : ($i === $semComp + 1
+                                                                    ? 'bg-amber-300 dark:bg-amber-400'
+                                                                    : 'bg-gray-200 dark:bg-slate-600') }}">
+                                                        </div>
+                                                    @endfor
+                                                    <span class="text-[0.65rem] font-semibold
+                                                        {{ $semComp >= $umbral ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                                        {{ $semComp }}/{{ $semTotal }} sem.
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
@@ -287,7 +318,9 @@
                         <div x-data="{ open: @entangle('showDropdownEstudiante') }">
                             <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">
                                 Estudiante <span class="text-red-500">*</span>
-                                <span class="font-normal text-gray-400 dark:text-slate-500">(solo malla completa)</span>
+                                <span class="font-normal text-gray-400 dark:text-slate-500">
+                                    (Tecnológica: ≥ 2 sem. · Tecnicatura: ≥ 1 sem.)
+                                </span>
                             </label>
                             <div class="relative">
                                 <div class="relative">
@@ -318,41 +351,68 @@
                                     <div class="absolute z-20 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700
                                                 rounded-xl shadow-xl overflow-hidden">
                                         @foreach ($this->estudiantesSugeridos as $sug)
-                                            @php $mat = $sug->matriculas->first(); @endphp
-                                            <button wire:click="seleccionarEstudiante({{ $sug->id }})"
+                                            <button wire:click="seleccionarEstudiante({{ $sug['id'] }})"
                                                 type="button"
                                                 class="w-full flex items-center gap-3 px-4 py-3
                                                        hover:bg-blue-50 dark:hover:bg-blue-950/40 transition text-left
                                                        border-b border-gray-100 dark:border-slate-700 last:border-0">
                                                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600
                                                             flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                                                    {{ strtoupper(substr($sug->name, 0, 1)) }}
+                                                    {{ strtoupper(substr($sug['name'], 0, 1)) }}
                                                 </div>
                                                 <div class="flex-1 min-w-0">
                                                     <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
-                                                        {{ $sug->name }}</p>
-                                                    <div class="flex items-center gap-2 mt-0.5">
-                                                        <span class="text-xs text-gray-400 dark:text-slate-500">{{ $sug->cedula ?? 'Sin cédula' }}</span>
-                                                        @if ($mat?->carrera)
+                                                        {{ $sug['name'] }}</p>
+                                                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                        <span class="text-xs text-gray-400 dark:text-slate-500">{{ $sug['cedula'] ?? 'Sin cédula' }}</span>
+                                                        @if ($sug['carrera_code'])
                                                             <span class="text-xs px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 font-semibold">
-                                                                {{ $mat->carrera->code }}
+                                                                {{ $sug['carrera_code'] }}
                                                             </span>
                                                         @endif
+                                                        <span class="text-xs text-gray-400 dark:text-slate-500">{{ $sug['carrera_tipo'] }}</span>
                                                     </div>
+                                                    {{-- Mini barra de progreso de semestres --}}
+                                                    @if ($sug['total'] > 0)
+                                                        <div class="flex items-center gap-1.5 mt-1.5">
+                                                            @for ($i = 1; $i <= $sug['total']; $i++)
+                                                                <div title="Semestre {{ $i }}"
+                                                                    class="h-1.5 rounded-full flex-1 transition-colors
+                                                                    {{ $i <= $sug['completados']
+                                                                        ? 'bg-green-500 dark:bg-green-400'
+                                                                        : ($i === $sug['completados'] + 1
+                                                                            ? 'bg-amber-300 dark:bg-amber-400'
+                                                                            : 'bg-gray-200 dark:bg-slate-600') }}">
+                                                                </div>
+                                                            @endfor
+                                                            <span class="text-[0.65rem] text-gray-500 dark:text-slate-400 font-medium ml-0.5 whitespace-nowrap">
+                                                                {{ $sug['completados'] }}/{{ $sug['total'] }} sem.
+                                                            </span>
+                                                        </div>
+                                                    @endif
                                                 </div>
-                                                <span class="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-semibold flex-shrink-0">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                    Malla OK
-                                                </span>
+                                                @if ($sug['convalidacion'])
+                                                    <span class="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 font-semibold flex-shrink-0">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                                        </svg>
+                                                        Validación
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-semibold flex-shrink-0">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Sem. {{ $sug['umbral'] }}✓
+                                                    </span>
+                                                @endif
                                             </button>
                                         @endforeach
                                     </div>
                                 @elseif ($showDropdownEstudiante && $this->estudiantesSugeridos->count() === 0)
                                     <div class="absolute z-20 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700
                                                 rounded-xl shadow-xl p-4 text-center text-sm text-gray-400 dark:text-slate-500">
-                                        No se encontraron estudiantes con malla completa
+                                        Ningún estudiante cumple el requisito de semestres para prácticas preprofesionales
                                     </div>
                                 @endif
                             </div>
@@ -486,6 +546,9 @@
                                            bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100
                                            shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2.5 px-3"
                                     placeholder="0">
+                                @error('totalHoras')
+                                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">Estado</label>

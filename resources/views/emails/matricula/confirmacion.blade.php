@@ -259,6 +259,45 @@
                                         </tr>
                                         @endif
                                     </table>
+
+                                    {{-- Resumen de ahorro --}}
+                                    @if(isset($montoArancelOriginal) && $montoArancelOriginal && $montoArancel)
+                                    @php
+                                        $ahorro = round((float) str_replace(',', '', $montoArancelOriginal) - (float) str_replace(',', '', $montoArancel), 2);
+                                    @endphp
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                                           style="margin-top:14px;border-top:1px solid #ddd6fe;padding-top:12px;">
+                                        <tr>
+                                            <td style="padding:4px 0;font-size:12px;color:#9ca3af;text-decoration:line-through;">
+                                                Valor sin descuento
+                                            </td>
+                                            <td style="padding:4px 0;font-size:12px;color:#9ca3af;text-align:right;
+                                                        text-decoration:line-through;font-family:monospace;">
+                                                ${{ $montoArancelOriginal }}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:4px 0;font-size:14px;font-weight:700;color:#5b21b6;">
+                                                Valor con tu descuento
+                                            </td>
+                                            <td style="padding:4px 0;font-size:14px;font-weight:800;color:#5b21b6;
+                                                        text-align:right;font-family:monospace;">
+                                                ${{ $montoArancel }}
+                                            </td>
+                                        </tr>
+                                        @if($ahorro > 0)
+                                        <tr>
+                                            <td colspan="2" style="padding:6px 0 0;">
+                                                <span style="font-size:12px;font-weight:700;background-color:#d1fae5;
+                                                             color:#065f46;padding:3px 10px;border-radius:20px;">
+                                                    ¡Ahorro total: ${{ number_format($ahorro, 2) }}!
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @endif
+                                    </table>
+                                    @endif
+
                                     <p style="margin:14px 0 0;font-size:12px;color:#7c3aed;line-height:1.6;">
                                         Estos beneficios se aplican únicamente al arancel semestral. La cuota de matrícula no se modifica.
                                     </p>
@@ -305,6 +344,46 @@
                                     </td>
                                     <td style="padding:10px 16px;font-size:13px;font-weight:700;color:#0f2d5a;text-align:center;">
                                         {{ number_format((($detalle->materia?->horas_teoricas ?? 0) + ($detalle->materia?->horas_practicas ?? 0)) / 48, 2) }}
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                        @endif
+
+                        {{-- ── MATERIAS POR VALIDACIÓN DE CONOCIMIENTOS ── --}}
+                        @if(isset($materiasValidadas) && $materiasValidadas->isNotEmpty())
+                        <p style="margin:0 0 12px;font-size:11px;font-weight:700;color:#0f766e;
+                                   text-transform:uppercase;letter-spacing:0.13em;">
+                            Materias Reconocidas por Validación de Conocimientos
+                        </p>
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="border:1px solid #99f6e4;border-radius:10px;overflow:hidden;margin-bottom:24px;">
+                            <thead>
+                                <tr style="background-color:#0f766e;">
+                                    <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;
+                                               color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.08em;">#</th>
+                                    <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:600;
+                                               color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.08em;">Materia</th>
+                                    <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:600;
+                                               color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.08em;">Nota</th>
+                                    <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:600;
+                                               color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:0.08em;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($materiasValidadas as $i => $detalle)
+                                <tr style="background-color:{{ $i % 2 === 0 ? '#f0fdfa' : '#ffffff' }};border-top:1px solid #99f6e4;">
+                                    <td style="padding:10px 16px;font-size:13px;color:#5eead4;">{{ $i + 1 }}</td>
+                                    <td style="padding:10px 16px;font-size:13px;color:#1e293b;font-weight:500;">
+                                        {{ $detalle->materia?->name ?? '—' }}
+                                    </td>
+                                    <td style="padding:10px 16px;font-size:13px;font-weight:700;color:#0f766e;text-align:center;">
+                                        {{ $detalle->nota !== null ? number_format($detalle->nota, 2) : '—' }}
+                                    </td>
+                                    <td style="padding:10px 16px;text-align:center;">
+                                        <span style="font-size:11px;font-weight:700;background-color:#ccfbf1;
+                                                     color:#0f766e;padding:2px 8px;border-radius:20px;">Aprobado</span>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -423,6 +502,42 @@
                                             </td>
                                         </tr>
                                     </table>
+                                    @if(isset($arrastresDetalle) && $arrastresDetalle->isNotEmpty() && $totalCostoArrastres)
+                                    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #bbf7d0;">
+                                        <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#166534;
+                                                   text-transform:uppercase;letter-spacing:0.11em;">
+                                            Desglose del valor
+                                        </p>
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding:3px 0;font-size:12px;color:#166534;">Matrícula base</td>
+                                                <td style="padding:3px 0;font-size:12px;color:#166534;text-align:right;font-family:monospace;">
+                                                    ${{ $montoBaseMatricula }}
+                                                </td>
+                                            </tr>
+                                            @foreach($arrastresDetalle as $arr)
+                                            <tr>
+                                                <td style="padding:3px 0;font-size:12px;color:#166534;">
+                                                    Recargo arrastre · {{ $arr['nombre'] }}
+                                                </td>
+                                                <td style="padding:3px 0;font-size:12px;font-weight:600;color:#92400e;text-align:right;font-family:monospace;">
+                                                    +${{ $arr['costo_recargo'] }}
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                            <tr>
+                                                <td style="padding:6px 0 0;font-size:12px;font-weight:700;color:#0f2d5a;
+                                                            border-top:1px solid #bbf7d0;">
+                                                    Total
+                                                </td>
+                                                <td style="padding:6px 0 0;font-size:12px;font-weight:700;color:#0f2d5a;
+                                                            border-top:1px solid #bbf7d0;text-align:right;font-family:monospace;">
+                                                    ${{ $monto }}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    @endif
                                     <div style="margin-top:14px;padding-top:12px;border-top:1px solid #bbf7d0;">
                                         <p style="margin:0;font-size:12px;color:#166534;line-height:1.6;">
                                             Realice este pago antes de la fecha límite para garantizar su cupo.
@@ -505,7 +620,7 @@
                                             @foreach($obligColegiaturas as $i => $cuota)
                                             <tr style="background-color:{{ $i % 2 === 0 ? '#eff6ff' : '#dbeafe' }};border-top:1px solid #bfdbfe;">
                                                 <td style="padding:9px 14px;font-size:13px;color:#1e40af;font-weight:600;">
-                                                    {{ $i + 1 }}/{{ $obligColegiaturas->count() }}
+                                                    {{ $loop->iteration }}/{{ $obligColegiaturas->count() }}
                                                 </td>
                                                 <td style="padding:9px 14px;font-size:13px;color:#1e293b;text-align:center;">
                                                     {{ $cuota->fecha_vencimiento ? \Carbon\Carbon::parse($cuota->fecha_vencimiento)->format('d/m/Y') : '—' }}

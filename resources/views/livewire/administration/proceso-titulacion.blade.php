@@ -700,10 +700,13 @@
                                     <h4 class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Desglose de notas</h4>
 
                                     @php
-                                        $notaComunitariaResumen = $titulacionFinal?->comunitaria?->nota;
-                                        $notaPreprofResumen     = $titulacionFinal?->nota_practicas;
+                                        $notaComunitariaResumen   = $titulacionFinal?->comunitaria?->nota;
+                                        $notaPreprofResumen       = $titulacionFinal?->nota_practicas;
                                         $promedioPracticasResumen = ($notaPreprofResumen !== null && $notaComunitariaResumen !== null)
                                             ? round(((float)$notaPreprofResumen + (float)$notaComunitariaResumen) / 2, 2)
+                                            : null;
+                                        $notaAcumuladaResumen = ($promedioPracticasResumen !== null && $titulacionFinal?->promedio_malla !== null)
+                                            ? round(((float)$titulacionFinal->promedio_malla + (float)$promedioPracticasResumen) / 2, 2)
                                             : null;
                                     @endphp
                                     <div class="space-y-2">
@@ -711,14 +714,6 @@
                                             <span class="text-sm text-gray-600 dark:text-slate-300">Promedio de malla</span>
                                             <span class="text-sm font-bold {{ $titulacionFinal?->promedio_malla >= 7 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
                                                 {{ $titulacionFinal?->promedio_malla ? number_format($titulacionFinal->promedio_malla, 2) : '—' }}
-                                            </span>
-                                        </div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm text-gray-600 dark:text-slate-300">
-                                                {{ $titulacionFinal?->tipo_titulacion_label ?? 'Titulación' }}
-                                            </span>
-                                            <span class="text-sm font-bold {{ $titulacionFinal?->nota_titulacion >= 7 ? 'text-green-600 dark:text-green-400' : ($titulacionFinal?->nota_titulacion ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-slate-500') }}">
-                                                {{ $titulacionFinal?->nota_titulacion ? number_format($titulacionFinal->nota_titulacion, 2) : '—' }}
                                             </span>
                                         </div>
 
@@ -741,6 +736,24 @@
                                                     {{ $promedioPracticasResumen ? number_format($promedioPracticasResumen, 2) : '—' }}
                                                 </span>
                                             </div>
+                                        </div>
+
+                                        <div class="flex justify-between items-center pt-1">
+                                            <span class="text-sm font-semibold text-gray-700 dark:text-slate-200">Nota acumulada
+                                                <span class="text-xs font-normal text-gray-400 dark:text-slate-500">(malla + prácticas) / 2</span>
+                                            </span>
+                                            <span class="text-sm font-bold {{ $notaAcumuladaResumen >= 7 ? 'text-green-600 dark:text-green-400' : ($notaAcumuladaResumen ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-slate-500') }}">
+                                                {{ $notaAcumuladaResumen ? number_format($notaAcumuladaResumen, 2) : '—' }}
+                                            </span>
+                                        </div>
+
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 dark:text-slate-300">
+                                                {{ $titulacionFinal?->tipo_titulacion_label ?? 'Titulación' }}
+                                            </span>
+                                            <span class="text-sm font-bold {{ $titulacionFinal?->nota_titulacion >= 7 ? 'text-green-600 dark:text-green-400' : ($titulacionFinal?->nota_titulacion ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-slate-500') }}">
+                                                {{ $titulacionFinal?->nota_titulacion ? number_format($titulacionFinal->nota_titulacion, 2) : '—' }}
+                                            </span>
                                         </div>
 
                                         <div class="border-t border-gray-200 dark:border-slate-700 pt-2 flex justify-between items-center">

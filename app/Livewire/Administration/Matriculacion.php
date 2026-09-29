@@ -30,6 +30,7 @@ use App\Jobs\EnviarEmailMatricula;
 use App\Jobs\EnviarEmailRetiro;
 use App\Jobs\EnviarWhatsappMatricula;
 use App\Services\SettingService;
+use App\Services\SemestreActualService;
 use App\Traits\WithAuthorization;
 
 class Matriculacion extends Component
@@ -102,17 +103,19 @@ class Matriculacion extends Component
     // Convalidación de conocimientos — detectado automáticamente al calcular costos
     public bool $esConvalidacion          = false;
     public int  $semestresExonerados      = 0;
+    public int  $semestresYaCursados      = 0;
     public bool $pendienteConvalidacion   = false;
 
     // -------------------------------------------------------------------------
     // PROPIEDADES DEL MODAL RETIRO
     // -------------------------------------------------------------------------
-    public bool   $showRetiroModal      = false;
-    public ?int   $retiroMatriculaId    = null;
+    public bool   $showRetiroModal        = false;
+    public ?int   $retiroMatriculaId      = null;
     public string $retiroEstudianteNombre = '';
-    public string $retiroFecha          = '';
-    public string $retiroMotivo         = '';
-    public        $retiroDocumento      = null;
+    public string $retiroFecha            = '';
+    public string $retiroTipo             = '';
+    public string $retiroMotivo           = '';
+    public        $retiroDocumento        = null;
 
     protected $listeners = [
         'matricularEstudiante' => 'iniciarMatricula',
@@ -172,6 +175,28 @@ class Matriculacion extends Component
     public function updatedSelectedPeriodo(): void  { $this->resetPage(); }
     public function updatedSearch(): void           { $this->resetPage(); }
 
+    public function updatedMateriasSeleccionadas(): void
+    {
+        $arrastresIncluidos = count(array_filter($this->materiasArrastradas, fn($m) => $m['incluir'] ?? false));
+        $maxNormales = max(0, 8 - $arrastresIncluidos);
+        if (count($this->materiasSeleccionadas) > $maxNormales) {
+            $this->materiasSeleccionadas = array_slice($this->materiasSeleccionadas, 0, $maxNormales);
+        }
+    }
+
+    public function updatedMateriasArrastradas($value, $key): void
+    {
+        if (! str_ends_with((string) $key, '.incluir') || ! $value) return;
+
+        $total = count($this->materiasSeleccionadas)
+            + count(array_filter($this->materiasArrastradas, fn($m) => $m['incluir'] ?? false));
+
+        if ($total > 8) {
+            $index = (int) explode('.', $key)[0];
+            $this->materiasArrastradas[$index]['incluir'] = false;
+        }
+    }
+
     #[Computed]
     public function carreras()
     {
@@ -201,9 +226,11 @@ class Matriculacion extends Component
         $this->periodo_id = Periodo::periodoActivoGlobal()?->id ?? '';
 
         // Pre-seleccionar carrera más reciente
-        $ultimaMatricula = $this->estudiante->matriculas()->latest()->first();
+        $ultimaMatricula = $this->estudiante->matriculas()->where('tipo', '!=', Matricula::TIPO_VALIDACION)->latest()->first();
         if ($ultimaMatricula) {
             $this->carrera_id = $ultimaMatricula->carrera_id;
+        } else {
+            $this->carrera_id = $this->estudiante->matriculas()->latest()->value('carrera_id') ?? '';
         }
 
         // Cargar materias arrastradas pendientes
@@ -217,7 +244,7 @@ class Matriculacion extends Component
         // Auto-detectar tipo según historial
         if (!empty($this->materiasArrastradas)) {
             $this->tipo = 'Arrastre';
-        } elseif ($this->estudiante->matriculas()->count() > 0) {
+        } elseif ($this->estudiante->matriculas()->where('tipo', '!=', Matricula::TIPO_VALIDACION)->count() > 0) {
             $this->tipo = 'Renovacion';
         } else {
             $this->tipo = 'Nueva';
@@ -339,13 +366,40 @@ class Matriculacion extends Component
             ->pluck('detalle_matriculas.materia_id')
             ->toArray();
 
+        $materiasEnArrastre = array_column($this->materiasArrastradas, 'materia_id');
+
+        // Materias con al menos un paralelo activo en el período actual (MPP gap check).
+        // Si no hay periodo_id todavía, se trata todo como ofertado para no bloquear la UI.
+        $ofertadasIds = [];
+        if ($this->periodo_id) {
+            $ofertadasIds = MateriaPeriodoParalelo::where('periodo_id', $this->periodo_id)
+                ->where('is_active', true)
+                ->pluck('materia_id')
+                ->unique()
+                ->all();
+        }
+
+        // In creation mode only: restrict to the student's current semester.
+        // null = no restriction (new student, válvula de escape, or all complete).
+        // Edit mode ($this->matriculaId set) is intentionally excluded so existing
+        // enrollments always show their original materias regardless of current progress.
+        $semestreActualId = null;
+        if (! $this->matriculaId) {
+            $semestreActualId = (new SemestreActualService())
+                ->obtenerSemestreActual($this->estudiante->id, (int) $this->carrera_id)
+                ?->id;
+        }
+
         $this->materiasDisponibles = [];
 
         foreach ($carrera->semestres as $semestre) {
+            if ($semestreActualId !== null && $semestre->id !== $semestreActualId) continue;
+
             $materiasSemestre = [];
 
             foreach ($semestre->materias as $materia) {
                 if (in_array($materia->id, $materiasAprobadas)) continue;
+                if (in_array($materia->id, $materiasEnArrastre)) continue;
 
                 $prerequisitosCumplidos = $this->verificarPrerequisitos($materia, $materiasAprobadas);
                 $creditosCalculados     = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
@@ -361,6 +415,7 @@ class Matriculacion extends Component
                     'prerequisitos_faltantes' => $prerequisitosCumplidos
                         ? []
                         : $this->getPrerrequisitosFaltantes($materia, $materiasAprobadas),
+                    'ofertada'               => ! $this->periodo_id || in_array($materia->id, $ofertadasIds),
                 ];
             }
 
@@ -377,7 +432,7 @@ class Matriculacion extends Component
                 if (! isset($this->materiasDisponibles[$semestre->name])) continue;
 
                 $inscribibles = collect($this->materiasDisponibles[$semestre->name])
-                    ->filter(fn($m) => $m['puede_inscribir']);
+                    ->filter(fn($m) => $m['puede_inscribir'] && $m['ofertada']);
 
                 if ($inscribibles->isNotEmpty()) {
                     $this->semestreSugerido    = $semestre->name;
@@ -504,30 +559,29 @@ class Matriculacion extends Component
 
         $this->detectarConvalidacion();
 
-        $semestresTotal = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
-        $semestres      = $this->esConvalidacion
-            ? max(1, $semestresTotal - $this->semestresExonerados)
-            : $semestresTotal;
+        $semestresTotal   = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
+        $fraccionRestante = ($semestresTotal - $this->semestresYaCursados) / $semestresTotal;
+        $semestres        = max(1, $semestresTotal - $this->semestresExonerados - $this->semestresYaCursados);
 
-        $this->montoMatricula = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
+        $this->montoMatricula = round(($carrera->costo_carrera * 0.10 * $fraccionRestante) / $semestres, 2);
 
-        $this->aplicarCalculoArancel($carrera, $semestres);
+        $this->aplicarCalculoArancel($carrera, $semestres, $fraccionRestante);
     }
 
     /**
      * Helper compartido: calcula base arancel, reintegro y beca,
      * y actualiza las propiedades correspondientes.
      */
-    private function aplicarCalculoArancel(Carrera $carrera, int $semestres): void
+    private function aplicarCalculoArancel(Carrera $carrera, int $semestres, float $fraccionRestante = 1.0): void
     {
-        // Base arancel: estudiante con convalidación usa costo_convalidacion / semestres_restantes
+        // Base arancel: convalidación directa usa costo_convalidacion; track normal usa fracción restante
         if ($this->esConvalidacion
             && $carrera->costo_convalidacion !== null
             && (float) $carrera->costo_convalidacion > 0
         ) {
-            $base = round((float) $carrera->costo_convalidacion / $semestres, 2);
+            $base = round((float) $carrera->costo_convalidacion * $fraccionRestante / $semestres, 2);
         } else {
-            $base = round($carrera->costo_carrera / $semestres, 2);
+            $base = round($carrera->costo_carrera * $fraccionRestante / $semestres, 2);
         }
 
         // Reintegro: +10% costo_carrera si tiene retiro sin cobrar
@@ -593,13 +647,12 @@ class Matriculacion extends Component
 
         $this->detectarConvalidacion();
 
-        $semestresTotal = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
-        $semestres      = $this->esConvalidacion
-            ? max(1, $semestresTotal - $this->semestresExonerados)
-            : $semestresTotal;
+        $semestresTotal   = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
+        $fraccionRestante = ($semestresTotal - $this->semestresYaCursados) / $semestresTotal;
+        $semestres        = max(1, $semestresTotal - $this->semestresExonerados - $this->semestresYaCursados);
 
-        $this->montoMatricula = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
-        $this->aplicarCalculoArancel($carrera, $semestres);
+        $this->montoMatricula = round(($carrera->costo_carrera * 0.10 * $fraccionRestante) / $semestres, 2);
+        $this->aplicarCalculoArancel($carrera, $semestres, $fraccionRestante);
 
         // Créditos: acumular horas brutas de TODAS las materias y dividir una sola vez al final
         // Esto evita pérdida de precisión al redondear créditos individuales antes de sumar
@@ -665,6 +718,12 @@ class Matriculacion extends Component
             'periodo_id'  => 'required|exists:periodos,id',
             'descuento'   => 'numeric|min:0|max:' . $this->costoTotal,
         ]);
+
+        // Cap de 8 materias: red de seguridad por si el guard del frontend fue eludido
+        if (! $this->matriculaId && $this->totalMateriasActual() > 8) {
+            $this->addError('materiasSeleccionadas', 'No se pueden matricular más de 8 materias en total (regulares + arrastres).');
+            return;
+        }
 
         // Red de seguridad: evitar duplicado si el wizard se envía sin pasar por el paso 1
         if (! $this->matriculaId) {
@@ -741,24 +800,23 @@ class Matriculacion extends Component
             $fechaFinPeriodo = Carbon::parse(
                 $carreraPeriodo?->fecha_fin ?? $periodoActual?->fecha_fin ?? now()->addMonths(5)->toDateString()
             );
-            $semestresTotal = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
-            $semestres      = $this->esConvalidacion
-                ? max(1, $semestresTotal - $this->semestresExonerados)
-                : $semestresTotal;
+            $semestresTotal   = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
+            $fraccionRestante = ($semestresTotal - $this->semestresYaCursados) / $semestresTotal;
+            $semestres        = max(1, $semestresTotal - $this->semestresExonerados - $this->semestresYaCursados);
 
             // ------------------------------------------------------------------
             // MONTOS
             // ------------------------------------------------------------------
-            $montoMatricula = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
+            $montoMatricula = round(($carrera->costo_carrera * 0.10 * $fraccionRestante) / $semestres, 2);
 
-            // Base arancel: estudiante con convalidación usa costo_convalidacion / semestres_restantes
+            // Base arancel: convalidación directa usa costo_convalidacion; track normal usa fracción restante
             if ($this->esConvalidacion
                 && $carrera->costo_convalidacion !== null
                 && (float) $carrera->costo_convalidacion > 0
             ) {
-                $montoArancelBase = round((float) $carrera->costo_convalidacion / $semestres, 2);
+                $montoArancelBase = round((float) $carrera->costo_convalidacion * $fraccionRestante / $semestres, 2);
             } else {
-                $montoArancelBase = round($carrera->costo_carrera / $semestres, 2);
+                $montoArancelBase = round($carrera->costo_carrera * $fraccionRestante / $semestres, 2);
             }
 
             // Reintegro: +10% costo_carrera si hay retiro sin cobrar
@@ -1098,8 +1156,15 @@ class Matriculacion extends Component
             'valorInscripcion',
             'esConvalidacion',
             'semestresExonerados',
+            'semestresYaCursados',
             'pendienteConvalidacion',
         ]);
+    }
+
+    private function totalMateriasActual(): int
+    {
+        return count($this->materiasSeleccionadas)
+            + count(array_filter($this->materiasArrastradas, fn($m) => $m['incluir'] ?? false));
     }
 
     private function detectarConvalidacion(): void
@@ -1107,6 +1172,7 @@ class Matriculacion extends Component
         if (! $this->estudiante || ! $this->carrera_id) {
             $this->esConvalidacion         = false;
             $this->semestresExonerados     = 0;
+            $this->semestresYaCursados     = 0;
             $this->pendienteConvalidacion  = false;
             return;
         }
@@ -1120,13 +1186,15 @@ class Matriculacion extends Component
         if (! $convalidacion) {
             $this->esConvalidacion        = false;
             $this->semestresExonerados    = 0;
+            $this->semestresYaCursados    = 0;
             $this->pendienteConvalidacion = $this->estudiante->aspirante?->tipo_proceso === 'validacion_conocimientos';
             return;
         }
 
         $this->pendienteConvalidacion = false;
-        $this->esConvalidacion = true;
-        $materiasAprobadas     = $convalidacion->detalles->pluck('materia_id')->toArray();
+        $this->esConvalidacion        = true;
+        $this->semestresYaCursados    = 0; // se sobreescribe abajo solo para Casos 2/3
+        $materiasAprobadas            = $convalidacion->detalles->pluck('materia_id')->toArray();
 
         $semestres = Semestre::with(['materias' => fn($q) => $q->where('is_active', true)])
             ->where('carrera_id', $this->carrera_id)
@@ -1138,6 +1206,37 @@ class Matriculacion extends Component
             if ($semestre->materias->isEmpty()) return false;
             return $semestre->materias->every(fn($m) => in_array($m->id, $materiasAprobadas));
         })->count();
+
+        // Regla de negocio — tres casos de validación de conocimientos:
+        //
+        // Caso 1: el estudiante entra DIRECTO por validación (nunca tuvo matrícula regular
+        //         en esta carrera). Aplica pricing de convalidación: costo_convalidacion
+        //         dividido entre los semestres restantes (total − exonerados).
+        //
+        // Caso 2: completó algún semestre con matrícula normal y luego validó semestres
+        //         subsiguientes. Ya entró al track de $280/semestre; el costo_convalidacion
+        //         ($2200) no le aplica.
+        //
+        // Caso 3: igual que Caso 2 — completó S1 normal, validó semestres no consecutivos
+        //         y materias parciales. Sigue en el track de $280/semestre.
+        //
+        // Diferenciador: existencia de al menos una matrícula regular (tipo ≠ Validacion)
+        // en esta carrera. Si existe → pricing normal; esConvalidacion se resetea a false
+        // para que aplicarCalculoArancel() use la rama costo_carrera.
+        $tieneMatriculaRegular = Matricula::where('user_id', $this->estudiante->id)
+            ->where('carrera_id', $this->carrera_id)
+            ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+            ->exists();
+
+        if ($tieneMatriculaRegular) {
+            $this->esConvalidacion = false;
+            // semestresExonerados kept — needed for remaining-balance formula
+            $this->semestresYaCursados = Matricula::where('user_id', $this->estudiante->id)
+                ->where('carrera_id', $this->carrera_id)
+                ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+                ->where('estado', 'Habilitada')
+                ->count();
+        }
     }
     /* =========================
         RETIRO DE MATRÍCULA
@@ -1154,6 +1253,7 @@ class Matriculacion extends Component
         $this->retiroMatriculaId      = $matriculaId;
         $this->retiroEstudianteNombre = $matricula->estudiante->name;
         $this->retiroFecha            = now()->toDateString();
+        $this->retiroTipo             = '';
         $this->retiroMotivo           = '';
         $this->showRetiroModal        = true;
     }
@@ -1164,9 +1264,10 @@ class Matriculacion extends Component
         $this->retiroMatriculaId      = null;
         $this->retiroEstudianteNombre = '';
         $this->retiroFecha            = '';
+        $this->retiroTipo             = '';
         $this->retiroMotivo           = '';
         $this->retiroDocumento        = null;
-        $this->resetValidation(['retiroFecha', 'retiroMotivo', 'retiroDocumento']);
+        $this->resetValidation(['retiroFecha', 'retiroTipo', 'retiroMotivo', 'retiroDocumento']);
     }
 
     public function confirmarRetiro(): void
@@ -1175,9 +1276,12 @@ class Matriculacion extends Component
 
         $this->validate([
             'retiroFecha'      => 'required|date',
+            'retiroTipo'       => 'required|in:Voluntario,Administrativo',
             'retiroMotivo'     => 'nullable|string|max:1000',
             'retiroDocumento'  => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ], [
+            'retiroTipo.required'      => 'Debes seleccionar el tipo de retiro.',
+            'retiroTipo.in'            => 'El tipo de retiro no es válido.',
             'retiroDocumento.required' => 'Debes adjuntar la solicitud o certificado de retiro.',
             'retiroDocumento.mimes'    => 'El documento debe ser PDF, JPG o PNG.',
             'retiroDocumento.max'      => 'El documento no puede superar los 5 MB.',
@@ -1200,6 +1304,7 @@ class Matriculacion extends Component
                     'matricula_id'    => $matricula->id,
                     'user_id'         => $matricula->user_id,
                     'fecha_retiro'    => $this->retiroFecha,
+                    'tipo'            => $this->retiroTipo,
                     'motivo'          => $this->retiroMotivo ?: null,
                     'documento_path'  => $documentoPath,
                     'recargo_cobrado' => false,
@@ -1209,6 +1314,10 @@ class Matriculacion extends Component
                 $matricula->update(['estado' => 'Retirada']);
 
                 $matricula->detalles()->update(['estado' => 'Retirado']);
+
+                ObligacionesFinanciera::where('matricula_id', $matricula->id)
+                    ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
+                    ->update(['estado' => 'Invalidado']);
             });
 
             $nombre = $matricula->estudiante->name;
@@ -1255,10 +1364,11 @@ class Matriculacion extends Component
     {
         return view('livewire.administration.matriculacion', [
             /* 'estudiantes' => User::role('Estudiante')->paginate(10), */
-            'estudiantes' => $this->estudiantes,
-            'periodos' => Periodo::all(),
-            'carreras' => Carrera::all(),
-            'semestres' => Semestre::all(),
+            'estudiantes'               => $this->estudiantes,
+            'periodos'                  => Periodo::all(),
+            'carreras'                  => Carrera::all(),
+            'semestres'                 => Semestre::all(),
+            'totalMateriasSeleccionadas' => $this->totalMateriasActual(),
         ]);
     }
 }

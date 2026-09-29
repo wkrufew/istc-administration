@@ -151,6 +151,7 @@ class BecasEstudiantes extends Component
         $descuentoTotal = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
             ->where('periodo_id', $periodo->id)
             ->whereNotNull('beca_aplicada_id')
+            ->where('estado', '!=', 'Invalidado')
             ->sum('descuento');
 
         $cobertura = $matriculados > 0 ? round($conBeca / $matriculados * 100, 1) : 0;
@@ -189,11 +190,13 @@ class BecasEstudiantes extends Component
 
         $descuentoTotal = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
             ->whereNotNull('beca_aplicada_id')
+            ->where('estado', '!=', 'Invalidado')
             ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
             ->sum('descuento');
 
         $montoOriginalTotal = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
             ->whereNotNull('beca_aplicada_id')
+            ->where('estado', '!=', 'Invalidado')
             ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
             ->sum('monto_original');
 
@@ -257,6 +260,7 @@ class BecasEstudiantes extends Component
 
                 $descCarrera = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
                     ->whereNotNull('beca_aplicada_id')
+                    ->where('estado', '!=', 'Invalidado')
                     ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
                     ->whereIn('user_id', function ($sq) use ($row, $periodo) {
                         $sq->select('user_id')->from('matriculas')
@@ -306,6 +310,7 @@ class BecasEstudiantes extends Component
                 $descPer = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
                     ->where('periodo_id', $row->id)
                     ->whereNotNull('beca_aplicada_id')
+                    ->where('estado', '!=', 'Invalidado')
                     ->sum('descuento');
 
                 $cobertura = $row->total_matriculados > 0

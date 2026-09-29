@@ -6,7 +6,6 @@ use App\Models\AsignacionDocente;
 use App\Models\Calificacion;
 use App\Models\DetalleMatricula;
 use App\Models\Materia;
-use App\Models\MateriasArrastrada;
 use App\Models\Paralelo;
 use App\Models\Periodo;
 use App\Models\User;
@@ -18,6 +17,7 @@ use App\Models\Horario;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Log;
+use App\Services\ArrastreService;
 use App\Services\SettingService;
 use App\Traits\WithAuthorization;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -319,17 +319,6 @@ class CalificacionEstudiante extends Component
             });
     }
 
-    // ── Auto-calculate attempt number from history ────────────────────────────
-    protected function calcularNumeroIntento(int $estudiante_id, int $materia_id): int
-    {
-        $intentos_previos = MateriasArrastrada::where('user_id', $estudiante_id)
-            ->where('materia_id', $materia_id)
-            ->where('periodo_reprobado_id', '!=', $this->periodo_id)
-            ->count();
-
-        return min($intentos_previos + 1, self::MAX_INTENTOS_PERMITIDOS);
-    }
-
     public function abrirFormularioCalificacion($detalle_matricula_id)
     {
         $this->resetearFormulario();
@@ -354,7 +343,7 @@ class CalificacionEstudiante extends Component
 
             $detalle = DetalleMatricula::with('estudiante')->find($detalle_matricula_id);
             if ($detalle && $detalle->estudiante) {
-                $this->numero_intento = $this->calcularNumeroIntento(
+                $this->numero_intento = (new ArrastreService())->calcularNumeroIntento(
                     $detalle->estudiante->id,
                     (int) $this->materia_id
                 );
@@ -663,7 +652,17 @@ class CalificacionEstudiante extends Component
                 $calificacion_guardada = Calificacion::create($datos_calificacion);
             }
 
-            $this->gestionarMateriaArrastrada($calificacion_guardada);
+            $userId = DetalleMatricula::where('id', $this->estudiante_seleccionado['detalle_matricula_id'])->value('user_id');
+            if ($userId) {
+                (new ArrastreService())->gestionar(
+                    $userId,
+                    (int) $this->materia_id,
+                    (int) $this->periodo_id,
+                    (float) $this->nota_final,
+                    $this->nota_minima_aprobacion,
+                    $this->numero_intento,
+                );
+            }
 
             DB::commit();
 
@@ -687,106 +686,6 @@ class CalificacionEstudiante extends Component
                 'title' => 'Error al publicar',
                 'text'  => 'Ocurrió un error: ' . $e->getMessage(),
             ]);
-        }
-    }
-
-    protected function calcularCostoAdicional($materia_id, int $numero_intento = 1)
-    {
-        try {
-            $materia = Materia::find($materia_id);
-            if (!$materia || !$materia->semestre_id) return 0;
-
-            $semestre = \App\Models\Semestre::find($materia->semestre_id);
-            if (!$semestre || !$semestre->carrera_id) return 0;
-
-            $carrera = \App\Models\Carrera::find($semestre->carrera_id);
-            if (!$carrera) return 0;
-
-            $porcentaje    = floatval(SettingService::get('matricula.porcentaje_arrastre', 30));
-            // Intento 2 = falla por 2da vez → siguiente inscripción (intento 3) cuesta el doble
-            if ($numero_intento >= 2) {
-                $porcentaje *= 2;
-            }
-
-            $creditosVivos   = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
-            $costo_normal    = $creditosVivos * $carrera->costo_credito;
-            $costo_adicional = $costo_normal * ($porcentaje / 100);
-
-            return round($costo_adicional, 2);
-        } catch (\Exception $e) {
-            Log::error('Error al calcular costo adicional: ' . $e->getMessage());
-            return 0;
-        }
-    }
-
-    protected function gestionarMateriaArrastrada($calificacion_guardada)
-    {
-        $detalle_matricula = DetalleMatricula::with(['matricula', 'estudiante'])
-            ->find($this->estudiante_seleccionado['detalle_matricula_id']);
-
-        if (!$detalle_matricula) return;
-
-        $estudiante_id = $detalle_matricula->estudiante->id;
-        $materia_id    = $this->materia_id;
-        $periodo_id    = $this->periodo_id;
-
-        $arrastre_existente = MateriasArrastrada::where('user_id', $estudiante_id)
-            ->where('materia_id', $materia_id)
-            ->where('periodo_reprobado_id', $periodo_id)
-            ->first();
-
-        $nota_minima_arrastre = $this->nota_minima_aprobacion - 3;
-
-        if ($this->calificacionCompleta()) {
-            if ($this->nota_final >= $this->nota_minima_aprobacion) {
-                $arrastre_existente?->delete();
-            } elseif ($this->nota_final < $nota_minima_arrastre) {
-                $numero_intento  = $arrastre_existente?->numero_intento ?? $this->numero_intento;
-                $porcentaje_base = floatval(SettingService::get('matricula.porcentaje_arrastre', 30));
-                $porcentaje_real = $numero_intento >= 2 ? $porcentaje_base * 2 : $porcentaje_base;
-                $costo_adicional = $this->calcularCostoAdicional($materia_id, $numero_intento);
-
-                $datos_arrastre = [
-                    'user_id'               => $estudiante_id,
-                    'materia_id'            => $materia_id,
-                    'periodo_reprobado_id'  => $periodo_id,
-                    'nota_obtenida'         => $this->nota_final,
-                    'nota_minima_requerida' => $this->nota_minima_aprobacion,
-                    'porcentaje_penalizacion' => $porcentaje_real,
-                    'numero_intento'        => $numero_intento,
-                    'estado'                => 'Perdida_Definitiva',
-                    'costo_adicional'       => $costo_adicional,
-                ];
-
-                $arrastre_existente
-                    ? $arrastre_existente->update($datos_arrastre)
-                    : MateriasArrastrada::create($datos_arrastre);
-            } elseif ($this->nota_final >= $nota_minima_arrastre && $this->nota_final < $this->nota_minima_aprobacion) {
-                $tiene_suspenso = $this->nota_suspenso !== '' && $this->nota_suspenso !== null;
-
-                if ($tiene_suspenso) {
-                    $numero_intento  = $arrastre_existente?->numero_intento ?? $this->numero_intento;
-                    $porcentaje_base = floatval(SettingService::get('matricula.porcentaje_arrastre', 30));
-                    $porcentaje_real = $numero_intento >= 2 ? $porcentaje_base * 2 : $porcentaje_base;
-                    $costo_adicional = $this->calcularCostoAdicional($materia_id, $numero_intento);
-
-                    $datos_arrastre = [
-                        'user_id'               => $estudiante_id,
-                        'materia_id'            => $materia_id,
-                        'periodo_reprobado_id'  => $periodo_id,
-                        'nota_obtenida'         => $this->nota_final,
-                        'nota_minima_requerida' => $this->nota_minima_aprobacion,
-                        'porcentaje_penalizacion' => $porcentaje_real,
-                        'numero_intento'        => $numero_intento,
-                        'estado'                => 'Arrastrada',
-                        'costo_adicional'       => $costo_adicional,
-                    ];
-
-                    $arrastre_existente
-                        ? $arrastre_existente->update($datos_arrastre)
-                        : MateriasArrastrada::create($datos_arrastre);
-                }
-            }
         }
     }
 

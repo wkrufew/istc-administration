@@ -38,6 +38,9 @@
         @endif
     </div>
 
+    {{-- ══ WIZARD (solo si aún no existe una convalidación confirmada) ══ --}}
+    @if ($this->historial->isEmpty())
+
     {{-- ══ INDICADOR DE PASOS ══ --}}
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
         <div class="flex items-center justify-between">
@@ -475,7 +478,9 @@
         @endif
     </div>
 
-    {{-- ══ HISTORIAL DE CONVALIDACIONES ══ --}}
+    @endif {{-- historial->isEmpty() --}}
+
+    {{-- ══ DETALLE DE VALIDACIÓN DE CONOCIMIENTO ══ --}}
     @if ($this->historial->isNotEmpty())
         <div class="mt-8 space-y-3">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -483,7 +488,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                Historial de convalidaciones
+                Detalle de Validación de Conocimiento
             </h3>
 
             @foreach ($this->historial as $conv)
@@ -492,7 +497,7 @@
 
                     <button type="button" @click="open = !open"
                             class="w-full flex items-center justify-between px-5 py-4 text-left
-                                   hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                                   hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
                         <div class="flex items-center gap-3">
                             <span class="px-2.5 py-1 rounded-lg text-xs font-semibold
                                 {{ $conv->estado === 'Confirmada'
@@ -519,7 +524,7 @@
                                    wire:click.stop
                                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline px-2 py-1
                                           rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                                    Ver PDF
+                                    Ver acta de validación
                                 </a>
                             @endif
                             <svg class="w-4 h-4 text-gray-400 transition-transform duration-200"
@@ -539,32 +544,55 @@
                          x-transition:leave-end="opacity-0"
                          class="border-t border-gray-100 dark:border-gray-700">
                         @if ($conv->observaciones)
-                            <p class="px-5 pt-3 text-xs text-gray-500 dark:text-gray-400 italic">
-                                {{ $conv->observaciones }}
-                            </p>
+                            <div class="px-5 pt-3 pb-1">
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
+                                    Observación
+                                </p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300 italic">
+                                    {{ $conv->observaciones }}
+                                </p>
+                            </div>
                         @endif
-                        <div class="divide-y divide-gray-50 dark:divide-gray-700/50 px-2 pb-2 pt-2">
-                            @foreach ($conv->detalles->sortBy('materia.name') as $det)
-                                <div class="flex items-center justify-between px-3 py-2">
-                                    <div>
-                                        <p class="text-sm text-gray-800 dark:text-gray-200">{{ $det->materia->name ?? '—' }}</p>
-                                        <p class="text-xs text-gray-400 dark:text-gray-500">{{ $det->materia->code ?? '—' }}</p>
+
+                        @php
+                            $porSemestre = $conv->detalles
+                                ->sortBy(fn($d) => [
+                                    $d->materia?->semestre?->order ?? 99,
+                                    $d->materia?->name,
+                                ])
+                                ->groupBy(fn($d) => $d->materia?->semestre_id ?? 0);
+                        @endphp
+
+                        @foreach ($porSemestre as $semId => $detallesSem)
+                            @php $semNombre = $detallesSem->first()?->materia?->semestre?->name ?? 'Sin semestre'; @endphp
+                            <div class="px-5 py-2 bg-gray-50 dark:bg-gray-700/40 border-t border-gray-100 dark:border-gray-700">
+                                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    {{ $semNombre }}
+                                </span>
+                            </div>
+                            <div class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                                @foreach ($detallesSem as $det)
+                                    <div class="flex items-center justify-between px-5 py-2.5">
+                                        <div>
+                                            <p class="text-sm text-gray-800 dark:text-gray-200">{{ $det->materia->name ?? '—' }}</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ $det->materia->code ?? '—' }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm font-bold
+                                                {{ $det->estado === 'Aprobado' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
+                                                {{ number_format($det->nota, 2) }}
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded-md text-xs font-semibold
+                                                {{ $det->estado === 'Aprobado'
+                                                    ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                                                    : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' }}">
+                                                {{ $det->estado }}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm font-bold
-                                            {{ $det->estado === 'Aprobado' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
-                                            {{ number_format($det->nota, 2) }}
-                                        </span>
-                                        <span class="px-2 py-0.5 rounded-md text-xs font-semibold
-                                            {{ $det->estado === 'Aprobado'
-                                                ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                                                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' }}">
-                                            {{ $det->estado }}
-                                        </span>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
+                                @endforeach
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             @endforeach

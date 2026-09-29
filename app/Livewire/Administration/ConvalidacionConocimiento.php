@@ -77,8 +77,9 @@ class ConvalidacionConocimiento extends Component
             'carrera:id,name',
             'periodo:id,code',
             'registradoPor:id,name',
-            'detalles' => fn($q) => $q->with('materia:id,name,code,semestre_id')
-                                       ->orderBy('estado'),
+            'detalles' => fn($q) => $q->with([
+                'materia' => fn($mq) => $mq->with('semestre:id,name,order'),
+            ])->orderBy('estado'),
         ])
             ->where('user_id', $this->userId)
             ->orderByDesc('created_at')

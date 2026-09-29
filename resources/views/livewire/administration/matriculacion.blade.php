@@ -146,7 +146,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-white/[0.04]">
                     @forelse($estudiantes as $student)
-                        @php $matriculaActual = $student->matriculas->first(); @endphp
+                        @php $matriculaActual = $student->matriculas->first(fn($m) => $m->tipo !== 'Validacion'); @endphp
                         <tr class="group hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors duration-150">
 
                             {{-- Estudiante --}}
@@ -513,10 +513,8 @@
                                             <span
                                                 class="text-[0.65rem] text-slate-500 uppercase tracking-wide w-16 flex-shrink-0 mt-0.5">Edad</span>
                                             <span class="text-xs text-slate-600 dark:text-white/70">
-                                                {{ $estudiante->fecha_nacimiento }}
-                                                <span
-                                                    class="text-slate-400 dark:text-slate-400">({{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->age }}
-                                                    años)</span>
+                                                {{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->isoFormat('D [de] MMMM [de] YYYY') }}
+                                                <span class="text-slate-400 dark:text-slate-400">({{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->age }} años)</span>
                                             </span>
                                         </div>
                                     </div>
@@ -605,16 +603,18 @@
                                             <div class="space-y-2">
                                                 @foreach ($materiasArrastradas as $index => $materiaArrastrada)
                                                     @php
-                                                        $intento      = $materiaArrastrada['numero_intento'] ?? 1;
-                                                        $sigIntento   = $intento + 1;
-                                                        $porcentaje   = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
-                                                        $costoExtra   = $materiaArrastrada['costo_adicional'] ?? 0;
-                                                        $esUltimo     = $sigIntento >= 3;
+                                                        $intento             = $materiaArrastrada['numero_intento'] ?? 1;
+                                                        $sigIntento          = $intento + 1;
+                                                        $porcentaje          = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
+                                                        $costoExtra          = $materiaArrastrada['costo_adicional'] ?? 0;
+                                                        $esUltimo            = $sigIntento >= 3;
+                                                        $bloqueadoPorLimite  = $totalMateriasSeleccionadas >= 8 && !($materiaArrastrada['incluir'] ?? false);
                                                     @endphp
-                                                    <label class="flex items-start gap-2.5 cursor-pointer group">
+                                                    <label class="flex items-start gap-2.5 {{ $bloqueadoPorLimite ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }} group">
                                                         <input type="checkbox" class="w-4 h-4 rounded accent-amber-500 mt-0.5 flex-shrink-0"
                                                             wire:model="materiasArrastradas.{{ $index }}.incluir"
-                                                            id="arrastre_{{ $index }}">
+                                                            id="arrastre_{{ $index }}"
+                                                            {{ $bloqueadoPorLimite ? 'disabled' : '' }}>
                                                         <div class="flex-1 border-l-2 {{ $esUltimo ? 'border-red-500/60' : 'border-amber-500/50' }} pl-2">
                                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                                 <strong class="text-xs text-slate-700 dark:text-white/85">
@@ -646,8 +646,18 @@
                         {{-- ── PASO 2: Materias ── --}}
                         @if ($paso == 2)
                             <div class="pt-5">
-                                <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 mb-4">
-                                    Materias Disponibles</h4>
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
+                                        Materias Disponibles</h4>
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[0.65rem] font-semibold
+                                        {{ $totalMateriasSeleccionadas >= 8
+                                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                            : ($totalMateriasSeleccionadas >= 6
+                                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                : 'bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-700/60 dark:text-slate-400 dark:border-transparent') }}">
+                                        {{ $totalMateriasSeleccionadas }} / 8 materias
+                                    </span>
+                                </div>
 
                                 @if (empty($materiasDisponibles))
                                     <div
@@ -684,15 +694,21 @@
                                                 </div>
                                                 <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                                     @foreach ($materias as $materia)
+                                                        @php
+                                                            $bloqueadoPorLimite = $totalMateriasSeleccionadas >= 8 && !in_array($materia['id'], $materiasSeleccionadas);
+                                                            $deshabilitada = !$materia['puede_inscribir'] || $bloqueadoPorLimite;
+                                                            $noOfertada = !($materia['ofertada'] ?? true);
+                                                        @endphp
                                                         <label
-                                                            class="cursor-pointer {{ !$materia['puede_inscribir'] ? 'opacity-50 cursor-not-allowed' : '' }}">
+                                                            class="cursor-pointer {{ $deshabilitada ? 'opacity-50 cursor-not-allowed' : '' }}">
                                                             <input type="checkbox" class="sr-only peer"
                                                                 value="{{ $materia['id'] }}"
                                                                 wire:model="materiasSeleccionadas"
-                                                                {{ !$materia['puede_inscribir'] ? 'disabled' : '' }}>
+                                                                {{ $deshabilitada ? 'disabled' : '' }}>
                                                             <div
-                                                                class="border border-slate-100 dark:border-white/[0.06] rounded-lg p-3 bg-white dark:bg-slate-900 transition-all duration-150
-                                                            {{ $materia['puede_inscribir'] ? 'hover:border-lime-500/30 hover:bg-lime-500/[0.04]' : '' }}
+                                                                class="border rounded-lg p-3 bg-white dark:bg-slate-900 transition-all duration-150
+                                                            {{ $noOfertada ? 'border-slate-200 dark:border-white/[0.04] opacity-60' : 'border-slate-100 dark:border-white/[0.06]' }}
+                                                            {{ !$deshabilitada && !$noOfertada ? 'hover:border-lime-500/30 hover:bg-lime-500/[0.04]' : '' }}
                                                             peer-checked:border-lime-500/40 peer-checked:bg-lime-500/[0.07]">
                                                                 <p class="text-xs font-medium text-slate-700 dark:text-white/80 mb-0.5">
                                                                     {{ $materia['name'] }}</p>
@@ -725,6 +741,14 @@
                                                                             <p class="text-[0.6rem] text-red-400/70">•
                                                                                 {{ $pre }}</p>
                                                                         @endforeach
+                                                                    </div>
+                                                                @endif
+                                                                @if ($noOfertada)
+                                                                    <div class="mt-1.5 flex items-center gap-1 text-[0.6rem] text-slate-400 dark:text-slate-500">
+                                                                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                                                        </svg>
+                                                                        No ofertada este período
                                                                     </div>
                                                                 @endif
                                                             </div>
@@ -1245,6 +1269,38 @@
                             </p>
                         </div>
 
+                        {{-- Tipo de retiro --}}
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Tipo de retiro <span class="text-red-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" wire:click="$set('retiroTipo', 'Voluntario')"
+                                    class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all
+                                        {{ $retiroTipo === 'Voluntario'
+                                            ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-orange-300 dark:hover:border-orange-500/40' }}">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    Voluntario
+                                </button>
+                                <button type="button" wire:click="$set('retiroTipo', 'Administrativo')"
+                                    class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all
+                                        {{ $retiroTipo === 'Administrativo'
+                                            ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-orange-300 dark:hover:border-orange-500/40' }}">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Administrativo
+                                </button>
+                            </div>
+                            @error('retiroTipo')
+                                <p class="mt-1.5 text-xs text-red-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <div>
                             <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                 Fecha de retiro <span class="text-red-500">*</span>
@@ -1491,7 +1547,7 @@
                                 <td class="px-4 py-3">{{ $student->email }}</td>
                                 <td class="px-4 py-3 text-center">
                                     @php
-                                        $matriculaActual = $student->matriculas->first();
+                                        $matriculaActual = $student->matriculas->first(fn($m) => $m->tipo !== 'Validacion');
                                     @endphp
                                     @if ($matriculaActual)
                                         <div>
@@ -1700,9 +1756,8 @@
                                                     <p><span class="font-medium">Celular:</span> {{ $estudiante->phone }}
                                                     </p>
                                                     <p><span class="font-medium">Fecha de nacimiento:</span>
-                                                        {{ $estudiante->fecha_nacimiento }}
-                                                        ({{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->age }}
-                                                        años)
+                                                        {{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->isoFormat('D [de] MMMM [de] YYYY') }}
+                                                        ({{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->age }} años)
                                                     </p>
                                                     <p><span class="font-medium">Matrícula:</span>
                                                         {{ $estudiante->matricula_numero }}</p>
@@ -1788,17 +1843,19 @@
                                                         <div class="space-y-3">
                                                             @foreach ($materiasArrastradas as $index => $materiaArrastrada)
                                                                 @php
-                                                                    $intento    = $materiaArrastrada['numero_intento'] ?? 1;
-                                                                    $sigIntento = $intento + 1;
-                                                                    $porcentaje = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
-                                                                    $costoExtra = $materiaArrastrada['costo_adicional'] ?? 0;
-                                                                    $esUltimo   = $sigIntento >= 3;
+                                                                    $intento            = $materiaArrastrada['numero_intento'] ?? 1;
+                                                                    $sigIntento         = $intento + 1;
+                                                                    $porcentaje         = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
+                                                                    $costoExtra         = $materiaArrastrada['costo_adicional'] ?? 0;
+                                                                    $esUltimo           = $sigIntento >= 3;
+                                                                    $bloqueadoPorLimite = $totalMateriasSeleccionadas >= 8 && !($materiaArrastrada['incluir'] ?? false);
                                                                 @endphp
-                                                                <div class="flex items-start gap-2">
+                                                                <div class="flex items-start gap-2 {{ $bloqueadoPorLimite ? 'opacity-50' : '' }}">
                                                                     <input type="checkbox"
-                                                                        class="h-4 w-4 text-amber-500 focus:ring-amber-500 border-gray-300 rounded mt-0.5 flex-shrink-0"
+                                                                        class="h-4 w-4 text-amber-500 focus:ring-amber-500 border-gray-300 rounded mt-0.5 flex-shrink-0 {{ $bloqueadoPorLimite ? 'cursor-not-allowed' : '' }}"
                                                                         wire:model="materiasArrastradas.{{ $index }}.incluir"
-                                                                        id="arrastre_{{ $index }}">
+                                                                        id="arrastre_{{ $index }}"
+                                                                        {{ $bloqueadoPorLimite ? 'disabled' : '' }}>
                                                                     <div class="border-l-2 {{ $esUltimo ? 'border-red-400' : 'border-amber-400' }} pl-2 flex-1">
                                                                         <label for="arrastre_{{ $index }}" class="cursor-pointer">
                                                                             <div class="flex items-center gap-1.5 flex-wrap">
@@ -1830,7 +1887,17 @@
 
                                 @if ($paso == 2)
                                     <div>
-                                        <h4 class="text-lg font-semibold text-gray-900 mb-4">Materias Disponibles</h4>
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h4 class="text-lg font-semibold text-gray-900">Materias Disponibles</h4>
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+                                                {{ $totalMateriasSeleccionadas >= 8
+                                                    ? 'bg-red-100 text-red-700 border border-red-200'
+                                                    : ($totalMateriasSeleccionadas >= 6
+                                                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                        : 'bg-gray-100 text-gray-600 border border-gray-200') }}">
+                                                {{ $totalMateriasSeleccionadas }} / 8 materias
+                                            </span>
+                                        </div>
                                         @if (empty($materiasDisponibles))
                                             <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
                                                 <div class="flex">
@@ -1874,15 +1941,21 @@
                                                             <div
                                                                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                                 @foreach ($materias as $materia)
+                                                                    @php
+                                                                        $bloqueadoPorLimite = $totalMateriasSeleccionadas >= 8 && !in_array($materia['id'], $materiasSeleccionadas);
+                                                                        $deshabilitada = !$materia['puede_inscribir'] || $bloqueadoPorLimite;
+                                                                        $noOfertada = !($materia['ofertada'] ?? true);
+                                                                    @endphp
                                                                     <div class="relative">
-                                                                        <label class="cursor-pointer">
+                                                                        <label class="cursor-pointer {{ $deshabilitada ? 'cursor-not-allowed' : '' }}">
                                                                             <input type="checkbox" class="sr-only peer"
                                                                                 value="{{ $materia['id'] }}"
                                                                                 wire:model="materiasSeleccionadas"
-                                                                                {{ !$materia['puede_inscribir'] ? 'disabled' : '' }}>
+                                                                                {{ $deshabilitada ? 'disabled' : '' }}>
                                                                             <div
                                                                                 class="border-2 rounded-lg p-3 transition-all duration-200
-                                                                            {{ !$materia['puede_inscribir'] ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500' }}
+                                                                            {{ $noOfertada ? 'border-gray-200 opacity-60' : '' }}
+                                                                            {{ $deshabilitada ? 'opacity-50 cursor-not-allowed' : (!$noOfertada ? 'hover:border-blue-500' : '') }}
                                                                             peer-checked:border-blue-500 peer-checked:bg-blue-50">
                                                                                 <h6
                                                                                     class="font-semibold text-gray-900 mb-1">
@@ -1920,6 +1993,14 @@
                                                                                                 </li>
                                                                                             @endforeach
                                                                                         </ul>
+                                                                                    </div>
+                                                                                @endif
+                                                                                @if ($noOfertada)
+                                                                                    <div class="mt-2 flex items-center gap-1.5 text-xs text-gray-400">
+                                                                                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                                                                        </svg>
+                                                                                        No ofertada este período
                                                                                     </div>
                                                                                 @endif
                                                                             </div>

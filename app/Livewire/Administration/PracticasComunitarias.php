@@ -4,6 +4,7 @@ namespace App\Livewire\Administration;
 
 use App\Models\Carrera;
 use App\Models\Comunitaria;
+use App\Models\Convalidacion;
 use App\Models\NotaTitulacion;
 use App\Models\User;
 use Livewire\Component;
@@ -106,12 +107,24 @@ class PracticasComunitarias extends Component
     // =========================================================================
     // BUSCADOR PREDICTIVO DE ESTUDIANTE
     // =========================================================================
+
+    // Umbrales de semestres completados requeridos para prácticas comunitarias
+    // Tecnológica: haber aprobado 1er semestre (umbral=1)
+    // Tecnicatura: basta estar matriculado en 1er semestre, sin completarlo (umbral=0)
+    private function umbralComunitaria(string $tipo): int
+    {
+        return match($tipo) {
+            Carrera::TIPO_TECNOLOGICA => 1,
+            Carrera::TIPO_TECNICATURA => 0,
+            default                   => 99,
+        };
+    }
+
     #[Computed]
     public function estudiantesSugeridos()
     {
         if (strlen($this->busquedaEstudiante) < 3) return collect();
 
-        // Solo estudiantes con al menos el 80% de la malla aprobada
         return User::role('estudiante')
             ->where(
                 fn($q) =>
@@ -120,11 +133,33 @@ class PracticasComunitarias extends Component
             )
             ->with(['matriculas' => fn($q) => $q->where('estado', 'Habilitada')->with('carrera')->latest()])
             ->get()
-            ->filter(function ($user) {
-                $matricula = $user->matriculas->first();
-                if (! $matricula) return false;
-                return NotaTitulacion::mallaAlcanza80Porciento($user->id, $matricula->carrera_id);
+            ->map(function ($user) {
+                $matricula     = $user->matriculas->first();
+                $carrera       = $matricula?->carrera;
+                $completados   = $carrera ? Carrera::contarSemestresCompletados($user->id, $carrera->id) : 0;
+                $umbral        = $carrera ? $this->umbralComunitaria($carrera->tipo) : 99;
+                $convalidacion = $carrera
+                    ? Convalidacion::where('user_id', $user->id)
+                        ->where('carrera_id', $carrera->id)
+                        ->where('estado', 'Confirmada')
+                        ->exists()
+                    : false;
+
+                return [
+                    'id'            => $user->id,
+                    'name'          => $user->name,
+                    'cedula'        => $user->cedula,
+                    'carrera_id'    => $carrera?->id,
+                    'carrera_code'  => $carrera?->code,
+                    'carrera_tipo'  => $carrera?->tipo_label,
+                    'completados'   => $completados,
+                    'total'         => $carrera?->duracion_semestres ?? 0,
+                    'umbral'        => $umbral,
+                    'convalidacion' => $convalidacion,
+                    'habilitado'    => $convalidacion || $completados >= $umbral,
+                ];
             })
+            ->filter(fn($s) => $s['habilitado'])
             ->take(6);
     }
 
@@ -258,12 +293,7 @@ class PracticasComunitarias extends Component
         $nota     = $this->nota !== '' ? (float) $this->nota : null;
         $horas    = (int) ($this->totalHoras ?: 0);
 
-        if ($nota !== null && $nota >= 7 && $horas < $horasMin) {
-            $this->addError('totalHoras', "Se requieren mínimo {$horasMin} horas para {$carrera->tipo_label} ({$horas} registradas).");
-            return;
-        }
-
-        // Auto-determinar estado basado en nota
+        // Auto-determinar estado basado en nota y horas
         $estadoCalculado = $this->estado;
         if ($nota !== null) {
             if ($nota >= 7 && $horas >= $horasMin) {
@@ -271,6 +301,13 @@ class PracticasComunitarias extends Component
             } elseif ($nota < 7) {
                 $estadoCalculado = 'Reprobada';
             }
+            // nota >= 7 pero horas insuficientes → queda en estado actual (guardado progresivo)
+        }
+
+        // Solo bloquear si el estado resultante sería Completada pero las horas no alcanzan
+        if ($estadoCalculado === 'Completada' && $horas < $horasMin) {
+            $this->addError('totalHoras', "Se requieren mínimo {$horasMin} horas para {$carrera->tipo_label} ({$horas} registradas).");
+            return;
         }
 
         try {
@@ -326,7 +363,7 @@ class PracticasComunitarias extends Component
                 if ($this->certificadoPath) Storage::disk('public')->delete($this->certificadoPath);
                 $ext = $this->certificado->getClientOriginalExtension();
                 $datos['certificado_empresa_path'] = $this->certificado->storeAs(
-                    'comunita/certificados',
+                    'comunitarias/certificados',
                     "CERTIFICADO_{$cedula}_{$fecha}.{$ext}",
                     'public'
                 );
@@ -358,7 +395,7 @@ class PracticasComunitarias extends Component
             DB::commit();
 
             $this->cerrarModal();
-            $this->dispatch('swal', ['tipo' => 'success', 'mensaje' => $mensaje]);
+            $this->dispatch('swal', ['toast' => true, 'icon' => 'success', 'title' => $mensaje]);
         } catch (\Exception $e) {
             DB::rollBack();
             $this->addError('general', 'Error al guardar: ' . $e->getMessage());
@@ -382,9 +419,9 @@ class PracticasComunitarias extends Component
                 Storage::disk('public')->delete($comunitaria->certificado_empresa_path);
 
             $comunitaria->delete();
-            $this->dispatch('swal', ['tipo' => 'success', 'mensaje' => 'Práctica eliminada correctamente.']);
+            $this->dispatch('swal', ['toast' => true, 'icon' => 'success', 'title' => 'Práctica eliminada correctamente.']);
         } catch (\Exception $e) {
-            $this->dispatch('swal', ['tipo' => 'error', 'mensaje' => 'No se pudo eliminar la práctica.']);
+            $this->dispatch('swal', ['toast' => true, 'icon' => 'error', 'title' => 'No se pudo eliminar la práctica.']);
         }
     }
 

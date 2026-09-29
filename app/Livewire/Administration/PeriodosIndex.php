@@ -71,7 +71,7 @@ class PeriodosIndex extends Component
             $obligacionesPendientes = ObligacionesFinanciera::with('pagos')
                 ->where('periodo_id', $periodo->id)
                 ->where('tipo', 'COLEGIATURA')
-                ->where('estado', '!=', 'Pagado')
+                ->whereNotIn('estado', ['Pagado', 'Invalidado'])
                 ->get();
 
             // Recoger becas antes de actualizar las obligaciones

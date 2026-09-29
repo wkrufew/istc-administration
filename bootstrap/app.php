@@ -102,4 +102,18 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect($safeRedirect())->with('swal', $swalDenied($e->getMessage()));
         });
 
+        // ── 4. Sesión expirada (CSRF token inválido) ──────────────────────
+        $exceptions->render(function (
+            \Illuminate\Session\TokenMismatchException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            return redirect()->route('login')
+                ->with('swal', [
+                    'icon'              => 'warning',
+                    'title'             => 'Sesión expirada',
+                    'text'              => 'Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.',
+                    'confirmButtonText' => 'Iniciar sesión',
+                ]);
+        });
+
     })->create();

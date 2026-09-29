@@ -110,7 +110,8 @@ class ReportesFinancieros extends Component
         $cid = $this->carreraId;
 
         $base = ObligacionesFinanciera::where('periodo_id', $pid)
-            ->whereHas('matricula', fn($q) => $q->where('carrera_id', $cid));
+            ->whereHas('matricula', fn($q) => $q->where('carrera_id', $cid))
+            ->where('estado', '!=', 'Invalidado');
 
         $totalObligaciones = (clone $base)->count();
         $montoTotal        = (clone $base)->sum('monto_final');
@@ -170,9 +171,10 @@ class ReportesFinancieros extends Component
             'pagos' => fn($q) => $q->orderByDesc('fecha_pago'),
         ])
             ->whereHas('matricula', fn($q) => $q->where('carrera_id', $this->carreraId))
-            ->when($this->periodoId,    fn($q) => $q->where('periodo_id', $this->periodoId))
-            ->when($this->filtroEstado, fn($q) => $q->where('estado', $this->filtroEstado))
-            ->when($this->filtroTipo,   fn($q) => $q->where('tipo',   $this->filtroTipo))
+            ->when($this->periodoId,     fn($q) => $q->where('periodo_id', $this->periodoId))
+            ->when($this->filtroEstado,  fn($q) => $q->where('estado', $this->filtroEstado))
+            ->when(! $this->filtroEstado, fn($q) => $q->where('estado', '!=', 'Invalidado'))
+            ->when($this->filtroTipo,    fn($q) => $q->where('tipo',   $this->filtroTipo))
             ->when(
                 $this->busqueda,
                 fn($q) =>

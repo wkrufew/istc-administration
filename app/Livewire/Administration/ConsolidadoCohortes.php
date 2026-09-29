@@ -51,6 +51,7 @@ class ConsolidadoCohortes extends Component
             // ── Financiero ────────────────────────────────────────────────────
             $obligaciones = ObligacionesFinanciera::where('periodo_id', $this->periodoId)
                 ->whereHas('matricula', fn($q) => $q->where('carrera_id', $carrera->id))
+                ->where('estado', '!=', 'Invalidado')
                 ->get();
 
             $montoTotal = $obligaciones->sum('monto_final');

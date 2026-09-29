@@ -11,6 +11,7 @@ class Retiro extends Model
         'matricula_id',
         'user_id',
         'fecha_retiro',
+        'tipo',
         'motivo',
         'documento_path',
         'recargo_cobrado',

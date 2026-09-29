@@ -4,6 +4,7 @@ namespace App\Livewire\Administration;
 
 use App\Models\Carrera;
 use App\Models\Convalidacion;
+use App\Models\Periodo;
 use App\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -19,16 +20,20 @@ class ConvalidacionesIndex extends Component
     public string $busqueda     = '';
 
     // Filtros del listado
-    public string $filtroEstado   = '';
-    public string $filtroCarrera  = '';
+    public string $filtroEstado          = '';
+    public string $filtroCarrera         = '';
+    public string $filtroPeriodo         = '';
+    public string $busquedaEstudiante    = '';
 
     public function updatedBusqueda(): void
     {
         // Resetear paginación del modal al escribir
     }
 
-    public function updatedFiltroEstado(): void  { $this->resetPage(); }
-    public function updatedFiltroCarrera(): void { $this->resetPage(); }
+    public function updatedFiltroEstado(): void       { $this->resetPage(); }
+    public function updatedFiltroCarrera(): void      { $this->resetPage(); }
+    public function updatedFiltroPeriodo(): void      { $this->resetPage(); }
+    public function updatedBusquedaEstudiante(): void { $this->resetPage(); }
 
     public function abrirModal(): void
     {
@@ -100,6 +105,12 @@ class ConvalidacionesIndex extends Component
         ])
             ->when($this->filtroEstado,  fn($q) => $q->where('estado',     $this->filtroEstado))
             ->when($this->filtroCarrera, fn($q) => $q->where('carrera_id', $this->filtroCarrera))
+            ->when($this->filtroPeriodo, fn($q) => $q->where('periodo_id', $this->filtroPeriodo))
+            ->when(strlen(trim($this->busquedaEstudiante)) >= 2, fn($q) => $q->whereHas(
+                'estudiante',
+                fn($s) => $s->where('name',   'like', '%' . trim($this->busquedaEstudiante) . '%')
+                             ->orWhere('cedula', 'like', '%' . trim($this->busquedaEstudiante) . '%')
+            ))
             ->orderByDesc('created_at')
             ->paginate(12);
     }
@@ -118,6 +129,12 @@ class ConvalidacionesIndex extends Component
     public function carreras()
     {
         return Carrera::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+    }
+
+    #[Computed]
+    public function periodos()
+    {
+        return Periodo::orderByDesc('fecha_inicio')->get(['id', 'code', 'description']);
     }
 
     #[Layout('layouts.admin')]

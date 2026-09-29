@@ -271,6 +271,66 @@
             </div>
 
             {{-- ================================================================
+             PROGRESO POR SEMESTRE
+             ================================================================ --}}
+            @if (!empty($progresoPorSemestre))
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Avance en la Carrera</p>
+                <div class="flex flex-wrap gap-2.5">
+                    @foreach ($progresoPorSemestre as $sem)
+                        @php $pct = $sem['total'] > 0 ? round($sem['aprobadas'] / $sem['total'] * 100) : 0; @endphp
+
+                        @if ($sem['estado'] === 'completado')
+                        <div class="flex items-center gap-2.5 bg-green-50 border border-green-200 rounded-xl px-3.5 py-2.5">
+                            <div class="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-green-800 leading-tight">{{ $sem['nombre'] }}</p>
+                                <p class="text-[0.6rem] text-green-600 leading-tight">{{ $sem['aprobadas'] }}/{{ $sem['total'] }} aprobadas</p>
+                            </div>
+                        </div>
+
+                        @elseif ($sem['estado'] === 'en_curso')
+                        <div class="flex items-center gap-2.5 bg-blue-50 border border-blue-300 rounded-xl px-3.5 py-2.5 shadow-sm">
+                            <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="min-w-[96px]">
+                                <p class="text-xs font-bold text-blue-800 leading-tight">{{ $sem['nombre'] }} · En curso</p>
+                                <p class="text-[0.6rem] text-blue-600 leading-tight mb-1.5">{{ $sem['aprobadas'] }}/{{ $sem['total'] }} aprobadas</p>
+                                <div class="h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                                    <div class="h-1.5 bg-blue-500 rounded-full transition-all" style="width:{{ $pct }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @else
+                        <div class="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 opacity-50">
+                            <div class="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 leading-tight">{{ $sem['nombre'] }}</p>
+                                <p class="text-[0.6rem] text-gray-400 leading-tight">Bloqueado</p>
+                            </div>
+                        </div>
+                        @endif
+
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            {{-- ================================================================
              FILA: Materias + Financiero
              ================================================================ --}}
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

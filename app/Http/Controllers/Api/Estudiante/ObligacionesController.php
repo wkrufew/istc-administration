@@ -67,9 +67,10 @@ class ObligacionesController extends Controller
 
         $paginado = ObligacionesFinanciera::with(['periodo', 'matricula.carrera', 'pagos'])
             ->where('user_id', $userId)
-            ->when($request->tipo,       fn($q) => $q->where('tipo', $request->tipo))
-            ->when($request->estado,     fn($q) => $q->where('estado', $request->estado))
-            ->when($request->periodo_id, fn($q) => $q->where('periodo_id', $request->periodo_id))
+            ->when($request->tipo,        fn($q) => $q->where('tipo', $request->tipo))
+            ->when($request->estado,      fn($q) => $q->where('estado', $request->estado))
+            ->when(! $request->estado,    fn($q) => $q->where('estado', '!=', 'Invalidado'))
+            ->when($request->periodo_id,  fn($q) => $q->where('periodo_id', $request->periodo_id))
             ->orderByRaw("FIELD(estado, 'Pendiente', 'Parcial', 'Vencido', 'Pagado')")
             ->orderBy('fecha_vencimiento')
             ->paginate(10);
@@ -94,10 +95,10 @@ class ObligacionesController extends Controller
             ->where('user_id', $userId)
             ->findOrFail($id);
 
-        if ($obligacion->estado === 'Pagado') {
+        if (in_array($obligacion->estado, ['Pagado', 'Invalidado'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Esta obligación ya está pagada.',
+                'message' => 'Esta obligación no está disponible para pago.',
             ], 422);
         }
 

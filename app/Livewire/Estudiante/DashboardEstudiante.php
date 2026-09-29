@@ -3,6 +3,7 @@
 namespace App\Livewire\Estudiante;
 
 use Livewire\Component;
+use App\Models\Carrera;
 use App\Models\Periodo;
 use App\Models\Matricula;
 use App\Models\DetalleMatricula;
@@ -12,6 +13,7 @@ use App\Models\ConvenioAplicado;
 use App\Models\ObligacionesFinanciera;
 use App\Models\AsignacionDocente;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 
 class DashboardEstudiante extends Component
@@ -106,6 +108,7 @@ class DashboardEstudiante extends Component
 
         $obligaciones = ObligacionesFinanciera::where('user_id', $this->idUser)
             ->where('periodo_id', $this->periodoSeleccionado)
+            ->where('estado', '!=', 'Invalidado')
             ->get();
 
         return [
@@ -191,6 +194,59 @@ class DashboardEstudiante extends Component
         ];
     }
 
+    // Progreso semestral a lo largo de toda la carrera (solo lectura)
+    #[Computed]
+    public function progresoPorSemestre(): array
+    {
+        $carreraId = $this->matricula?->carrera_id;
+        if (! $carreraId) return [];
+
+        $carrera = Carrera::with([
+            'semestres' => fn($q) => $q->orderBy('order'),
+            'semestres.materias',
+        ])->find($carreraId);
+        if (! $carrera) return [];
+
+        $materiasAprobadas = DB::table('calificacions')
+            ->join('detalle_matriculas', 'calificacions.detalle_matricula_id', '=', 'detalle_matriculas.id')
+            ->join('matriculas', 'detalle_matriculas.matricula_id', '=', 'matriculas.id')
+            ->where('matriculas.user_id', $this->idUser)
+            ->where('calificacions.estado_final', 'Aprobado')
+            ->pluck('detalle_matriculas.materia_id')
+            ->unique()
+            ->all();
+
+        $semestres         = [];
+        $encontradoEnCurso = false;
+
+        foreach ($carrera->semestres as $semestre) {
+            $ids = $semestre->materias->pluck('id')->all();
+            if (empty($ids)) continue;
+
+            $aprobadas  = count(array_intersect($ids, $materiasAprobadas));
+            $completado = $aprobadas === count($ids);
+
+            if ($completado) {
+                $estado = 'completado';
+            } elseif (! $encontradoEnCurso) {
+                $estado            = 'en_curso';
+                $encontradoEnCurso = true;
+            } else {
+                $estado = 'bloqueado';
+            }
+
+            $semestres[] = [
+                'nombre'    => $semestre->name,
+                'order'     => $semestre->order,
+                'total'     => count($ids),
+                'aprobadas' => $aprobadas,
+                'estado'    => $estado,
+            ];
+        }
+
+        return $semestres;
+    }
+
     // Stats rápidas
     #[Computed]
     public function stats()
@@ -221,6 +277,7 @@ class DashboardEstudiante extends Component
             'estudiante'          => Auth::user(),
             'becaYConvenio'       => $this->becaYConvenio,
             'deudaGlobal'         => $this->deudaGlobal,
+            'progresoPorSemestre' => $this->progresoPorSemestre,
         ]);
     }
 }

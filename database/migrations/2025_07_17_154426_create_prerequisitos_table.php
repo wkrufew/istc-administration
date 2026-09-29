@@ -25,7 +25,9 @@ return new class extends Migration
             $table->unique(['materia_id', 'prerequisito_id'], 'unique_prerequisito');
         });
         // Agregar restricción CHECK (solo funciona si tu base usa InnoDB con soporte CHECK)
-        DB::statement('ALTER TABLE prerequisitos ADD CONSTRAINT chk_no_self_prerequisito CHECK (materia_id != prerequisito_id)');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE prerequisitos ADD CONSTRAINT chk_no_self_prerequisito CHECK (materia_id != prerequisito_id)');
+        }
     }
 
     /**

@@ -164,7 +164,7 @@ class DashboardPrincipal extends Component
         $pid = $this->periodoId;
 
         // Totales por estado de obligaciones
-        $totalObligaciones = ObligacionesFinanciera::where('periodo_id', $pid)->sum('monto_final');
+        $totalObligaciones = ObligacionesFinanciera::where('periodo_id', $pid)->where('estado', '!=', 'Invalidado')->sum('monto_final');
         $totalPagado       = ObligacionesFinanciera::where('periodo_id', $pid)->where('estado', 'Pagado')->sum('monto_final');
         $totalPendiente    = ObligacionesFinanciera::where('periodo_id', $pid)->whereIn('estado', ['Pendiente', 'Parcial'])->sum('monto_final');
         $totalVencido      = ObligacionesFinanciera::where('periodo_id', $pid)->where('estado', 'Vencido')->sum('monto_final');
@@ -356,7 +356,7 @@ class DashboardPrincipal extends Component
         $pctMat        = $totalMat > 0 ? round(($habilitadas / $totalMat) * 100) : 0;
 
         // % pagos al día (Pagado / total obligaciones)
-        $totalOblig    = ObligacionesFinanciera::where('periodo_id', $pid)->count();
+        $totalOblig    = ObligacionesFinanciera::where('periodo_id', $pid)->where('estado', '!=', 'Invalidado')->count();
         $pagadas       = ObligacionesFinanciera::where('periodo_id', $pid)->where('estado', 'Pagado')->count();
         $pctPagos      = $totalOblig > 0 ? round(($pagadas / $totalOblig) * 100) : 0;
 

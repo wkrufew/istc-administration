@@ -63,7 +63,7 @@
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if ($tipo->tipo_alcance === 'anual')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">Anual</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">Permanente</span>
                                 @else
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-medium bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400">Semestral</span>
                                 @endif
@@ -168,7 +168,7 @@
                         <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Alcance *</label>
                         <select wire:model="tipo_alcance"
                             class="w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-white/80 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition">
-                            <option value="anual">Anual (persiste todos los semestres)</option>
+                            <option value="anual">Permanente (rige durante toda la carrera)</option>
                             <option value="semestral">Semestral (expira al fin del semestre)</option>
                         </select>
                         @error('tipo_alcance') <p class="text-xs text-red-400 mt-1">{{ $message }}</p> @enderror

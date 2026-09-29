@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite: recrear la tabla no es trivial; solo aseguramos que la columna exista
+            return;
+        }
         // Eliminar FK existente, hacer el campo nullable, re-agregar FK con SET NULL
         DB::statement('ALTER TABLE detalle_matriculas DROP FOREIGN KEY detalle_matriculas_paralelo_id_foreign');
         DB::statement('ALTER TABLE detalle_matriculas MODIFY paralelo_id BIGINT UNSIGNED NULL');
@@ -15,6 +19,9 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
         // Registros sin paralelo no pueden revertirse; esto es solo para entorno de desarrollo
         DB::statement('ALTER TABLE detalle_matriculas DROP FOREIGN KEY detalle_matriculas_paralelo_id_foreign');
         DB::statement('UPDATE detalle_matriculas SET paralelo_id = 0 WHERE paralelo_id IS NULL');

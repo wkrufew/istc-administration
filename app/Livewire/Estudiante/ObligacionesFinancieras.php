@@ -75,9 +75,10 @@ class ObligacionesFinancieras extends Component
     {
         return ObligacionesFinanciera::with(['periodo', 'matricula.carrera', 'pagos', 'becaAplicada.tipoBeca'])
             ->where('user_id', $this->idUser)
-            ->when($this->filtroTipo,    fn($q) => $q->where('tipo', $this->filtroTipo))
-            ->when($this->filtroEstado,  fn($q) => $q->where('estado', $this->filtroEstado))
-            ->when($this->filtroPeriodo, fn($q) => $q->where(function ($sub) {
+            ->when($this->filtroTipo,     fn($q) => $q->where('tipo', $this->filtroTipo))
+            ->when($this->filtroEstado,   fn($q) => $q->where('estado', $this->filtroEstado))
+            ->when(! $this->filtroEstado, fn($q) => $q->where('estado', '!=', 'Invalidado'))
+            ->when($this->filtroPeriodo,  fn($q) => $q->where(function ($sub) {
                 // Muestra obligaciones del período seleccionado + vencidas de cualquier período
                 $sub->where('periodo_id', $this->filtroPeriodo)
                     ->orWhere('estado', 'Vencido');
@@ -163,8 +164,8 @@ class ObligacionesFinancieras extends Component
             ->where('user_id', $this->idUser)
             ->find($obligacionId);
 
-        if (! $obligacion || $obligacion->estado === 'Pagado') {
-            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'Esta obligación ya está pagada.']);
+        if (! $obligacion || in_array($obligacion->estado, ['Pagado', 'Invalidado'])) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'Esta obligación no está disponible para pago.']);
             return;
         }
 

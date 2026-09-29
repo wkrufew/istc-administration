@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\BecaAplicada;
+use App\Models\Convalidacion;
 use App\Models\ConvenioAplicado;
 use App\Models\Matricula;
 use App\Services\MoodleService;
@@ -58,14 +59,37 @@ class MatriculaConfirmada extends Mailable
 
         $obligMatricula    = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'MATRICULA');
-        $obligColegiaturas = $this->matricula->obligacionesFinancieras
-            ->where('tipo', 'COLEGIATURA');
-        $obligColegiatura  = $obligColegiaturas->first();
-        $totalArancel      = $obligColegiaturas->sum('monto_final');
+        $obligColegiaturas    = $this->matricula->obligacionesFinancieras
+            ->where('tipo', 'COLEGIATURA')
+            ->values();
+        $obligColegiatura     = $obligColegiaturas->first();
+        $totalArancel         = $obligColegiaturas->sum('monto_final');
+        $totalArancelOriginal = $obligColegiaturas->sum('monto_original');
         $numCuotasArancel  = $obligColegiaturas->count();
         $obligInscripcion  = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'INSCRIPCION');
         $logoPath = SettingService::get('instituto.logo_path');
+
+        $this->matricula->loadMissing('detalles.materia');
+
+        $convalidacion = Convalidacion::where('user_id', $this->matricula->user_id)
+            ->where('carrera_id', $this->matricula->carrera_id)
+            ->where('estado', 'Confirmada')
+            ->with(['detalles' => fn($q) => $q->where('estado', 'Aprobado')->with('materia')])
+            ->first();
+        $materiasValidadas = $convalidacion?->detalles ?? collect();
+
+        $arrastresDetalle = $this->matricula->detalles
+            ->where('tipo', 'Arrastre')
+            ->filter(fn($d) => (float) ($d->costo_materia ?? 0) > 0)
+            ->map(fn($d) => [
+                'nombre'        => $d->materia?->name ?? '—',
+                'costo_recargo' => number_format((float) $d->costo_materia, 2),
+            ])
+            ->values();
+        $costoArrastresRaw = $this->matricula->detalles
+            ->where('tipo', 'Arrastre')
+            ->sum('costo_materia');
 
         return new Content(
             view: 'emails.matricula.confirmacion',
@@ -95,7 +119,9 @@ class MatriculaConfirmada extends Mailable
                 'fechaLimite'        => $obligMatricula?->fecha_vencimiento
                     ? Carbon::parse($obligMatricula->fecha_vencimiento)->format('d/m/Y') : null,
                 'obligColegiaturas'   => $obligColegiaturas,
-                'montoArancel'        => $totalArancel > 0 ? number_format($totalArancel, 2) : null,
+                'montoArancel'         => $totalArancel > 0 ? number_format($totalArancel, 2) : null,
+                'montoArancelOriginal' => $totalArancelOriginal > 0 && $totalArancelOriginal != $totalArancel
+                    ? number_format($totalArancelOriginal, 2) : null,
                 'numCuotasArancel'    => $numCuotasArancel,
                 'fechaArancel'        => $obligColegiatura?->fecha_vencimiento
                     ? Carbon::parse($obligColegiatura->fecha_vencimiento)->format('d/m/Y') : null,
@@ -103,6 +129,12 @@ class MatriculaConfirmada extends Mailable
                     ? number_format((float) $obligInscripcion->monto_final, 2) : null,
                 'fechaInscripcion'   => $obligInscripcion?->fecha_vencimiento
                     ? Carbon::parse($obligInscripcion->fecha_vencimiento)->format('d/m/Y') : null,
+                'arrastresDetalle'    => $arrastresDetalle,
+                'totalCostoArrastres' => $costoArrastresRaw > 0
+                    ? number_format((float) $costoArrastresRaw, 2) : null,
+                'montoBaseMatricula'  => $obligMatricula && $costoArrastresRaw > 0
+                    ? number_format((float) $obligMatricula->monto_final - $costoArrastresRaw, 2) : null,
+                'materiasValidadas'   => $materiasValidadas,
             ],
         );
     }

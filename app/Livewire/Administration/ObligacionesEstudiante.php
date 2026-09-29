@@ -124,10 +124,11 @@ class ObligacionesEstudiante extends Component
             'pagos',
             'becaAplicada.tipoBeca',
         ])
-            ->when($this->filtroEstudiante,       fn($q) => $q->where('user_id', $this->filtroEstudiante))
-            ->when($this->filtroTipo,             fn($q) => $q->where('tipo', $this->filtroTipo))
-            ->when($this->filtroEstado,           fn($q) => $q->where('estado', $this->filtroEstado))
-            ->when($this->filtroMatricula,        fn($q) => $q->where('matricula_id', $this->filtroMatricula))
+            ->when($this->filtroEstudiante,        fn($q) => $q->where('user_id', $this->filtroEstudiante))
+            ->when($this->filtroTipo,              fn($q) => $q->where('tipo', $this->filtroTipo))
+            ->when($this->filtroEstado,            fn($q) => $q->where('estado', $this->filtroEstado))
+            ->when(! $this->filtroEstado,          fn($q) => $q->where('estado', '!=', 'Invalidado'))
+            ->when($this->filtroMatricula,         fn($q) => $q->where('matricula_id', $this->filtroMatricula))
             ->when($this->filtroPendientesVerif,  fn($q) => $q->whereHas('pagos', fn($p) => $p->where('estado', Pago::ESTADO_PENDIENTE)))
             ->orderByRaw("FIELD(estado, 'Pendiente', 'Parcial', 'Vencido', 'Pagado')")
             ->orderBy('fecha_vencimiento')
@@ -298,8 +299,8 @@ class ObligacionesEstudiante extends Component
     {
         $obligacion = ObligacionesFinanciera::with('pagos', 'estudiante')->find($obligacionId);
 
-        if (! $obligacion || $obligacion->estado === 'Pagado') {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Esta obligación ya está pagada.']);
+        if (! $obligacion || in_array($obligacion->estado, ['Pagado', 'Invalidado'])) {
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Esta obligación no está disponible para pago.']);
             return;
         }
 

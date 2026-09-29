@@ -145,8 +145,12 @@ class NotaTitulacion extends Model
     }
 
     /**
-     * Recalcula la nota final de egreso y actualiza el estado
-     * nota_final_egreso = (promedio_malla + nota_titulacion + nota_practicas) / 3
+     * Recalcula la nota final de egreso y actualiza el estado.
+     *
+     * Fórmula:
+     *   promedio_practicas = (nota_preprofesional + nota_comunitaria) / 2
+     *   nota_acumulada     = (promedio_malla + promedio_practicas) / 2
+     *   nota_final_egreso  = (nota_acumulada + nota_titulacion) / 2
      */
     public function recalcularNotaFinal(): void
     {
@@ -161,11 +165,8 @@ class NotaTitulacion extends Model
             $notaComunitaria       !== null
         ) {
             $promedio_practicas = ((float) $this->nota_practicas + (float) $notaComunitaria) / 2;
-            $notaFinal = (
-                (float) $this->promedio_malla  +
-                (float) $this->nota_titulacion +
-                (float) $promedio_practicas
-            ) / 3;
+            $nota_acumulada     = ((float) $this->promedio_malla + $promedio_practicas) / 2;
+            $notaFinal          = ($nota_acumulada + (float) $this->nota_titulacion) / 2;
 
             $this->nota_final_egreso = round($notaFinal, 2);
             $this->estado = $notaFinal >= self::NOTA_MINIMA

@@ -242,7 +242,7 @@
                             <svg class="w-3 h-3 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
                             <p class="text-[9px] font-bold text-blue-500 uppercase tracking-wide leading-none">Inicio matrícula</p>
                         </div>
-                        <p class="text-xs font-bold text-blue-800 dark:text-blue-300 leading-snug">{{ $cohorte->fecha_inicio_matriculacion->format('d M Y') }}</p>
+                        <p class="text-xs font-bold text-blue-800 dark:text-blue-300 leading-snug">{{ $cohorte->fecha_inicio_matriculacion->isoFormat('D MMM YYYY') }}</p>
                     </div>
                     @endif
 
@@ -253,7 +253,7 @@
                             <svg class="w-3 h-3 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342"/></svg>
                             <p class="text-[9px] font-bold text-emerald-500 uppercase tracking-wide leading-none">Inicio de clases</p>
                         </div>
-                        <p class="text-xs font-bold text-emerald-800 dark:text-emerald-300 leading-snug">{{ $cohorte->fecha_inicio_clases->format('d M Y') }}</p>
+                        <p class="text-xs font-bold text-emerald-800 dark:text-emerald-300 leading-snug">{{ $cohorte->fecha_inicio_clases->isoFormat('D MMM YYYY') }}</p>
                     </div>
                     @endif
 

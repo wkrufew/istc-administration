@@ -17,6 +17,7 @@ class EstudianteAdministration extends Component
         $users = User::permission('acceso_estudiantil')
             ->where(function ($query) {
                 $query->where('name', 'LIKE', '%' . $this->search . '%')
+                    ->orWhere('cedula', 'LIKE', '%' . $this->search . '%')
                     ->orWhere('email', 'LIKE', '%' . $this->search . '%');
             })
             ->with('roles')

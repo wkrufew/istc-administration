@@ -36,6 +36,12 @@ class GestionAspirantes extends Component
     #[Url(as: 'estado')]
     public string $filtroEstado = '';
 
+    #[Url(as: 'tipo')]
+    public string $filtroTipoProceso = '';
+
+    #[Url(as: 'devueltos')]
+    public bool $filtroConDevueltos = false;
+
     // ── Modal detalle / acción ────────────────────────────────────────────
     public bool    $showDetalle    = false;
     public ?int    $aspiranteId    = null;
@@ -87,9 +93,11 @@ class GestionAspirantes extends Component
         $this->apiActiva = ! empty(SettingService::get('cedula_api.token', ''));
     }
 
-    public function updatedBuscar(): void       { $this->resetPage(); }
-    public function updatedFiltroCohorte(): void { $this->resetPage(); }
-    public function updatedFiltroEstado(): void  { $this->resetPage(); }
+    public function updatedBuscar(): void             { $this->resetPage(); }
+    public function updatedFiltroCohorte(): void      { $this->resetPage(); }
+    public function updatedFiltroEstado(): void       { $this->resetPage(); }
+    public function updatedFiltroTipoProceso(): void  { $this->resetPage(); }
+    public function updatedFiltroConDevueltos(): void { $this->resetPage(); }
 
     #[Computed]
     public function cohortes()
@@ -116,6 +124,16 @@ class GestionAspirantes extends Component
             })
             ->when($this->filtroCohorte, fn ($q) => $q->where('cohorte_id', $this->filtroCohorte))
             ->when($this->filtroEstado, fn ($q) => $q->where('estado', $this->filtroEstado))
+            ->when($this->filtroTipoProceso, fn ($q) => $q->where('tipo_proceso', $this->filtroTipoProceso))
+            ->when($this->filtroConDevueltos, fn ($q) => $q->where(fn ($inner) =>
+                $inner->where('cedula_estado',          'rechazado')
+                      ->orWhere('bachiller_estado',     'rechazado')
+                      ->orWhere('habilitante_estado',   'rechazado')
+                      ->orWhere('pago_estado',          'rechazado')
+                      ->orWhere('hoja_vida_estado',     'rechazado')
+                      ->orWhere('cert_laborales_estado','rechazado')
+                      ->orWhere('cert_cursos_estado',   'rechazado')
+            ))
             ->orderByDesc('created_at')
             ->paginate(25);
     }

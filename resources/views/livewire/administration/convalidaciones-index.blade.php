@@ -43,18 +43,47 @@
     </div>
 
     {{-- ══ FILTROS ══ --}}
-    <div class="flex flex-col sm:flex-row gap-3">
+    <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
+        {{-- Buscador por estudiante --}}
+        <div class="relative flex-1 min-w-48">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+            </svg>
+            <input type="text"
+                   wire:model.live.debounce.300ms="busquedaEstudiante"
+                   placeholder="Buscar por nombre o cédula..."
+                   class="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600
+                          bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                          placeholder-gray-400 dark:placeholder-gray-500
+                          shadow-sm focus:border-green-500 focus:ring-green-500 text-sm">
+        </div>
+
+        {{-- Filtro carrera --}}
         <select wire:model.live="filtroCarrera"
                 class="rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
-                       shadow-sm focus:border-green-500 focus:ring-green-500 text-sm">
+                       shadow-sm focus:border-green-500 focus:ring-green-500 text-sm px-3 py-2">
             <option value="">Todas las carreras</option>
             @foreach ($this->carreras as $c)
                 <option value="{{ $c->id }}">{{ $c->name }}</option>
             @endforeach
         </select>
+
+        {{-- Filtro período --}}
+        <select wire:model.live="filtroPeriodo"
+                class="rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
+                       shadow-sm focus:border-green-500 focus:ring-green-500 text-sm px-3 py-2">
+            <option value="">Todos los períodos</option>
+            @foreach ($this->periodos as $p)
+                <option value="{{ $p->id }}">{{ $p->code }}{{ $p->description ? ' — ' . $p->description : '' }}</option>
+            @endforeach
+        </select>
+
+        {{-- Filtro estado --}}
         <select wire:model.live="filtroEstado"
                 class="rounded-xl border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
-                       shadow-sm focus:border-green-500 focus:ring-green-500 text-sm">
+                       shadow-sm focus:border-green-500 focus:ring-green-500 text-sm px-3 py-2">
             <option value="">Todos los estados</option>
             <option value="Confirmada">Confirmada</option>
             <option value="Borrador">Borrador</option>
@@ -80,7 +109,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="bg-gray-50 dark:bg-gray-750 border-b border-gray-100 dark:border-gray-700">
+                    <tr class="bg-gray-50 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700">
                         <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3">
                             Estudiante
                         </th>
@@ -107,7 +136,7 @@
                             $aprobadas  = $conv->detalles->where('estado','Aprobado')->count();
                             $reprobadas = $conv->detalles->where('estado','Reprobado')->count();
                         @endphp
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
                             {{-- Estudiante --}}
                             <td class="px-5 py-3.5">
                                 <div class="flex items-center gap-3">

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Carrera extends Model
 {
@@ -117,6 +118,45 @@ class Carrera extends Model
         return $query->where('is_active', true);
     }
 
+
+    /**
+     * Cuenta cuántos semestres consecutivos (desde el primero) tiene completamente
+     * aprobados un estudiante en esta carrera. Solo cuenta aprobaciones reales
+     * (estado_final = 'Aprobado'), sin incluir arrastres, para determinar elegibilidad
+     * en prácticas comunitarias y preprofesionales.
+     */
+    public static function contarSemestresCompletados(int $userId, int $carreraId): int
+    {
+        $carrera = static::with([
+            'semestres' => fn($q) => $q->orderBy('order'),
+            'semestres.materias',
+        ])->find($carreraId);
+
+        if (! $carrera || $carrera->semestres->isEmpty()) return 0;
+
+        $aprobadas = DB::table('calificacions')
+            ->join('detalle_matriculas', 'calificacions.detalle_matricula_id', '=', 'detalle_matriculas.id')
+            ->join('matriculas', 'detalle_matriculas.matricula_id', '=', 'matriculas.id')
+            ->where('matriculas.user_id', $userId)
+            ->where('matriculas.carrera_id', $carreraId)
+            ->where('calificacions.estado_final', 'Aprobado')
+            ->pluck('detalle_matriculas.materia_id')
+            ->unique()
+            ->all();
+
+        $completados = 0;
+        foreach ($carrera->semestres as $semestre) {
+            $ids = $semestre->materias->pluck('id')->all();
+            if (empty($ids)) continue;
+            if (count(array_intersect($ids, $aprobadas)) === count($ids)) {
+                $completados++;
+            } else {
+                break; // Se detiene al primer semestre incompleto (evaluación consecutiva)
+            }
+        }
+
+        return $completados;
+    }
 
     ///para titulacion y practicas preprofesionales
     public function practicasPreprofesionales()

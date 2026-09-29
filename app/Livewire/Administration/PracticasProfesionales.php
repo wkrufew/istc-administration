@@ -3,7 +3,7 @@
 namespace App\Livewire\Administration;
 
 use App\Models\Carrera;
-use App\Models\NotaTitulacion;
+use App\Models\Convalidacion;
 use App\Models\PracticaPreprofesional;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -105,12 +105,24 @@ class PracticasProfesionales extends Component
     // =========================================================================
     // BUSCADOR PREDICTIVO DE ESTUDIANTE
     // =========================================================================
+
+    // Umbrales de semestres completados requeridos para prácticas preprofesionales
+    // Tecnológica: haber aprobado 2 semestres (umbral=2)
+    // Tecnicatura: haber aprobado 1 semestre (umbral=1)
+    private function umbralPreprofesional(string $tipo): int
+    {
+        return match($tipo) {
+            Carrera::TIPO_TECNOLOGICA => 2,
+            Carrera::TIPO_TECNICATURA => 1,
+            default                   => 99,
+        };
+    }
+
     #[Computed]
     public function estudiantesSugeridos()
     {
         if (strlen($this->busquedaEstudiante) < 3) return collect();
 
-        // Solo estudiantes con al menos el 80% de la malla aprobada
         return User::role('estudiante')
             ->where(
                 fn($q) =>
@@ -119,11 +131,33 @@ class PracticasProfesionales extends Component
             )
             ->with(['matriculas' => fn($q) => $q->where('estado', 'Habilitada')->with('carrera')->latest()])
             ->get()
-            ->filter(function ($user) {
-                $matricula = $user->matriculas->first();
-                if (! $matricula) return false;
-                return NotaTitulacion::mallaAlcanza80Porciento($user->id, $matricula->carrera_id);
+            ->map(function ($user) {
+                $matricula     = $user->matriculas->first();
+                $carrera       = $matricula?->carrera;
+                $completados   = $carrera ? Carrera::contarSemestresCompletados($user->id, $carrera->id) : 0;
+                $umbral        = $carrera ? $this->umbralPreprofesional($carrera->tipo) : 99;
+                $convalidacion = $carrera
+                    ? Convalidacion::where('user_id', $user->id)
+                        ->where('carrera_id', $carrera->id)
+                        ->where('estado', 'Confirmada')
+                        ->exists()
+                    : false;
+
+                return [
+                    'id'            => $user->id,
+                    'name'          => $user->name,
+                    'cedula'        => $user->cedula,
+                    'carrera_id'    => $carrera?->id,
+                    'carrera_code'  => $carrera?->code,
+                    'carrera_tipo'  => $carrera?->tipo_label,
+                    'completados'   => $completados,
+                    'total'         => $carrera?->duracion_semestres ?? 0,
+                    'umbral'        => $umbral,
+                    'convalidacion' => $convalidacion,
+                    'habilitado'    => $convalidacion || $completados >= $umbral,
+                ];
             })
+            ->filter(fn($s) => $s['habilitado'])
             ->take(6);
     }
 
@@ -253,12 +287,7 @@ class PracticasProfesionales extends Component
         $nota      = $this->nota !== '' ? (float) $this->nota : null;
         $horas     = (int) ($this->totalHoras ?: 0);
 
-        if ($nota !== null && $nota >= 7 && $horas < $horasMin) {
-            $this->addError('totalHoras', "Se requieren mínimo {$horasMin} horas para {$carrera->tipo_label} ({$horas} registradas).");
-            return;
-        }
-
-        // Auto-determinar estado basado en nota
+        // Auto-determinar estado basado en nota y horas
         $estadoCalculado = $this->estado;
         if ($nota !== null) {
             if ($nota >= 7 && $horas >= $horasMin) {
@@ -266,6 +295,13 @@ class PracticasProfesionales extends Component
             } elseif ($nota < 7) {
                 $estadoCalculado = 'Reprobada';
             }
+            // nota >= 7 pero horas insuficientes → queda en estado actual (guardado progresivo)
+        }
+
+        // Solo bloquear si el estado resultante sería Completada pero las horas no alcanzan
+        if ($estadoCalculado === 'Completada' && $horas < $horasMin) {
+            $this->addError('totalHoras', "Se requieren mínimo {$horasMin} horas para {$carrera->tipo_label} ({$horas} registradas).");
+            return;
         }
 
         try {
@@ -337,7 +373,7 @@ class PracticasProfesionales extends Component
             DB::commit();
 
             $this->cerrarModal();
-            $this->dispatch('swal', ['tipo' => 'success', 'mensaje' => $mensaje]);
+            $this->dispatch('swal', ['toast' => true, 'icon' => 'success', 'title' => $mensaje]);
         } catch (\Exception $e) {
             DB::rollBack();
             $this->addError('general', 'Error al guardar: ' . $e->getMessage());
@@ -361,9 +397,9 @@ class PracticasProfesionales extends Component
                 Storage::disk('public')->delete($practica->certificado_empresa_path);
 
             $practica->delete();
-            $this->dispatch('swal', ['tipo' => 'success', 'mensaje' => 'Práctica eliminada correctamente.']);
+            $this->dispatch('swal', ['toast' => true, 'icon' => 'success', 'title' => 'Práctica eliminada correctamente.']);
         } catch (\Exception $e) {
-            $this->dispatch('swal', ['tipo' => 'error', 'mensaje' => 'No se pudo eliminar la práctica.']);
+            $this->dispatch('swal', ['toast' => true, 'icon' => 'error', 'title' => 'No se pudo eliminar la práctica.']);
         }
     }
 
