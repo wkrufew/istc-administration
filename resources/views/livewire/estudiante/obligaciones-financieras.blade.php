@@ -82,7 +82,7 @@
 
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Saldo de Carrera</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pendiente por concepto</p>
                         <span class="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -90,8 +90,20 @@
                             </svg>
                         </span>
                     </div>
-                    <p class="text-3xl font-bold text-blue-600">${{ number_format($saldoCarrera, 2) }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Costo de carrera menos lo abonado</p>
+                    @if (count($saldoPorConcepto))
+                        <dl class="space-y-1.5">
+                            @foreach ($saldoPorConcepto as $fila)
+                                <div class="flex items-center justify-between text-sm">
+                                    <dt class="text-gray-600">{{ $fila['label'] }}</dt>
+                                    <dd class="font-semibold text-blue-700 tabular-nums">${{ number_format($fila['monto'], 2) }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                        <p class="text-xs text-gray-400 mt-2">Saldo pendiente en todos los períodos</p>
+                    @else
+                        <p class="text-2xl font-bold text-green-600">Al día</p>
+                        <p class="text-xs text-gray-400 mt-1">No tienes valores pendientes</p>
+                    @endif
                 </div>
 
             </div>
@@ -116,7 +128,7 @@
                         <select wire:model.live="filtroTipo"
                             class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                             <option value="">Todos</option>
-                            @foreach (['MATRICULA' => 'Matrícula', 'COLEGIATURA' => 'Colegiatura', 'ARRASTRE' => 'Arrastre', 'INSCRIPCION' => 'Inscripción', 'MULTA' => 'Multa', 'OTROS' => 'Otros'] as $val => $label)
+                            @foreach (['MATRICULA' => 'Matrícula', 'COLEGIATURA' => 'Colegiatura', 'ARRASTRE' => 'Arrastre', 'REINTEGRO' => 'Reintegro', 'INSCRIPCION' => 'Inscripción', 'MULTA' => 'Multa', 'OTROS' => 'Otros'] as $val => $label)
                                 <option value="{{ $val }}">{{ $label }}</option>
                             @endforeach
                         </select>
@@ -143,6 +155,7 @@
                             'MATRICULA'   => 'bg-blue-100 text-blue-800',
                             'COLEGIATURA' => 'bg-purple-100 text-purple-800',
                             'ARRASTRE'    => 'bg-yellow-100 text-yellow-800',
+                            'REINTEGRO'   => 'bg-orange-100 text-orange-900',
                             'INSCRIPCION' => 'bg-orange-100 text-orange-800',
                             'MULTA'       => 'bg-red-100 text-red-800',
                             'OTROS'       => 'bg-gray-100 text-gray-700',
@@ -151,6 +164,7 @@
                             'MATRICULA'   => 'Matrícula',
                             'COLEGIATURA' => 'Colegiatura',
                             'ARRASTRE'    => 'Arrastre',
+                            'REINTEGRO'   => 'Reintegro',
                             'INSCRIPCION' => 'Inscripción',
                             'MULTA'       => 'Multa',
                             'OTROS'       => 'Otros',

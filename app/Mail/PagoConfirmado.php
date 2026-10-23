@@ -72,6 +72,10 @@ class PagoConfirmado extends Mailable
                     'url_portal'   => url('/login'),
                 ],
                 'pagoInscripcion' => $pagoInscripcion,
+                // Este pago completó lo requerido para habilitar (matrícula, arrastres o reintegro)
+                'matriculaHabilitada' => in_array($this->pago->obligacion?->tipo, \App\Models\ObligacionesFinanciera::TIPOS_HABILITACION, true)
+                    && $this->pago->obligacion->estado === 'Pagado'
+                    && $this->matricula?->fresh()?->estado === 'Habilitada',
             ],
         );
     }

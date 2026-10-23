@@ -8,13 +8,11 @@ use App\Jobs\NotificarObservacionDocumentoAspirante;
 use App\Models\Aspirante;
 use App\Models\Carrera;
 use App\Models\Cohorte;
-use App\Models\User;
-use App\Services\SettingService;
+use App\Models\ConvenioAplicado;
+use App\Models\TipoConvenio;
+use App\Services\BeneficiosService;
 use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -53,28 +51,6 @@ class GestionAspirantes extends Component
     public string  $nuevoEstado       = '';
     public string  $observacion       = '';
 
-    // ── Modal registrar aspirante ─────────────────────────────────────────
-    public bool   $showRegistrar    = false;
-    public string $regFirstName     = '';
-    public string $regLastName      = '';
-    public string $regCedula        = '';
-    public string $regEmail         = '';
-    public string $regCohorteId     = '';
-    public string $regCarreraId     = '';
-    public string $regGenero        = '';
-    public string $regEstadoCivil   = '';
-    public string $regFechaNac      = '';
-    public string $regNacionalidad  = '';
-    public string $regPadre         = '';
-    public string $regMadre         = '';
-    public string $regTipoProceso   = 'regular';
-
-    // Modal cédula (igual que CreateUser)
-    public bool   $apiActiva          = false;
-    public bool   $showEntryModal     = false;
-    public string $cedulaModalInput   = '';
-    public array  $cedulaModalData    = [];
-
     // ── Indicadores ──────────────────────────────────────────────────────
     public bool   $showIndicadores   = false;
 
@@ -86,11 +62,12 @@ class GestionAspirantes extends Component
     public string $editEmail         = '';
     public string $editCarreraId     = '';
     public string $editCohorteId     = '';
+    public string $editTipoConvenioId     = '';
+    public string $editPorcentajeConvenio = '';
 
     public function mount(): void
     {
         $this->requierePermiso('gestionar_aspirantes');
-        $this->apiActiva = ! empty(SettingService::get('cedula_api.token', ''));
     }
 
     public function updatedBuscar(): void             { $this->resetPage(); }
@@ -143,6 +120,72 @@ class GestionAspirantes extends Component
     {
         if (! $this->aspiranteId) return null;
         return Aspirante::with(['user', 'carrera', 'cohorte', 'registradoPor'])->find($this->aspiranteId);
+    }
+
+    #[Computed]
+    public function tiposConvenio()
+    {
+        return TipoConvenio::where('is_active', true)->orderBy('nombre')->get(['id', 'nombre', 'porcentaje_defecto', 'tipo_alcance']);
+    }
+
+    #[Computed]
+    public function convenioAspirante(): ?ConvenioAplicado
+    {
+        $userId = $this->aspiranteSeleccionado?->user_id;
+        return $userId ? $this->convenioActivoDe($userId) : null;
+    }
+
+    private function convenioActivoDe(int $userId): ?ConvenioAplicado
+    {
+        return ConvenioAplicado::where('user_id', $userId)
+            ->where('is_active', true)
+            ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
+            ->with('tipoConvenio:id,nombre')
+            ->latest('id')
+            ->first();
+    }
+
+    /** Un aspirante rechazado o eliminado no conserva convenio activo (queda en su historial). */
+    private function desactivarConvenios(int $userId, string $motivo): void
+    {
+        ConvenioAplicado::where('user_id', $userId)->where('is_active', true)
+            ->get()
+            ->each(fn($c) => BeneficiosService::desactivar($c, $motivo));
+    }
+
+    private function sincronizarConvenio(int $userId): void
+    {
+        $actual    = $this->convenioActivoDe($userId);
+        $nuevoTipo = $this->editTipoConvenioId !== '' ? (int) $this->editTipoConvenioId : null;
+
+        if (! $nuevoTipo) {
+            if ($actual) $this->desactivarConvenios($userId, 'retirado_en_edicion');
+            return;
+        }
+
+        if ($actual && (int) $actual->tipo_convenio_id === $nuevoTipo) {
+            $actual->update(['porcentaje_aplicado' => $this->editPorcentajeConvenio]);
+            return;
+        }
+
+        if ($actual) $this->desactivarConvenios($userId, 'reemplazo');
+
+        ConvenioAplicado::create([
+            'user_id'             => $userId,
+            'tipo_convenio_id'    => $nuevoTipo,
+            'porcentaje_aplicado' => $this->editPorcentajeConvenio,
+            'motivo'              => 'Asignado desde la gestión de admisión',
+            'fecha_inicio'        => now()->toDateString(),
+            'fecha_fin'           => null,
+            'is_active'           => true,
+            'registrado_por'      => auth()->id(),
+        ]);
+    }
+
+    public function updatedEditTipoConvenioId($value): void
+    {
+        $tipo = $value ? TipoConvenio::find($value) : null;
+        $this->editPorcentajeConvenio = $tipo ? (string) (float) $tipo->porcentaje_defecto : '';
     }
 
     #[Computed]
@@ -217,6 +260,8 @@ class GestionAspirantes extends Component
             'carreras'          => $this->carreras,
             'aspiranteDetalle'  => $this->aspiranteSeleccionado,
             'verificacionCount' => $this->verificacionCount,
+            'tiposConvenio'     => $this->tiposConvenio,
+            'convenioAspirante' => $this->convenioAspirante,
         ]);
     }
 
@@ -273,6 +318,9 @@ class GestionAspirantes extends Component
                 'estado'         => 'rechazado',
                 'motivo_rechazo' => $this->motivoRechazo,
             ]);
+            if ($estadoActual !== 'matriculado') {
+                $this->desactivarConvenios($aspirante->user_id, 'aspirante_rechazado');
+            }
         } else {
             $aspirante->update([
                 'estado'               => $this->nuevoEstado,
@@ -315,6 +363,9 @@ class GestionAspirantes extends Component
 
         $aspirante = Aspirante::findOrFail($id);
         $aspirante->delete();
+        if ($aspirante->estado !== 'matriculado') {
+            $this->desactivarConvenios($aspirante->user_id, 'aspirante_eliminado');
+        }
 
         unset($this->aspirantes);
 
@@ -323,198 +374,6 @@ class GestionAspirantes extends Component
             'title' => 'Aspirante eliminado',
             'text'  => 'Movido a la papelera. Puedes restaurarlo desde allí.',
             'timer' => 3000,
-        ]);
-    }
-
-    // ── Registrar aspirante ───────────────────────────────────────────────
-
-    public function abrirRegistrar(): void
-    {
-        $this->showRegistrar    = true;
-        $this->showEntryModal   = true;
-        $this->cedulaModalInput = '';
-        $this->cedulaModalData  = [];
-        $this->resetErrorBag();
-    }
-
-    public function cerrarRegistrar(): void
-    {
-        $this->showRegistrar   = false;
-        $this->showEntryModal  = false;
-        $this->cedulaModalInput = '';
-        $this->cedulaModalData  = [];
-        $this->regFirstName     = '';
-        $this->regLastName      = '';
-        $this->regCedula        = '';
-        $this->regEmail         = '';
-        $this->regCohorteId     = '';
-        $this->regCarreraId     = '';
-        $this->regGenero        = '';
-        $this->regEstadoCivil   = '';
-        $this->regFechaNac      = '';
-        $this->regNacionalidad  = '';
-        $this->regPadre         = '';
-        $this->regMadre         = '';
-        $this->regTipoProceso   = 'regular';
-        $this->resetErrorBag();
-    }
-
-    public function consultarCedulaRegistro(): void
-    {
-        $this->resetErrorBag('cedulaModal');
-
-        if (! trim($this->cedulaModalInput)) {
-            $this->addError('cedulaModal', 'Ingrese el número de cédula o documento.');
-            return;
-        }
-
-        $token = SettingService::get('cedula_api.token', '');
-        $url   = SettingService::get('cedula_api.url', '');
-
-        if (! $token || ! $url) {
-            $this->addError('cedulaModal', 'API no configurada. Ve a Ajustes → API Cédula.');
-            return;
-        }
-
-        try {
-            $response = Http::withToken($token)
-                ->timeout(10)
-                ->get(rtrim($url, '/') . '/' . trim($this->cedulaModalInput));
-
-            if ($response->successful() && ! empty($response->json('identificacion'))) {
-                $this->cedulaModalData = $response->json();
-            } else {
-                $this->cedulaModalData = [];
-                $this->addError('cedulaModal', 'Cédula no encontrada en el sistema.');
-            }
-        } catch (\Throwable $e) {
-            Log::warning('consultarCedulaRegistro error', ['cedula' => $this->cedulaModalInput, 'error' => $e->getMessage()]);
-            $this->addError('cedulaModal', 'No se pudo conectar con el servicio. Intente nuevamente.');
-        }
-    }
-
-    public function aplicarCedulaRegistro(): void
-    {
-        if (empty($this->cedulaModalData)) return;
-
-        $d = $this->cedulaModalData;
-
-        $this->regCedula = trim($this->cedulaModalInput);
-
-        $palabras = preg_split('/\s+/', trim($d['nombres'] ?? ''));
-        $total    = count($palabras);
-        if ($total >= 4) {
-            $this->regLastName  = ucwords(strtolower($palabras[0] . ' ' . $palabras[1]));
-            $this->regFirstName = ucwords(strtolower(implode(' ', array_slice($palabras, 2))));
-        } elseif ($total === 3) {
-            $this->regLastName  = ucwords(strtolower($palabras[0] . ' ' . $palabras[1]));
-            $this->regFirstName = ucwords(strtolower($palabras[2]));
-        } elseif ($total === 2) {
-            $this->regLastName  = ucwords(strtolower($palabras[0]));
-            $this->regFirstName = ucwords(strtolower($palabras[1]));
-        } else {
-            $this->regFirstName = ucwords(strtolower($d['nombres'] ?? ''));
-        }
-
-        $generoApi         = strtoupper($d['genero'] ?? $d['sexo'] ?? '');
-        $this->regGenero   = match(true) {
-            in_array($generoApi, ['HOMBRE', 'MASCULINO', 'M']) => 'Masculino',
-            in_array($generoApi, ['MUJER', 'FEMENINO', 'F'])   => 'Femenino',
-            default                                             => '',
-        };
-
-        $ec = strtoupper($d['estadoCivil'] ?? '');
-        $this->regEstadoCivil = match(true) {
-            str_contains($ec, 'SOLTERO') || str_contains($ec, 'SOLTERA') => 'Soltero/a',
-            str_contains($ec, 'CASADO')  || str_contains($ec, 'CASADA')  => 'Casado/a',
-            str_contains($ec, 'DIVOR')                                    => 'Divorciado/a',
-            str_contains($ec, 'VIUDO')   || str_contains($ec, 'VIUDA')   => 'Viudo/a',
-            str_contains($ec, 'UNION')   || str_contains($ec, 'LIBRE')   => 'Unión libre',
-            default                                                        => '',
-        };
-
-        if (! empty($d['fechaNacimiento'])) {
-            try {
-                $this->regFechaNac = \Carbon\Carbon::createFromFormat('d/m/Y', $d['fechaNacimiento'])->format('Y-m-d');
-            } catch (\Exception) {
-                $this->regFechaNac = '';
-            }
-        } else {
-            $this->regFechaNac = '';
-        }
-        $this->regNacionalidad = ucfirst(strtolower($d['nacionalidad'] ?? ''));
-        $this->regPadre        = ! empty($d['nombrePadre']) ? ucwords(strtolower($d['nombrePadre'])) : '';
-        $this->regMadre        = ! empty($d['nombreMadre']) ? ucwords(strtolower($d['nombreMadre'])) : '';
-
-        $this->showEntryModal  = false;
-        $this->cedulaModalInput = '';
-        $this->cedulaModalData  = [];
-    }
-
-    public function omitirCedula(): void
-    {
-        $this->showEntryModal  = false;
-        $this->cedulaModalInput = '';
-        $this->cedulaModalData  = [];
-    }
-
-    public function guardarAspirante(): void
-    {
-        if ($this->sinPermiso('gestionar_aspirantes')) return;
-
-        $this->validate([
-            'regFirstName'  => 'required|string|max:255',
-            'regLastName'   => 'required|string|max:255',
-            'regCedula'     => 'required|string|max:20|unique:users,cedula',
-            'regEmail'      => 'required|email|max:255|unique:users,email',
-            'regCohorteId'  => 'required|exists:cohortes,id',
-            'regCarreraId'  => 'required|exists:carreras,id',
-        ], [
-            'regFirstName.required'  => 'El nombre es obligatorio.',
-            'regLastName.required'   => 'El apellido es obligatorio.',
-            'regCedula.required'     => 'La cédula/documento es obligatorio.',
-            'regCedula.unique'       => 'Esta cédula ya está registrada.',
-            'regEmail.required'      => 'El correo es obligatorio.',
-            'regEmail.unique'        => 'Este correo ya está registrado.',
-            'regCohorteId.required'  => 'Selecciona una cohorte.',
-            'regCarreraId.required'  => 'Selecciona una carrera.',
-        ]);
-
-        $user = User::create([
-            'name'           => $this->regFirstName . ' ' . $this->regLastName,
-            'first_name'     => $this->regFirstName,
-            'last_name'      => $this->regLastName,
-            'cedula'         => $this->regCedula,
-            'email'          => $this->regEmail,
-            'password'       => Hash::make(Str::random(16)),
-            'genero'         => $this->regGenero ?: null,
-            'estado_civil'   => $this->regEstadoCivil ?: null,
-            'fecha_nacimiento'=> $this->regFechaNac ?: null,
-            'nacionalidad'   => $this->regNacionalidad ?: null,
-            'padre'          => $this->regPadre ?: null,
-            'madre'          => $this->regMadre ?: null,
-            'is_active'      => true,
-        ]);
-
-        $user->assignRole('Admision');
-
-        Aspirante::create([
-            'user_id'       => $user->id,
-            'cohorte_id'    => $this->regCohorteId,
-            'carrera_id'    => $this->regCarreraId,
-            'estado'        => 'pendiente',
-            'tipo_proceso'  => $this->regTipoProceso,
-            'registrado_por'=> auth()->id(),
-        ]);
-
-        unset($this->aspirantes);
-        $this->cerrarRegistrar();
-
-        $this->dispatch('swal', [
-            'icon'  => 'success',
-            'title' => 'Aspirante registrado',
-            'text'  => $this->regFirstName . ' ' . $this->regLastName . ' fue registrado como aspirante en estado Pendiente.',
-            'timer' => 4000,
         ]);
     }
 
@@ -531,6 +390,11 @@ class GestionAspirantes extends Component
         $this->editEmail      = $asp->user->email      ?? '';
         $this->editCarreraId  = (string) ($asp->carrera_id ?? '');
         $this->editCohorteId  = (string) ($asp->cohorte_id ?? '');
+
+        $convenio = $this->convenioActivoDe($asp->user_id);
+        $this->editTipoConvenioId     = (string) ($convenio?->tipo_convenio_id ?? '');
+        $this->editPorcentajeConvenio = $convenio ? (string) (float) $convenio->porcentaje_aplicado : '';
+
         $this->showEditar     = true;
         $this->resetErrorBag();
     }
@@ -557,7 +421,10 @@ class GestionAspirantes extends Component
             'editEmail'     => "required|email|max:255|unique:users,email,{$userId}",
             'editCohorteId' => 'required|exists:cohortes,id',
             'editCarreraId' => 'required|exists:carreras,id',
+            'editTipoConvenioId'     => 'nullable|exists:tipos_convenio,id',
+            'editPorcentajeConvenio' => 'nullable|required_with:editTipoConvenioId|numeric|min:0|max:100',
         ], [
+            'editPorcentajeConvenio.required_with' => 'Indica el porcentaje de descuento del convenio.',
             'editFirstName.required' => 'El nombre es obligatorio.',
             'editLastName.required'  => 'El apellido es obligatorio.',
             'editCedula.unique'      => 'Esta cédula ya está en uso.',
@@ -579,13 +446,68 @@ class GestionAspirantes extends Component
             'carrera_id' => $this->editCarreraId,
         ]);
 
-        unset($this->aspiranteSeleccionado, $this->aspirantes);
+        $this->sincronizarConvenio($userId);
+
+        unset($this->aspiranteSeleccionado, $this->aspirantes, $this->convenioAspirante);
         $this->showEditar = false;
 
         $this->dispatch('swal', [
             'icon'  => 'success',
             'title' => 'Datos actualizados',
             'timer' => 2500,
+        ]);
+    }
+
+    // ── Verificar pago de matrícula (admisión) ────────────────────────────
+
+    /**
+     * El monto y método confirmados aquí son los que se aplican a la obligación
+     * de matrícula cuando el aspirante se matricula.
+     */
+    public function verificarPagoAdmision($monto, $metodo): void
+    {
+        if ($this->sinPermiso('gestionar_aspirantes')) return;
+
+        $aspirante = Aspirante::findOrFail($this->aspiranteId);
+        if ($aspirante->estado !== 'verificacion' || ! $aspirante->pago_comprobante_path) return;
+
+        $validator = validator(
+            ['monto' => $monto, 'metodo' => $metodo],
+            [
+                'monto'  => 'required|numeric|min:0.01|max:99999',
+                'metodo' => 'required|in:Efectivo,Tarjeta,Transferencia,Deposito,Payphone',
+            ],
+            [
+                'monto.required'  => 'Indica el monto verificado.',
+                'monto.min'       => 'El monto debe ser mayor a cero.',
+                'metodo.required' => 'Selecciona el método de pago.',
+            ]
+        );
+
+        if ($validator->fails()) {
+            $this->dispatch('swal', [
+                'icon'  => 'warning',
+                'title' => 'Revisa los datos del pago',
+                'text'  => $validator->errors()->first(),
+            ]);
+            return;
+        }
+
+        $aspirante->update([
+            'pago_estado'        => 'verificado',
+            'pago_monto'         => round((float) $monto, 2),
+            'pago_metodo'        => $metodo,
+            'pago_verificado_at' => now(),
+            'pago_observacion'   => null,
+        ]);
+
+        unset($this->aspiranteSeleccionado);
+
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => 'Pago verificado',
+            'text'  => '$' . number_format((float) $monto, 2) . ' · ' . $metodo . '. Se aplicará automáticamente al matricularlo.',
+            'timer' => 3500,
         ]);
     }
 
@@ -600,6 +522,9 @@ class GestionAspirantes extends Component
 
         $estadosPermitidos = $campo === 'pago' ? Aspirante::PAGO_ESTADOS : Aspirante::DOC_ESTADOS;
         if (! in_array($nuevoEstado, $estadosPermitidos, true)) return;
+
+        // El pago se verifica con monto y método: verificarPagoAdmision()
+        if ($campo === 'pago' && $nuevoEstado === 'verificado') return;
 
         $aspirante = Aspirante::findOrFail($this->aspiranteId);
 

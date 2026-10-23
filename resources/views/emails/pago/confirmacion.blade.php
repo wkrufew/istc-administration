@@ -89,6 +89,20 @@
                             Confirmamos la recepción de tu pago. A continuación encontrarás el detalle del comprobante.
                         </p>
 
+                        @if(!empty($matriculaHabilitada))
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="background-color:#f0fdf4;border:2px solid #86efac;border-radius:12px;margin-bottom:24px;">
+                            <tr>
+                                <td style="padding:16px 20px;">
+                                    <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#15803d;">¡Completaste el pago de tu matrícula!</p>
+                                    <p style="margin:0;font-size:13px;color:#166534;line-height:1.6;">
+                                        Tu matrícula está <strong>habilitada</strong> y ya puedes ver tus materias en el portal estudiantil.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                        @endif
+
                         {{-- ── COMPROBANTE ────────────────────────────── --}}
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                                style="border:1px solid #bbf7d0;border-radius:12px;margin-bottom:24px;overflow:hidden;">

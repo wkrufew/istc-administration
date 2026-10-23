@@ -159,6 +159,11 @@
                                         'text-orange-700 dark:text-orange-400',
                                         'bg-orange-500',
                                     ],
+                                    'REINTEGRO' => [
+                                        'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800/50',
+                                        'text-rose-700 dark:text-rose-400',
+                                        'bg-rose-500',
+                                    ],
                                     'MULTA' => [
                                         'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50',
                                         'text-red-700 dark:text-red-400',
@@ -261,6 +266,7 @@
                                 <option value="MATRICULA">Matrícula</option>
                                 <option value="COLEGIATURA">Colegiatura</option>
                                 <option value="ARRASTRE">Arrastre</option>
+                                <option value="REINTEGRO">Reintegro</option>
                                 <option value="INSCRIPCION">Inscripción</option>
                                 <option value="MULTA">Multa</option>
                                 <option value="OTROS">Otros</option>
@@ -316,6 +322,7 @@
                                             'COLEGIATURA' => 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400',
                                             'ARRASTRE' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
                                             'INSCRIPCION' => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
+                                            'REINTEGRO' => 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400',
                                             'MULTA' => 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400',
                                             default => 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400',
                                         };
@@ -666,6 +673,7 @@
                                                         'COLEGIATURA' => 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400',
                                                         'ARRASTRE' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
                                                         'INSCRIPCION' => 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
+                                                        'REINTEGRO' => 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400',
                                                         'MULTA' => 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
                                                         default => 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400',
                                                     };

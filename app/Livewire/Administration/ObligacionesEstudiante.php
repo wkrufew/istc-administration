@@ -10,6 +10,7 @@ use App\Models\Pago;
 use App\Models\Matricula;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Periodo;
+use App\Services\HabilitacionMatriculaService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -92,6 +93,10 @@ class ObligacionesEstudiante extends Component
     // -------------------------------------------------------------------------
     public function mount($matricula = null, $user = null)
     {
+        // Enlaces desde matriculación: ?estudiante={id}&cobrar={obligacion_id}
+        $user   = $user ?: (request()->integer('estudiante') ?: null);
+        $cobrar = request()->integer('cobrar') ?: null;
+
         $this->filtroMatricula = $matricula;
         if ($user) {
             $this->filtroEstudiante = $user;
@@ -99,6 +104,11 @@ class ObligacionesEstudiante extends Component
             if ($estudiante) {
                 $this->filtroEstudianteNombre = $estudiante->name . ' — ' . $estudiante->cedula;
                 $this->filtroBusquedaTexto    = $this->filtroEstudianteNombre;
+            }
+
+            // Abrir el cobro solo si la obligación pertenece al estudiante filtrado
+            if ($cobrar && ObligacionesFinanciera::where('id', $cobrar)->where('user_id', $user)->exists()) {
+                $this->abrirModalPago($cobrar);
             }
         }
     }
@@ -415,13 +425,10 @@ class ObligacionesEstudiante extends Component
             // Refrescar desde DB para leer el estado que calculó el observer
             $this->obligacionSeleccionada->refresh();
 
-            // Si MATRICULA quedó Pagada: habilitar matrícula y auto-liquidar INSCRIPCION
+            // Si MATRICULA quedó Pagada: auto-liquidar INSCRIPCION
             if ($this->obligacionSeleccionada->tipo === 'MATRICULA'
                 && $this->obligacionSeleccionada->estado === 'Pagado'
                 && $this->obligacionSeleccionada->matricula_id) {
-
-                Matricula::find($this->obligacionSeleccionada->matricula_id)
-                    ?->update(['estado' => 'Habilitada']);
 
                 if ($obligInscripcion) {
                     $numeroCuotaInsc = Pago::where('obligacion_id', $obligInscripcion->id)
@@ -446,6 +453,9 @@ class ObligacionesEstudiante extends Component
                     ]);
                 }
             }
+
+            // Habilita solo si matrícula, arrastres y reintegro quedaron pagados
+            HabilitacionMatriculaService::verificarPorObligacion($this->obligacionSeleccionada);
 
             DB::commit();
 
@@ -616,17 +626,20 @@ class ObligacionesEstudiante extends Component
             ]);
 
             $loteRef = 'ISTC-PG-' . now()->year . '-' . str_pad($pagoPrimero->id, 5, '0', STR_PAD_LEFT);
-            $pagoPrimero->update(['numero_comprobante' => $loteRef]);
+            $pagoPrimero->update([
+                'numero_comprobante' => $loteRef,
+                'descripcion'        => $this->descripcionPG ?: 'Pago general — lote ' . $loteRef,
+            ]);
 
             // Pagos restantes del lote
-            foreach (array_slice($distribucion, 1) as $distItem) {
+            foreach (array_slice($distribucion, 1) as $i => $distItem) {
                 $ob    = $distItem['ob'];
                 $cuota = Pago::where('obligacion_id', $ob->id)
                     ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
                     ->count() + 1;
 
                 Pago::create([
-                    'numero_comprobante' => $loteRef,
+                    'numero_comprobante' => $loteRef . '-' . ($i + 2),
                     'codigo_referencia'  => $this->referenciaPG ?: null,
                     'obligacion_id'      => $ob->id,
                     'monto'              => $distItem['pago'],
@@ -718,9 +731,7 @@ class ObligacionesEstudiante extends Component
 
             // Recargar la obligación desde DB para leer el estado recalculado
             $obligacion = $this->pagoSeleccionado->obligacion()->first();
-            if ($obligacion->tipo === 'MATRICULA' && $obligacion->estado === 'Pagado') {
-                Matricula::find($obligacion->matricula_id)?->update(['estado' => 'Habilitada']);
-            }
+            HabilitacionMatriculaService::verificarPorObligacion($obligacion);
 
             DB::commit();
 

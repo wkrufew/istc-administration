@@ -185,6 +185,28 @@
                     @error('last_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
+                <label class="md:col-span-2 flex items-start gap-3 rounded-xl border px-4 py-3 cursor-pointer select-none transition-colors
+                              {{ $usarCedulaComoPassword
+                                  ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20'
+                                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 hover:border-emerald-300 dark:hover:border-emerald-700' }}">
+                    <input type="checkbox" wire:model.live="usarCedulaComoPassword"
+                           class="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500/30">
+                    <span>
+                        <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200">Usar la cédula como contraseña</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Se marca sola para el rol Estudiante. Desmárcala si quieres escribir una contraseña distinta.
+                        </span>
+                    </span>
+                </label>
+
+                @if ($usarCedulaComoPassword)
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Contraseña</label>
+                    <div class="w-full rounded-xl border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5 text-sm text-emerald-800 dark:text-emerald-300">
+                        Será su número de cédula{{ $cedula ? ': ' . $cedula : '' }}
+                    </div>
+                </div>
+                @else
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Contraseña <span class="text-red-500">*</span></label>
                     <input type="password" wire:model="password" placeholder="Mínimo 8 caracteres"
@@ -208,9 +230,10 @@
                                   focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500
                                   focus:bg-white dark:focus:bg-slate-800 transition-all">
                 </div>
+                @endif
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Rol <span class="text-red-500">*</span></label>
-                    <select wire:model="role_id"
+                    <select wire:model.live="role_id"
                             class="w-full rounded-xl border border-slate-300 dark:border-slate-600
                                    bg-slate-50 dark:bg-slate-900/70 px-4 py-2.5 text-sm
                                    text-slate-900 dark:text-slate-100

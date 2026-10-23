@@ -174,6 +174,20 @@
                                             </td>
                                         </tr>
                                         <tr>
+                                            <td style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Proceso</td>
+                                            <td style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-size:13px;font-weight:600;color:#1e293b;text-align:right;">
+                                                @if(!empty($esValidacion))
+                                                    Validación de conocimientos
+                                                    <span style="display:block;font-size:11px;font-weight:400;color:#64748b;">
+                                                        Validaste {{ $semestresExonerados }} {{ $semestresExonerados === 1 ? 'semestre' : 'semestres' }}
+                                                        · cursarás {{ $semestresACursar }}
+                                                    </span>
+                                                @else
+                                                    Regular
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
                                             <td style="padding:9px 0;font-size:13px;color:#64748b;">Fecha de Matrícula</td>
                                             <td style="padding:9px 0;font-size:13px;font-weight:600;color:#1e293b;text-align:right;">
                                                 {{ $matricula->fecha_matricula?->format('d/m/Y') }}
@@ -476,8 +490,78 @@
 
                         @endif
 
+                        {{-- ── MATRÍCULA YA PAGADA (pago de admisión aplicado) ── --}}
+                        @if($obligacion && !$esEdicion && ($estadoMatricula ?? null) === 'Pagado')
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="background-color:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:16px;">
+                            <tr>
+                                <td style="padding:20px 24px;">
+                                    <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.13em;">
+                                        Matrícula — Pagada
+                                    </p>
+                                    <p style="margin:0;font-size:28px;font-weight:800;color:#15803d;line-height:1;">${{ $monto }}</p>
+                                    <p style="margin:10px 0 0;font-size:13px;color:#166534;line-height:1.6;">
+                                        {{ !empty($pagoEnAdmision) ? 'Cubierta con el pago que realizaste en admisión.' : 'Tu pago de matrícula ya está registrado.' }}
+                                        <strong>Tu matrícula está habilitada</strong>: ya puedes ver tus materias en el portal.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        {{-- ── MATRÍCULA CON VALOR POR COMPLETAR (validación) ── --}}
+                        @elseif($obligacion && !$esEdicion && ($estadoMatricula ?? null) === 'Parcial')
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="background-color:#fffbeb;border:2px solid #fcd34d;border-radius:10px;margin-bottom:16px;">
+                            <tr>
+                                <td style="padding:20px 24px;">
+                                    <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.13em;">
+                                        Estado de tu matrícula: pendiente de completar el pago
+                                    </p>
+                                    @if(!empty($esValidacion) && !empty($soloMatricula))
+                                    <p style="margin:0 0 12px;font-size:13px;color:#78350f;line-height:1.6;">
+                                        Como validaste {{ $semestresExonerados }} {{ $semestresExonerados === 1 ? 'semestre' : 'semestres' }},
+                                        cursarás {{ $semestresACursar }} en lugar de {{ $semestresACursar + $semestresExonerados }}.
+                                        La matrícula de tu carrera (${{ number_format($matriculaTotalCarrera, 2) }}) se divide entre esos {{ $semestresACursar }}:
+                                    </p>
+                                    @endif
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#78350f;">
+                                        <tr>
+                                            <td style="padding:6px 0;border-bottom:1px solid #fde68a;">
+                                                @if(!empty($soloMatricula))
+                                                    Matrícula de este semestre
+                                                    @if(!empty($esValidacion))(${{ number_format($matriculaTotalCarrera, 2) }} ÷ {{ $semestresACursar }})@endif
+                                                @else
+                                                    Matrícula, arrastres y reintegro
+                                                @endif
+                                            </td>
+                                            <td style="padding:6px 0;border-bottom:1px solid #fde68a;text-align:right;font-family:monospace;">${{ $monto }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:6px 0;border-bottom:1px solid #fde68a;">
+                                                {{ !empty($pagoEnAdmision) ? 'Pago inicial realizado en admisión' : 'Abonado' }}
+                                            </td>
+                                            <td style="padding:6px 0;border-bottom:1px solid #fde68a;text-align:right;font-family:monospace;">− ${{ number_format($pagadoMatricula, 2) }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:8px 0 0;font-weight:700;color:#92400e;">Valor por completar</td>
+                                            <td style="padding:8px 0 0;font-weight:800;font-size:18px;color:#b45309;text-align:right;font-family:monospace;">${{ number_format($saldoMatricula, 2) }}</td>
+                                        </tr>
+                                    </table>
+                                    <p style="margin:14px 0 0;font-size:13px;color:#78350f;line-height:1.6;">
+                                        <strong>Tu matrícula se habilitará cuando completes el valor total.</strong>
+                                        Hasta entonces no podrás ver tus materias ni calificaciones.
+                                    </p>
+                                    <p style="margin:10px 0 0;font-size:13px;color:#78350f;line-height:1.6;">
+                                        <strong>¿Cómo pagar?</strong> Ingresa a tu portal → <em>Obligaciones financieras</em>,
+                                        registra el pago de ${{ number_format($saldoMatricula, 2) }} y adjunta tu comprobante.
+                                        Cuando secretaría lo apruebe, tu matrícula se habilitará automáticamente.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+
                         {{-- ── PAGO INMEDIATO: MATRÍCULA ────────────── --}}
-                        @if($obligacion && !$esEdicion)
+                        @elseif($obligacion && !$esEdicion)
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                                style="background-color:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:16px;">
                             <tr>
@@ -502,7 +586,7 @@
                                             </td>
                                         </tr>
                                     </table>
-                                    @if(isset($arrastresDetalle) && $arrastresDetalle->isNotEmpty() && $totalCostoArrastres)
+                                    @if(!empty($montoBaseMatricula))
                                     <div style="margin-top:14px;padding-top:12px;border-top:1px solid #bbf7d0;">
                                         <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#166534;
                                                    text-transform:uppercase;letter-spacing:0.11em;">
@@ -525,6 +609,16 @@
                                                 </td>
                                             </tr>
                                             @endforeach
+                                            @if(!empty($montoReintegro))
+                                            <tr>
+                                                <td style="padding:3px 0;font-size:12px;color:#166534;">
+                                                    Reintegro por retiro anterior (10%)
+                                                </td>
+                                                <td style="padding:3px 0;font-size:12px;font-weight:600;color:#c2410c;text-align:right;font-family:monospace;">
+                                                    +${{ $montoReintegro }}
+                                                </td>
+                                            </tr>
+                                            @endif
                                             <tr>
                                                 <td style="padding:6px 0 0;font-size:12px;font-weight:700;color:#0f2d5a;
                                                             border-top:1px solid #bbf7d0;">

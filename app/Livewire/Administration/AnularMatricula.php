@@ -5,12 +5,14 @@ namespace App\Livewire\Administration;
 use App\Models\AuditoriaAnulacionMatricula;
 use App\Models\BecaAplicada;
 use App\Models\Convalidacion;
+use App\Models\ConvenioAplicado;
 use App\Models\DetalleMatricula;
 use App\Models\Matricula;
 use App\Models\MateriasArrastrada;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Pago;
 use App\Models\User;
+use App\Services\BeneficiosService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -178,10 +180,17 @@ class AnularMatricula extends Component
 
                 $matricula->obligacionesFinancieras()->delete();
 
-                // 3b. Desactivar becas que estaban aplicadas a esta matrícula
-                if ($becasADesactivar->isNotEmpty()) {
-                    BecaAplicada::whereIn('id', $becasADesactivar)->update(['is_active' => false]);
-                }
+                // 3b. Desactivar becas que estaban aplicadas a esta matrícula (quedan en el historial)
+                BecaAplicada::whereIn('id', $becasADesactivar)->get()
+                    ->each(fn($beca) => BeneficiosService::desactivar($beca, 'anulacion_matricula', "Matrícula {$matricula->code}"));
+
+                // 3c. Un convenio semestral usado por esta matrícula vuelve a quedar disponible:
+                //     la matrícula se anuló, así que el beneficio no llegó a aprovecharse.
+                ConvenioAplicado::where('user_id', $matricula->user_id)
+                    ->where('periodo_id', $matricula->periodo_id)
+                    ->where('is_active', true)
+                    ->whereHas('tipoConvenio', fn($t) => $t->where('tipo_alcance', 'semestral'))
+                    ->update(['periodo_id' => null]);
 
                 // 4. Convalidación (si existe)
                 $convalidacion = Convalidacion::where('matricula_id', $matriculaId)->first();

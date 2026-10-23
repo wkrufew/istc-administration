@@ -4,8 +4,12 @@ namespace App\Livewire\Administration;
 
 use App\Models\BecaAplicada;
 use App\Models\Carrera;
+use App\Models\ConvenioAplicado;
+use App\Models\Matricula;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Periodo;
+use App\Services\BeneficiosService;
+use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -14,7 +18,7 @@ use Livewire\WithPagination;
 
 class PeriodosIndex extends Component
 {
-    use WithPagination;
+    use WithPagination, WithAuthorization;
 
     #[Url(as: 'q')]
     public string $search = '';
@@ -34,6 +38,8 @@ class PeriodosIndex extends Component
 
     public function cerrar(int $periodoId, int $carreraId): void
     {
+        if ($this->sinPermiso('gestionar_periodos')) return;
+
         $periodo = Periodo::find($periodoId);
         if (! $periodo) {
             $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'Periodo no encontrado.']);
@@ -68,31 +74,53 @@ class PeriodosIndex extends Component
 
         DB::beginTransaction();
         try {
-            $obligacionesPendientes = ObligacionesFinanciera::with('pagos')
-                ->where('periodo_id', $periodo->id)
-                ->where('tipo', 'COLEGIATURA')
+            // Solo obligaciones de ESTA carrera: el mismo período puede seguir activo en otras.
+            // Las impagas quedan en su período como Vencido (siguen siendo pagables); no se
+            // trasladan ni se generan cobros nuevos: la colegiatura siguiente la crea la matrícula.
+            $obligacionesPendientes = ObligacionesFinanciera::where('periodo_id', $periodo->id)
                 ->whereNotIn('estado', ['Pagado', 'Invalidado'])
+                ->where(fn($q) => $q
+                    ->whereHas('matricula', fn($m) => $m->where('carrera_id', $carreraId))
+                    ->orWhere(fn($sinMatricula) => $sinMatricula
+                        ->whereNull('matricula_id')
+                        ->whereIn('user_id', Matricula::where('periodo_id', $periodo->id)
+                            ->where('carrera_id', $carreraId)
+                            ->select('user_id'))
+                    )
+                )
                 ->get();
 
-            // Recoger becas antes de actualizar las obligaciones
-            $becasADesactivar = $obligacionesPendientes
-                ->whereNotNull('beca_aplicada_id')
-                ->pluck('beca_aplicada_id')
-                ->unique()
-                ->values();
+            $matriculadosEnPeriodo = Matricula::where('periodo_id', $periodo->id)
+                ->where('carrera_id', $carreraId)
+                ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+                ->select('user_id');
+
+            // Las becas se renuevan manualmente cada período: al cerrar se desactivan TODAS las de
+            // los estudiantes de esta carrera matriculados en el período, hayan pagado o no.
+            $becasADesactivar = BecaAplicada::where('is_active', true)
+                ->whereIn('user_id', $matriculadosEnPeriodo)
+                ->get();
+
+            // Convenios semestrales usados en este período (los permanentes siguen vigentes; los
+            // semestrales aún sin usar, p. ej. asignados a mitad de período, se conservan)
+            $conveniosADesactivar = ConvenioAplicado::where('is_active', true)
+                ->where('periodo_id', $periodo->id)
+                ->whereHas('tipoConvenio', fn($t) => $t->where('tipo_alcance', 'semestral'))
+                ->whereIn('user_id', $matriculadosEnPeriodo)
+                ->get();
 
             // Marcar obligaciones impagas como Vencido
             $numVencidas = 0;
             foreach ($obligacionesPendientes as $obligacion) {
-                if ($obligacion->saldo <= 0) continue;
+                if ($obligacion->estado === 'Vencido' || $obligacion->saldo <= 0) continue;
                 $obligacion->update(['estado' => 'Vencido']);
                 $numVencidas++;
             }
 
-            // Desactivar becas vinculadas al período cerrado
-            if ($becasADesactivar->isNotEmpty()) {
-                BecaAplicada::whereIn('id', $becasADesactivar)->update(['is_active' => false]);
-            }
+            // Desactivar becas y convenios semestrales (quedan en el historial con motivo)
+            $detalle = "Período {$periodo->code}";
+            $becasADesactivar->each(fn($beca) => BeneficiosService::desactivar($beca, 'cierre_periodo', $detalle));
+            $conveniosADesactivar->each(fn($conv) => BeneficiosService::desactivar($conv, 'cierre_periodo', $detalle));
 
             DB::table('carrera_periodo')
                 ->where('carrera_id', $carreraId)
@@ -106,8 +134,10 @@ class PeriodosIndex extends Component
             DB::commit();
 
             $carreraObj  = Carrera::find($carreraId);
-            $numBecas    = $becasADesactivar->count();
-            $sufijoBecas = $numBecas > 0 ? " · {$numBecas} beca(s) desactivada(s)" : '';
+            $numBecas     = $becasADesactivar->count();
+            $numConvenios = $conveniosADesactivar->count();
+            $sufijoBecas  = ($numBecas > 0 ? " · {$numBecas} beca(s) desactivada(s)" : '')
+                . ($numConvenios > 0 ? " · {$numConvenios} convenio(s) semestral(es) desactivado(s)" : '');
 
             $this->dispatch('toast', [
                 'tipo'    => 'success',

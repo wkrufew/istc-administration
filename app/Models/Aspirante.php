@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CalculoMatriculaService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -44,6 +45,9 @@ class Aspirante extends Model
         'habilitante_observacion',
 
         'pago_monto',
+        'pago_metodo',
+        'pago_verificado_at',
+        'pago_aplicado_id',
         'pago_comprobante_path',
         'pago_estado',
         'pago_observacion',
@@ -66,7 +70,8 @@ class Aspirante extends Model
     ];
 
     protected $casts = [
-        'pago_monto' => 'decimal:2',
+        'pago_monto'         => 'decimal:2',
+        'pago_verificado_at' => 'datetime',
     ];
 
     // ── Relaciones ────────────────────────────────────────────────────────────
@@ -89,6 +94,66 @@ class Aspirante extends Model
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registrado_por');
+    }
+
+    public function pagoAplicado(): BelongsTo
+    {
+        return $this->belongsTo(Pago::class, 'pago_aplicado_id');
+    }
+
+    /** Matrícula de un semestre regular de su carrera: lo que paga en admisión. */
+    public function valorMatriculaAdmision(): float
+    {
+        if (! $this->carrera) return 0;
+
+        return CalculoMatriculaService::matriculaPorSemestre(
+            $this->carrera,
+            CalculoMatriculaService::semestresCarrera($this->carrera)
+        );
+    }
+
+    /**
+     * Lo que el aspirante debe conocer antes de pagar, compartido por el portal y el correo:
+     * valor de matrícula, tipo de proceso, convenio y, en validación, cómo cambia el valor
+     * según los semestres que exonere.
+     */
+    public function resumenPagoAdmision(): array
+    {
+        $carrera  = $this->carrera;
+        $valor    = $this->valorMatriculaAdmision();
+        $convenio = ConvenioAplicado::where('user_id', $this->user_id)
+            ->where('is_active', true)
+            ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
+            ->with('tipoConvenio:id,nombre')
+            ->latest('id')
+            ->first();
+
+        return [
+            'valor_matricula'  => $valor,
+            'es_validacion'    => $this->esValidacionConocimientos(),
+            'total_matricula'  => $carrera ? CalculoMatriculaService::matriculaTotalCarrera($carrera) : 0,
+            'semestres'        => $carrera ? CalculoMatriculaService::semestresCarrera($carrera) : 0,
+            'convenio'         => $convenio ? [
+                'nombre'     => $convenio->tipoConvenio?->nombre ?? 'Convenio',
+                'porcentaje' => (float) $convenio->porcentaje_aplicado,
+            ] : null,
+            'escenarios'       => ($carrera && $this->esValidacionConocimientos())
+                ? CalculoMatriculaService::escenariosValidacion($carrera, $valor)
+                : [],
+        ];
+    }
+
+    /**
+     * Pago de matrícula verificado en admisión (con monto confirmado por secretaría)
+     * que aún no se aplicó a una matrícula. Las verificaciones anteriores al registro de
+     * monto/método no tienen pago_verificado_at y siguen el cobro normal.
+     */
+    public function tienePagoAdmisionPorAplicar(): bool
+    {
+        return $this->pago_estado === 'verificado'
+            && $this->pago_verificado_at !== null
+            && (float) $this->pago_monto > 0
+            && ! $this->pago_aplicado_id;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

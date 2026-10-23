@@ -309,7 +309,7 @@
                             [3,  'cedula',                   true,  '0601234567',             'Cédula de identidad · debe ser único'],
                             [4,  'rol',                      false, 'Estudiante',             'Rol del sistema · default: Estudiante'],
                             [5,  'email',                    false, 'juan@email.com',         'Correo · se genera automáticamente si está vacío'],
-                            [6,  'password',                 false, '12345678',               'Contraseña · default: 12345678'],
+                            [6,  'password',                 false, '12345678',               'Contraseña · por defecto: la cédula'],
                             [7,  'phone',                    false, '0999123456',             'Teléfono celular'],
                             [8,  'address',                  false, 'Av. Principal 123',      'Dirección domiciliaria'],
                             [9,  'fecha_nacimiento',         false, '1990-01-15',             'Fecha de nacimiento · formato AAAA-MM-DD'],

@@ -71,6 +71,64 @@
               <li>Enviar tu documentación para revisión</li>
             </ul>
 
+            {{-- Valor de la matrícula --}}
+            @if(!empty($resumenPago) && $resumenPago['valor_matricula'] > 0)
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;margin-bottom:28px;">
+              <tr>
+                <td style="padding:20px 24px;">
+                  <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:.08em;">
+                    {{ $resumenPago['es_validacion'] ? 'Pago inicial de matrícula' : 'Valor de tu matrícula' }}
+                    · {{ $resumenPago['es_validacion'] ? 'Validación de conocimientos' : 'Proceso regular' }}
+                  </p>
+                  <p style="margin:0 0 6px;font-size:24px;font-weight:700;color:#1e3a8a;">
+                    ${{ number_format($resumenPago['valor_matricula'], 2) }}
+                  </p>
+                  <p style="margin:0 0 14px;font-size:13px;color:#475569;line-height:1.5;">
+                    Realiza este pago y sube el comprobante en el portal.
+                  </p>
+
+                  <p style="margin:0 0 {{ $resumenPago['es_validacion'] ? '14px' : '0' }};font-size:13px;line-height:1.5;padding:10px 12px;border-radius:8px;
+                            {{ $resumenPago['convenio'] ? 'background:#f5f3ff;color:#5b21b6;' : 'background:#ffffff;color:#64748b;' }}">
+                    @if($resumenPago['convenio'])
+                      <strong>Convenio:</strong> {{ $resumenPago['convenio']['nombre'] }} ·
+                      <strong>{{ number_format($resumenPago['convenio']['porcentaje'], 0) }}% de descuento</strong> en el arancel (colegiatura). La matrícula no lleva descuento.
+                    @else
+                      <strong>Convenio:</strong> no tienes un convenio asignado.
+                    @endif
+                  </p>
+
+                  @if($resumenPago['es_validacion'] && count($resumenPago['escenarios']))
+                  <p style="margin:0 0 8px;font-size:13px;color:#334155;line-height:1.5;">
+                    <strong>¿Por qué es un pago inicial?</strong> La matrícula de tu carrera cuesta
+                    <strong>${{ number_format($resumenPago['total_matricula'], 2) }} en total</strong> y se divide entre los semestres que vayas a cursar.
+                    Según cuántos semestres valides en tu prueba:
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;color:#334155;margin-bottom:8px;">
+                    <tr>
+                      <td style="padding:4px 6px;font-weight:600;color:#64748b;border-bottom:1px solid #bfdbfe;">Validas</td>
+                      <td style="padding:4px 6px;font-weight:600;color:#64748b;border-bottom:1px solid #bfdbfe;">Matrícula por semestre</td>
+                      <td style="padding:4px 6px;font-weight:600;color:#64748b;border-bottom:1px solid #bfdbfe;">Pagas adicional</td>
+                    </tr>
+                    @foreach($resumenPago['escenarios'] as $esc)
+                    <tr>
+                      <td style="padding:4px 6px;border-bottom:1px solid #dbeafe;">{{ $esc['exonera'] }} {{ $esc['exonera'] === 1 ? 'semestre' : 'semestres' }}</td>
+                      <td style="padding:4px 6px;border-bottom:1px solid #dbeafe;">${{ number_format($resumenPago['total_matricula'], 2) }} ÷ {{ $esc['cursa'] }} = <strong>${{ number_format($esc['valor'], 2) }}</strong></td>
+                      <td style="padding:4px 6px;border-bottom:1px solid #dbeafe;font-weight:600;color:{{ $esc['diferencia'] > 0 ? '#b45309' : '#047857' }};">
+                        {{ $esc['diferencia'] > 0 ? '$' . number_format($esc['diferencia'], 2) : 'Nada más' }}
+                      </td>
+                    </tr>
+                    @endforeach
+                  </table>
+                  <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;">
+                    Lo que pagas ahora se descuenta del valor final; la diferencia, si la hay, la completas al matricularte.
+                  </p>
+                  @endif
+                </td>
+              </tr>
+            </table>
+            @endif
+
             {{-- CTA --}}
             <div style="text-align:center;margin-bottom:28px;">
               <a href="{{ $portalUrl }}"

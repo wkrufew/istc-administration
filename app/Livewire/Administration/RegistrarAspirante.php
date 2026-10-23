@@ -6,6 +6,8 @@ use App\Jobs\EnviarConfirmacionRegistroAspirante;
 use App\Models\Aspirante;
 use App\Models\Carrera;
 use App\Models\Cohorte;
+use App\Models\ConvenioAplicado;
+use App\Models\TipoConvenio;
 use App\Services\SettingService;
 use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +34,10 @@ class RegistrarAspirante extends Component
     public ?int   $cohorte_id             = null;
     public ?int   $carrera_id             = null;
     public string $tipo_proceso           = 'regular';
+
+    // Convenio opcional: se aplica desde el registro para que matriculación ya lo encuentre
+    public ?int   $tipo_convenio_id       = null;
+    public string $porcentaje_convenio    = '';
 
     // Datos auto-completados desde la API
     public string $genero        = '';
@@ -76,6 +82,8 @@ class RegistrarAspirante extends Component
             'cohorte_id'   => 'required|exists:cohortes,id',
             'carrera_id'   => 'required|exists:carreras,id',
             'tipo_proceso' => 'required|in:regular,validacion_conocimientos',
+            'tipo_convenio_id'    => 'nullable|exists:tipos_convenio,id',
+            'porcentaje_convenio' => 'nullable|required_with:tipo_convenio_id|numeric|min:0|max:100',
         ];
     }
 
@@ -89,7 +97,21 @@ class RegistrarAspirante extends Component
         'cedula.unique'       => 'Ya existe un usuario con esa cédula.',
         'cohorte_id.required' => 'Selecciona una cohorte.',
         'carrera_id.required' => 'Selecciona una carrera.',
+        'porcentaje_convenio.required_with' => 'Indica el porcentaje de descuento del convenio.',
+        'porcentaje_convenio.max'           => 'El porcentaje no puede superar 100.',
     ];
+
+    public function updatedTipoConvenioId($value): void
+    {
+        $tipo = $value ? TipoConvenio::find($value) : null;
+        $this->porcentaje_convenio = $tipo ? (string) (float) $tipo->porcentaje_defecto : '';
+    }
+
+    #[Computed]
+    public function tiposConvenio()
+    {
+        return TipoConvenio::where('is_active', true)->orderBy('nombre')->get(['id', 'nombre', 'porcentaje_defecto', 'tipo_alcance']);
+    }
 
     // ── Modal cédula ──────────────────────────────────────────────────────
 
@@ -269,6 +291,19 @@ class RegistrarAspirante extends Component
                     'registrado_por' => auth()->id(),
                 ]);
 
+                if (! empty($data['tipo_convenio_id'])) {
+                    ConvenioAplicado::create([
+                        'user_id'             => $user->id,
+                        'tipo_convenio_id'    => $data['tipo_convenio_id'],
+                        'porcentaje_aplicado' => $data['porcentaje_convenio'],
+                        'motivo'              => 'Asignado en el registro de admisión',
+                        'fecha_inicio'        => now()->toDateString(),
+                        'fecha_fin'           => null,
+                        'is_active'           => true,
+                        'registrado_por'      => auth()->id(),
+                    ]);
+                }
+
                 EnviarConfirmacionRegistroAspirante::dispatch($aspirante->id);
             });
 
@@ -276,6 +311,7 @@ class RegistrarAspirante extends Component
                 'firstName', 'lastName', 'email', 'cedula', 'telefono',
                 'cohorte_id', 'carrera_id', 'documentoInternacional', 'tipo_proceso',
                 'genero', 'estadoCivil', 'fechaNac', 'nacionalidad', 'padre', 'madre',
+                'tipo_convenio_id', 'porcentaje_convenio',
             ]);
             $this->resetValidation();
             unset($this->cohortes, $this->carreras);
@@ -303,8 +339,9 @@ class RegistrarAspirante extends Component
     public function render()
     {
         return view('livewire.administration.registrar-aspirante', [
-            'cohortes' => $this->cohortes,
-            'carreras' => $this->carreras,
+            'cohortes'      => $this->cohortes,
+            'carreras'      => $this->carreras,
+            'tiposConvenio' => $this->tiposConvenio,
         ]);
     }
 

@@ -884,6 +884,67 @@
                         </div>
                     </div>
 
+                    {{-- ── Valor de la matrícula ── --}}
+                    @if($resumenPago && $resumenPago['valor_matricula'] > 0)
+                    <div class="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/20 p-4 space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                                    {{ $resumenPago['es_validacion'] ? 'Pago inicial de matrícula' : 'Valor de tu matrícula' }}
+                                </p>
+                                <p class="text-2xl font-bold text-blue-800 dark:text-blue-200 leading-tight">${{ number_format($resumenPago['valor_matricula'], 2) }}</p>
+                                <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Paga este valor y adjunta el comprobante abajo.</p>
+                            </div>
+                            <span class="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $resumenPago['es_validacion'] ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' }}">
+                                {{ $resumenPago['es_validacion'] ? 'Validación de conocimientos' : 'Proceso regular' }}
+                            </span>
+                        </div>
+
+                        <div class="text-xs rounded-lg px-3 py-2 {{ $resumenPago['convenio'] ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-800 dark:text-violet-300' : 'bg-white/70 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400' }}">
+                            @if($resumenPago['convenio'])
+                                <strong>Convenio:</strong> {{ $resumenPago['convenio']['nombre'] }} · <strong>{{ number_format($resumenPago['convenio']['porcentaje'], 0) }}% de descuento</strong> en el arancel (colegiatura). La matrícula no lleva descuento.
+                            @else
+                                <strong>Convenio:</strong> no tienes un convenio asignado.
+                            @endif
+                        </div>
+
+                        @if($resumenPago['es_validacion'] && count($resumenPago['escenarios']))
+                        <div class="text-xs text-slate-700 dark:text-slate-300 space-y-2">
+                            <p class="leading-relaxed">
+                                <strong>¿Por qué es un pago inicial?</strong> La matrícula de tu carrera cuesta
+                                <strong>${{ number_format($resumenPago['total_matricula'], 2) }} en total</strong> y se divide entre los semestres que vayas a cursar.
+                                Según cuántos semestres valides en tu prueba:
+                            </p>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left tabular-nums">
+                                    <thead>
+                                        <tr class="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                            <th class="py-1 pr-2 font-semibold">Validas</th>
+                                            <th class="py-1 pr-2 font-semibold">Cursas</th>
+                                            <th class="py-1 pr-2 font-semibold">Matrícula por semestre</th>
+                                            <th class="py-1 font-semibold">Pagas adicional</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-blue-100 dark:divide-blue-900/40">
+                                        @foreach($resumenPago['escenarios'] as $esc)
+                                        <tr>
+                                            <td class="py-1 pr-2">{{ $esc['exonera'] }} {{ $esc['exonera'] === 1 ? 'semestre' : 'semestres' }}</td>
+                                            <td class="py-1 pr-2">{{ $esc['cursa'] }}</td>
+                                            <td class="py-1 pr-2">${{ number_format($resumenPago['total_matricula'], 2) }} ÷ {{ $esc['cursa'] }} = <strong>${{ number_format($esc['valor'], 2) }}</strong></td>
+                                            <td class="py-1 font-semibold {{ $esc['diferencia'] > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400' }}">
+                                                {{ $esc['diferencia'] > 0 ? '$' . number_format($esc['diferencia'], 2) : 'Nada más' }}
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Lo que pagas ahora se descuenta del valor final; la diferencia, si la hay, la completas al matricularte.</p>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+
                     {{-- ── Comprobante de pago ── --}}
                     <div class="border border-slate-100 dark:border-slate-700 rounded-xl p-3.5 space-y-2">
                         <div class="flex items-start justify-between gap-2">
@@ -908,7 +969,7 @@
                         @endif
                         @if($puedeSubirDoc('pago'))
                         <div class="space-y-2">
-                            <input wire:model="pagoMonto" type="number" step="0.01" min="0" placeholder="Monto pagado (ej: 50.00)"
+                            <input wire:model="pagoMonto" type="number" step="0.01" min="0" placeholder="Monto pagado (ej: {{ number_format($resumenPago['valor_matricula'] ?? 0, 2, '.', '') }})"
                                    class="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
                             <label class="flex items-center gap-2 p-2.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors group">
                                 @if($archivoPago)

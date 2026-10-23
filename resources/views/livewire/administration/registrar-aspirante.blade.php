@@ -261,6 +261,46 @@
                 @error('tipo_proceso') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
             </div>
 
+            {{-- Convenio (opcional) --}}
+            <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                    Convenio <span class="font-normal text-slate-400">(opcional)</span>
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <select wire:model.live="tipo_convenio_id"
+                            class="sm:col-span-2 w-full px-3 py-2 rounded-xl text-sm border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500">
+                        <option value="">Sin convenio</option>
+                        @foreach($tiposConvenio as $tipo)
+                            <option value="{{ $tipo->id }}">
+                                {{ $tipo->nombre }} ({{ number_format($tipo->porcentaje_defecto, 0) }}% · {{ $tipo->tipo_alcance === 'semestral' ? 'Semestral' : 'Permanente' }})
+                            </option>
+                        @endforeach
+                    </select>
+                    @if($tiposConvenio->isEmpty())
+                        <p class="sm:col-span-3 text-xs text-amber-700 dark:text-amber-400">
+                            No hay tipos de convenio activos.
+                            <a href="{{ route('administracion.administrativa.tipos-convenio.index') }}" target="_blank"
+                               class="font-semibold underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200">Créalos en Tipos de Convenio</a>
+                            y vuelve a cargar esta página.
+                        </p>
+                    @endif
+                    @if($tipo_convenio_id)
+                        <div class="relative">
+                            <input wire:model="porcentaje_convenio" type="number" step="0.01" min="0" max="100"
+                                   class="w-full pr-8 px-3 py-2 rounded-xl text-sm border {{ $errors->has('porcentaje_convenio') ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700' }} text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500">
+                            <span class="absolute inset-y-0 right-3 flex items-center text-slate-400 text-sm">%</span>
+                        </div>
+                    @endif
+                </div>
+                @if($tipo_convenio_id)
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                        El descuento se aplica al <strong>arancel</strong>; el valor de la matrícula no lleva descuento.
+                    </p>
+                @endif
+                @error('tipo_convenio_id') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                @error('porcentaje_convenio') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+            </div>
+
             {{-- Acciones --}}
             <div class="flex items-center justify-end gap-3 pt-1">
                 <a href="{{ route('administracion.administrativa.aspirantes.index') }}"

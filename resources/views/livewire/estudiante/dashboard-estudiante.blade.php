@@ -13,6 +13,35 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
 
+        {{-- Matrícula registrada pero no habilitada por falta de pago --}}
+        @if ($matriculaPendientePago)
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border p-5
+                        {{ $matriculaPendientePago['en_revision'] ? 'bg-sky-50 border-sky-200' : 'bg-amber-50 border-amber-200' }}">
+                <div class="flex-1">
+                    @if ($matriculaPendientePago['en_revision'])
+                        <p class="text-sm font-semibold text-sky-900">Tu comprobante de matrícula está en revisión</p>
+                        <p class="text-sm text-sky-800 mt-1">
+                            Secretaría está verificando tu pago. Cuando lo apruebe, tu matrícula
+                            @if ($matriculaPendientePago['periodo']) del período {{ $matriculaPendientePago['periodo'] }} @endif
+                            se habilitará y podrás ver tus materias.
+                        </p>
+                    @else
+                        <p class="text-sm font-semibold text-amber-900">Tu matrícula está pendiente de pago</p>
+                        <p class="text-sm text-amber-800 mt-1">
+                            Falta completar <strong>${{ number_format($matriculaPendientePago['saldo'], 2) }}</strong> para habilitar tu matrícula.
+                            Hasta entonces no podrás ver tus materias ni calificaciones.
+                        </p>
+                    @endif
+                </div>
+                @unless ($matriculaPendientePago['en_revision'])
+                    <a href="{{ route('administracion.estudiantil.obligaciones-financieras') }}"
+                       class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-colors flex-shrink-0">
+                        Ir a pagar
+                    </a>
+                @endunless
+            </div>
+        @endif
+
         {{-- ================================================================
              HEADER: Perfil + selector de periodo
              ================================================================ --}}
@@ -507,6 +536,7 @@
                                                 'MATRICULA'   => 'bg-blue-100 text-blue-700',
                                                 'COLEGIATURA' => 'bg-purple-100 text-purple-700',
                                                 'ARRASTRE'    => 'bg-yellow-100 text-yellow-700',
+                                                'REINTEGRO'   => 'bg-orange-100 text-orange-800',
                                                 'INSCRIPCION' => 'bg-orange-100 text-orange-700',
                                                 'MULTA'       => 'bg-red-100 text-red-700',
                                                 'OTROS'       => 'bg-gray-100 text-gray-600',
@@ -515,6 +545,7 @@
                                                 'MATRICULA'   => 'Matrícula',
                                                 'COLEGIATURA' => 'Colegiatura',
                                                 'ARRASTRE'    => 'Arrastre',
+                                                'REINTEGRO'   => 'Reintegro',
                                                 'INSCRIPCION' => 'Inscripción',
                                                 'MULTA'       => 'Multa',
                                                 'OTROS'       => 'Otros',

@@ -84,6 +84,7 @@ class EnviarNotificacionPago implements ShouldQueue
             'COLEGIATURA' => 'Colegiatura',
             'INSCRIPCION' => 'Inscripción',
             'ARRASTRE'    => 'Arrastre',
+            'REINTEGRO'   => 'Reintegro',
             'MULTA'       => 'Multa',
             'OTROS'       => 'Otros',
         ];

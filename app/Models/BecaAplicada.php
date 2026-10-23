@@ -21,6 +21,10 @@ class BecaAplicada extends Model
         'fecha_ultima_revision',
         'is_active',
         'asignado_por',
+        'desactivado_at',
+        'desactivado_por',
+        'motivo_desactivacion',
+        'detalle_desactivacion',
     ];
 
     protected $casts = [
@@ -29,7 +33,13 @@ class BecaAplicada extends Model
         'fecha_asignacion'       => 'date',
         'fecha_ultima_revision'  => 'date',
         'is_active'              => 'boolean',
+        'desactivado_at'         => 'datetime',
     ];
+
+    public function desactivadoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'desactivado_por');
+    }
 
     public function estudiante(): BelongsTo
     {

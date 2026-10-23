@@ -34,7 +34,9 @@ class EnviarWhatsappMatricula implements ShouldQueue
             'estudiante',
             'carrera',
             'periodo',
-            'obligacionesFinancieras' => fn($q) => $q->where('tipo', 'MATRICULA')->latest(),
+            'obligacionesFinancieras' => fn($q) => $q
+                ->whereIn('tipo', \App\Models\ObligacionesFinanciera::TIPOS_HABILITACION)
+                ->where('estado', '!=', 'Invalidado'),
         ])->find($this->matriculaId);
 
         if (! $matricula) {
@@ -65,9 +67,11 @@ class EnviarWhatsappMatricula implements ShouldQueue
         $nombreInstituto = SettingService::get('instituto.nombre_largo', config('app.name'));
         $urlPlataforma   = SettingService::get('instituto.web', '—');
 
-        // Datos de la obligación de matrícula
-        $obligacion  = $matricula->obligacionesFinancieras->first();
-        $monto       = $obligacion ? '$' . number_format($obligacion->monto_final, 2) : '—';
+        // Pago inmediato: matrícula + arrastres + reintegro (los que existan)
+        $obligacion  = $matricula->obligacionesFinancieras->firstWhere('tipo', 'MATRICULA');
+        $monto       = $obligacion
+            ? '$' . number_format((float) $matricula->obligacionesFinancieras->sum('monto_final'), 2)
+            : '—';
         $fechaLimite = $obligacion?->fecha_vencimiento
             ? Carbon::parse($obligacion->fecha_vencimiento)->format('d/m/Y')
             : '—';

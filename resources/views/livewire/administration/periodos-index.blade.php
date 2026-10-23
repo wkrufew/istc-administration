@@ -451,8 +451,9 @@
                 title: `¿Cerrar período ${d.periodoCod}?`,
                 html: `El período se cerrará para <strong>${d.carreraNombre}</strong>.<br><br>
                        <ul style="text-align:left;font-size:0.85em;line-height:2">
-                         <li>✓ Obligaciones pendientes → <strong>Vencido</strong></li>
-                         <li>✓ Becas activas del período → desactivadas</li>
+                         <li>✓ Obligaciones sin pagar de esta carrera → <strong>Vencido</strong> (se pueden seguir pagando)</li>
+                         <li>✓ Becas activas de sus estudiantes → desactivadas (se renuevan manualmente)</li>
+                         <li>✓ Convenios semestrales usados en este período → desactivados</li>
                          <li>✓ Período siguiente activado automáticamente</li>
                        </ul>`,
                 icon: 'warning',

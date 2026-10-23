@@ -75,7 +75,7 @@ class ImportUsers extends Component
                         continue;
                     }
 
-                    $passwordValue = !empty($row[5]) ? (string) $row[5] : '12345678';
+                    $passwordValue = !empty($row[5]) ? (string) $row[5] : trim((string) $row[2]);
 
                     $user = User::create([
                         'first_name'               => $row[0],

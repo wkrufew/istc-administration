@@ -30,13 +30,15 @@ class BienvenidaAspirante extends Mailable
 
     public function content(): Content
     {
-        $logoPath = SettingService::get('instituto.logo_path');
+        $logoPath    = SettingService::get('instituto.logo_path');
+        $resumenPago = $this->user->aspirante?->loadMissing('carrera')->resumenPagoAdmision();
 
         return new Content(
             view: 'emails.admision.bienvenida',
             with: [
-                'user'      => $this->user,
-                'password'  => $this->password,
+                'user'        => $this->user,
+                'password'    => $this->password,
+                'resumenPago' => $resumenPago,
                 'portalUrl' => route('administracion.admision.dashboard'),
                 'instituto' => [
                     'nombre_largo' => SettingService::get('instituto.nombre_largo', 'Instituto'),

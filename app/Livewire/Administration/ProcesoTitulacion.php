@@ -8,6 +8,7 @@ use App\Models\NotaTitulacion;
 use App\Models\ObligacionesFinanciera;
 use App\Models\PracticaPreprofesional;
 use App\Models\User;
+use App\Services\BeneficiosService;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
@@ -475,7 +476,11 @@ class ProcesoTitulacion extends Component
         $estudiante = User::find($this->estudianteId);
         if (! $estudiante) return;
 
-        $estudiante->update(['estado_academico' => 'Egresado']);
+        DB::transaction(function () use ($estudiante) {
+            $estudiante->update(['estado_academico' => 'Egresado']);
+            // Ya no tendrá más matrículas: sus becas y convenios terminan (quedan en el historial)
+            BeneficiosService::desactivarTodos($estudiante->id, 'egreso');
+        });
 
         $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => "{$estudiante->name} ha sido marcado como Egresado correctamente."]);
         unset($this->estudiantes);

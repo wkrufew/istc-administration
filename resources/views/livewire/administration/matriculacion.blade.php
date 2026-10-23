@@ -160,7 +160,17 @@
                                     </div>
                                     <div>
                                         <p class="text-sm font-medium text-slate-700 dark:text-white/80">{{ $student->name }}</p>
-                                        <p class="text-xs text-slate-500 mt-0.5">{{ $student->matricula_numero }}</p>
+                                        @if ($student->aspirante?->estado === 'aprobado')
+                                            @php $esValidacion = $student->aspirante->tipo_proceso === 'validacion_conocimientos'; @endphp
+                                            <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[0.6rem] font-semibold border
+                                                {{ $esValidacion
+                                                    ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-500/30 text-violet-700 dark:text-violet-300'
+                                                    : 'bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-500/30 text-sky-700 dark:text-sky-300' }}">
+                                                Aspirante · {{ $esValidacion ? 'Validación' : 'Regular' }}
+                                            </span>
+                                        @else
+                                            <p class="text-xs text-slate-500 mt-0.5">{{ $student->matricula_numero }}</p>
+                                        @endif
                                     </div>
                                 </div>
                             </td>
@@ -474,28 +484,9 @@
                         {{-- ── PASO 1: Información ── --}}
                         @if ($paso == 1)
 
-                            {{-- Aviso: estudiante de val. conocimientos sin convalidación confirmada --}}
-                            @if ($pendienteConvalidacion)
-                            <div class="mt-3 flex items-start gap-3 rounded-xl border border-amber-300/60 dark:border-amber-600/40 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-                                <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-semibold text-amber-700 dark:text-amber-300">Validación de conocimientos pendiente</p>
-                                    <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                                        Este estudiante ingresó por proceso de validación de conocimientos y aún no tiene una convalidación confirmada.
-                                        Registra la convalidación primero en
-                                        <a href="{{ route('administracion.administrativa.convalidacion.conocimiento', ['userId' => $estudiante->id]) }}"
-                                           class="font-semibold underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-200"
-                                           wire:navigate>Validación de Conocimientos</a>
-                                        antes de continuar con la matrícula.
-                                    </p>
-                                </div>
-                            </div>
-                            @endif
-
                             <div class="pt-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
 
+                                <div class="space-y-3">
                                 {{-- Info estudiante --}}
                                 <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl p-4">
                                     <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400 mb-3">
@@ -518,6 +509,51 @@
                                             </span>
                                         </div>
                                     </div>
+                                </div>
+
+                                {{-- Aviso (no bloquea): deudas pendientes del estudiante --}}
+                                @php $deuda = $this->deudaPendiente; @endphp
+                                @if ($deuda)
+                                    <div class="flex items-start gap-3 rounded-xl border border-amber-300/60 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/15 px-4 py-3">
+                                        <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                                                Tiene ${{ number_format($deuda['total'], 2) }} pendientes de pago
+                                            </p>
+                                            <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                                                {{ $deuda['cantidad'] }} {{ $deuda['cantidad'] === 1 ? 'obligación' : 'obligaciones' }}@if ($deuda['vencidas'] > 0), {{ $deuda['vencidas'] }} {{ $deuda['vencidas'] === 1 ? 'vencida' : 'vencidas' }}@endif
+                                                @if (count($deuda['periodos'])) · Períodos: {{ implode(', ', $deuda['periodos']) }}@endif.
+                                                Puedes continuar con la matrícula.
+                                                <a href="{{ route('administracion.administrativa.obligaciones.index', ['estudiante' => $estudiante->id]) }}"
+                                                   target="_blank"
+                                                   class="font-semibold underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200">Ver sus obligaciones</a>
+                                            </p>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                {{-- Bloqueo: aspirante de validación sin convalidación confirmada --}}
+                                @if ($pendienteConvalidacion && ! $matriculaId)
+                                    <div class="flex items-start gap-3 rounded-xl border border-red-300/60 dark:border-red-500/30 bg-red-50 dark:bg-red-900/15 px-4 py-3">
+                                        <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-semibold text-red-700 dark:text-red-300">No se puede matricular todavía</p>
+                                            <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 leading-relaxed">
+                                                Este estudiante ingresó por <strong>validación de conocimientos</strong> y aún no tiene su validación registrada.
+                                                Sus valores de matrícula y arancel dependen de los semestres que se le exoneren.
+                                                Regístrala primero en
+                                                <a href="{{ route('administracion.administrativa.convalidacion.conocimiento', ['userId' => $estudiante->id]) }}"
+                                                   class="font-semibold underline underline-offset-2 hover:text-red-800 dark:hover:text-red-200"
+                                                   wire:navigate>Validación de Conocimientos</a>
+                                                y luego vuelve a matricularlo.
+                                            </p>
+                                        </div>
+                                    </div>
+                                @endif
                                 </div>
 
                                 {{-- Formulario --}}
@@ -846,6 +882,69 @@
                                 {{-- Tablas de materias --}}
                                 <div class="lg:col-span-2 space-y-4">
 
+                                    {{-- Proviene de admisión --}}
+                                    @php $admision = $this->infoAdmision; @endphp
+                                    @if ($admision)
+                                        <div class="rounded-xl border border-sky-200 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-900/15 p-4 space-y-3">
+                                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                <h5 class="text-[0.65rem] font-semibold tracking-[0.15em] uppercase text-sky-700 dark:text-sky-300">Proviene de admisión</h5>
+                                                <span class="px-2 py-0.5 rounded-full text-[0.6rem] font-semibold border
+                                                    {{ $admision['es_validacion'] ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-500/30 text-violet-700 dark:text-violet-300' : 'bg-white dark:bg-slate-800 border-sky-200 dark:border-sky-500/30 text-sky-700 dark:text-sky-300' }}">
+                                                    {{ $admision['es_validacion'] ? 'Validación de conocimientos' : 'Regular' }}
+                                                </span>
+                                            </div>
+
+                                            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                                                @if ($admision['es_validacion'])
+                                                    <div class="flex justify-between sm:block">
+                                                        <dt class="text-slate-500 dark:text-slate-400">Semestres validados</dt>
+                                                        <dd class="font-semibold text-slate-700 dark:text-white/80">{{ $semestresExonerados }}</dd>
+                                                    </div>
+                                                @endif
+                                                <div class="flex justify-between sm:block">
+                                                    <dt class="text-slate-500 dark:text-slate-400">Convenio</dt>
+                                                    <dd class="font-semibold text-slate-700 dark:text-white/80">
+                                                        {{ $infoConvenio ? $infoConvenio['nombre'] . ' · ' . number_format($infoConvenio['porcentaje'], 0) . '% (arancel)' : 'Sin convenio' }}
+                                                    </dd>
+                                                </div>
+                                                @if ($admision['aplicable'])
+                                                    <div class="flex justify-between sm:block">
+                                                        <dt class="text-slate-500 dark:text-slate-400">Pago verificado en admisión</dt>
+                                                        <dd class="font-semibold text-slate-700 dark:text-white/80">
+                                                            ${{ number_format($admision['monto'], 2) }}
+                                                            <span class="font-normal text-slate-500 dark:text-slate-400">· {{ $admision['metodo'] ?? 'Transferencia' }} · {{ $admision['fecha'] }}</span>
+                                                        </dd>
+                                                    </div>
+                                                @endif
+                                            </dl>
+
+                                            @if ($admision['aplicable'] && $admision['faltante'] <= 0)
+                                                <p class="text-xs rounded-lg px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300">
+                                                    Al guardar, el pago de admisión cubre la matrícula: quedará <strong>pagada y habilitada</strong>.
+                                                </p>
+                                            @elseif ($admision['aplicable'])
+                                                <p class="text-xs rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300">
+                                                    Al guardar se aplicarán <strong>${{ number_format($admision['aplicado'], 2) }}</strong> del pago de admisión.
+                                                    Faltarán <strong>${{ number_format($admision['faltante'], 2) }}</strong>: la matrícula se habilitará cuando se complete el pago.
+                                                </p>
+                                            @elseif ($admision['sin_monto'])
+                                                <p class="text-xs rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                                    Su pago se verificó sin registrar monto ni método, así que no se aplicará automáticamente. Regístralo al cobrar la matrícula.
+                                                </p>
+                                            @else
+                                                <p class="text-xs rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                                    No tiene un pago de matrícula verificado en admisión: se cobra normalmente.
+                                                </p>
+                                            @endif
+
+                                            @if ($admision['excedente'] > 0)
+                                                <p class="text-[0.7rem] text-amber-700 dark:text-amber-400">
+                                                    El pago de admisión supera la matrícula en ${{ number_format($admision['excedente'], 2) }}; ese excedente no se aplica automáticamente.
+                                                </p>
+                                            @endif
+                                        </div>
+                                    @endif
+
                                     {{-- Materias regulares --}}
                                     @if (!empty($materiasSeleccionadas))
                                         <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl overflow-hidden">
@@ -1050,6 +1149,14 @@
                                                             </span>
                                                         </div>
                                                     @endif
+                                                    @if ($tieneReintegro)
+                                                        <div class="flex justify-between items-center">
+                                                            <span class="text-xs text-orange-400/90">Reintegro por retiro (10%, sin descuento)</span>
+                                                            <span class="text-xs font-medium text-orange-400">
+                                                                +${{ number_format($montoReintegro, 2) }}
+                                                            </span>
+                                                        </div>
+                                                    @endif
                                                 </div>
 
                                                 <div
@@ -1080,16 +1187,6 @@
                                                         ${{ number_format($montoArancelBruto, 2) }}
                                                     </span>
                                                 </div>
-
-                                                {{-- Reintegro --}}
-                                                @if ($tieneReintegro)
-                                                    <div class="flex justify-between items-center">
-                                                        <span class="text-xs text-orange-400/90">Recargo reintegro (+10%)</span>
-                                                        <span class="text-xs font-medium text-orange-400">
-                                                            +${{ number_format($montoReintegro, 2) }}
-                                                        </span>
-                                                    </div>
-                                                @endif
 
                                                 {{-- Beca --}}
                                                 @if ($infoBeca)
@@ -1193,13 +1290,15 @@
 
                             @if ($paso < $totalPasos)
                                 <button type="button" x-on:click="avanzarPaso()"
+                                    @disabled($paso == 1 && $pendienteConvalidacion && ! $matriculaId)
                                     class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium tracking-wide uppercase
                                        text-white/90
                                        bg-gradient-to-r from-green-800/70 via-sky-800/60 to-purple-900/55
                                        border border-lime-500/25
                                        hover:from-green-700/80 hover:via-sky-700/70 hover:to-purple-800/65
                                        hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-900/30
-                                       active:translate-y-0 transition-all duration-200">
+                                       active:translate-y-0 transition-all duration-200
+                                       disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none">
                                     Siguiente
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
@@ -1382,25 +1481,8 @@
             document.addEventListener('livewire:init', () => {
                 Livewire.on('matricula-guardada', (event) => {
                     const data = event[0] ?? event;
-                    if (data.redirigir && data.matricula_id) {
-                        Swal.fire({
-                            title: '¡Matrícula creada!',
-                            text: data.mensaje,
-                            icon: 'success',
-                            confirmButtonText: 'Registrar Pago',
-                            showCancelButton: true,
-                            cancelButtonText: 'Ir a Obligaciones',
-                            confirmButtonColor: '#2563eb',
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                window.location.href =
-                                    '{{ route('administracion.administrativa.matriculas.pago', ['matricula' => '__ID__']) }}'.replace('__ID__', data.matricula_id);
-                            } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                window.location.href =
-                                    '{{ route('administracion.administrativa.obligaciones.index') }}';
-                            }
-                        });
-                    } else {
+
+                    if (!data.redirigir || !data.matricula_id) {
                         Swal.fire({
                             title: '¡Éxito!',
                             text: data.mensaje,
@@ -1408,7 +1490,56 @@
                             confirmButtonText: 'OK',
                             confirmButtonColor: '#2563eb'
                         });
+                        return;
                     }
+
+                    // Viene de admisión y su pago cubrió la matrícula: nada que cobrar
+                    if (data.caso === 'admision_pagada') {
+                        Swal.fire({
+                            title: '¡Matrícula habilitada!',
+                            text: data.mensaje,
+                            icon: 'success',
+                            confirmButtonText: 'Volver a matriculación',
+                            confirmButtonColor: '#2563eb',
+                        });
+                        return;
+                    }
+
+                    // Validación con semestres exonerados: falta completar la diferencia
+                    if (data.caso === 'admision_parcial') {
+                        Swal.fire({
+                            title: 'Matrícula registrada',
+                            text: data.mensaje,
+                            icon: 'info',
+                            confirmButtonText: 'Volver a matriculación',
+                            showDenyButton: true,
+                            denyButtonText: 'Cobrar ahora',
+                            confirmButtonColor: '#2563eb',
+                            denyButtonColor: '#d97706',
+                        }).then((result) => {
+                            if (result.isDenied) window.location.href = data.url_cobrar;
+                        });
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: '¡Matrícula creada!',
+                        text: data.mensaje,
+                        icon: 'success',
+                        confirmButtonText: 'Registrar Pago',
+                        showDenyButton: true,
+                        denyButtonText: 'Ir a Obligaciones',
+                        showCancelButton: true,
+                        cancelButtonText: 'Volver a matriculación',
+                        confirmButtonColor: '#2563eb',
+                        denyButtonColor: '#475569',
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = data.url_pago;
+                        } else if (result.isDenied) {
+                            window.location.href = data.url_obligaciones;
+                        }
+                    });
                 });
                 Livewire.on('error', (event) => {
                     const data = event[0] ?? event;
@@ -1425,1055 +1556,6 @@
             });
             Livewire.on('modal-closed', () => {
                 document.documentElement.style.overflow = '';
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') Livewire.dispatch('cerrarModal');
-            });
-        </script>
-    @endpush
-    {{-- <div>
-    <style>
-        .peer:checked+div {
-            @apply border-blue-500 bg-blue-50;
-        }
-
-        .peer:disabled+div {
-            @apply opacity-50 cursor-not-allowed;
-        }
-
-        * {
-            transition-property: all;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 200ms;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 3px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-    </style>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div class="flex justify-center items-center mb-4">
-            <div class="text-center">
-                <h2 class="text-2xl font-bold text-gray-800 mb-0">Gestión de Matrículas</h2>
-                <p class="text-lg text-gray-600 font-semibold">Administrar matrículas de estudiantes</p>
-            </div>
-        </div>
-
-
-        <div class="bg-gray-200 border border-gray-300 rounded-lg p-4 mb-4 shadow-lg">
-            <div class="max-w-6xl mx-auto mb-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="w-full">
-                        <label class="block text-center text-sm text-gray-700 font-semibold pl-4 mb-2">Buscar
-                            Estudiante</label>
-                        <input type="text" class="w-full rounded-full border border-gray-400 shadow-lg px-4 py-2"
-                            wire:model.live="search" placeholder="Nombre, email, cédula o matrícula...">
-                    </div>
-                    <div class="w-full">
-                        <label class="block text-center text-sm text-gray-700 font-semibold pl-4 mb-2">Período</label>
-                        <select class="w-full rounded-full border border-gray-400 shadow-lg px-4 py-2"
-                            wire:model.live="selectedPeriodo">
-                            <option value="">Todos los períodos</option>
-                            @foreach ($periodos as $periodo)
-                                <option value="{{ $periodo->id }}">{{ $periodo->code }} - {{ $periodo->description }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="w-full">
-                        <label class="block text-center text-sm text-gray-700 font-semibold pl-4 mb-2">Carrera</label>
-                        <select class="w-full rounded-full border border-gray-400 shadow-lg px-4 py-2"
-                            wire:model.live="selectedCarrera">
-                            <option value="">Todas las carreras</option>
-                            @foreach ($carreras as $carrera)
-                                <option value="{{ $carrera->id }}">{{ $carrera->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-            <div class="bg-gray-800 py-3 w-full">
-                <h6 class="text-center font-bold text-white uppercase text-2xl">Estudiantes</h6>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="min-w-full table-auto">
-                    <thead class="bg-gray-800 text-white">
-                        <tr>
-                            <th class="px-4 py-3 text-left">Estudiante</th>
-                            <th class="px-4 py-3 text-center">Cédula</th>
-                            <th class="px-4 py-3 text-left">Email</th>
-                            <th class="px-4 py-3 text-center">Matrícula Actual</th>
-                            <th class="px-4 py-3 text-center">Estado</th>
-                            <th class="px-4 py-3 text-left">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($estudiantes as $student)
-                            <tr class="hover:bg-gray-100 transition duration-200 border-b text-sm font-medium">
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center space-x-3">
-                                        <div
-                                            class="bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center text-gray-700 font-bold">
-                                            {{ substr($student->name, 0, 1) }}
-                                        </div>
-                                        <div>
-                                            <h6 class="font-semibold">{{ $student->name }}</h6>
-                                            <small class="text-gray-500">{{ $student->matricula_numero }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-center">{{ $student->cedula }}</td>
-                                <td class="px-4 py-3">{{ $student->email }}</td>
-                                <td class="px-4 py-3 text-center">
-                                    @php
-                                        $matriculaActual = $student->matriculas->first(fn($m) => $m->tipo !== 'Validacion');
-                                    @endphp
-                                    @if ($matriculaActual)
-                                        <div>
-                                            <span class="font-bold">{{ $matriculaActual->code }}</span>
-                                            <br>
-                                            <small class="text-gray-500">{{ $matriculaActual->carrera->name }}</small>
-                                        </div>
-                                    @else
-                                        <span class="text-gray-400">-</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex justify-center">
-                                        @if ($matriculaActual)
-                                            @switch($matriculaActual->estado)
-                                                @case('Habilitada')
-                                                    <span
-                                                        class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Pagada</span>
-                                                @break
-
-                                                @case('Pendiente_Pago')
-                                                    <span
-                                                        class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Pendiente
-                                                        Pago</span>
-                                                @break
-
-                                                @case('Borrador')
-                                                    <span
-                                                        class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">Borrador</span>
-                                                @break
-
-                                                @case('Cancelada')
-                                                    <span
-                                                        class="bg-gray-300 text-gray-800 px-3 py-1 rounded-full text-sm">Cancelada</span>
-                                                @break
-
-                                                @case('Retirada')
-                                                    <span
-                                                        class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">Retirada</span>
-                                                @break
-
-                                                @default
-                                                    <span
-                                                        class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">{{ $matriculaActual->estado }}</span>
-                                            @endswitch
-                                        @else
-                                            <span
-                                                class="bg-purple-300 text-purple-800 px-3 py-1 rounded-full text-sm">Sin
-                                                matrícula</span>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex space-x-2">
-                                        @if ($matriculaActual)
-                                            <button type="button"
-                                                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm transition duration-200"
-                                                wire:click="editarMatricula({{ $matriculaActual->id }})"
-                                                title="Editar matrícula">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path
-                                                        d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z">
-                                                    </path>
-                                                </svg>
-                                            </button>
-                                            @can('cancelar_matriculas')
-                                            @if (!in_array($matriculaActual->estado, ['Cancelada', 'Retirada']))
-                                            <button type="button"
-                                                class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-md text-sm transition duration-200"
-                                                wire:click="abrirRetiro({{ $matriculaActual->id }})"
-                                                title="Retirar estudiante">
-                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                                                </svg>
-                                            </button>
-                                            @endif
-                                            @endcan
-                                        @else
-                                            <button type="button"
-                                                class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition duration-200"
-                                                wire:click="iniciarMatricula({{ $student->id }})"
-                                                title="Nueva matrícula">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd"
-                                                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                                                        clip-rule="evenodd"></path>
-                                                </svg>
-                                            </button>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center py-8">
-                                        <div class="text-gray-500">
-                                            <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                            </svg>
-                                            <p class="text-lg">No se encontraron estudiantes</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="px-4 py-3 bg-gray-50">
-                    {{ $estudiantes->links() }}
-                </div>
-            </div>
-
-
-            @if ($showModal)
-                <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
-                    style="z-index:99999" aria-modal="true">
-
-                    <div
-                        class="flex items-center justify-center min-h-screen  mt-10 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-                        <span class="hidden sm:inline-block sm:align-middle h-screen" aria-hidden="true">&#8203;</span>
-
-
-                        <div
-                            class="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-
-                            <div class="bg-white px-6 py-4 border-b border-gray-200">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                        {{ $matriculaId ? 'Editar' : 'Nueva' }} Matrícula - {{ $estudiante->name }} -
-                                        {{ $estudiante->id }}
-                                    </h3>
-                                    <button type="button"
-                                        class="bg-white rounded-md text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                        wire:click="cerrarModal">
-                                        <span class="sr-only">Cerrar</span>
-                                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div
-                                class="bg-white px-4 py-4 sm:px-6 h-96 md:h-[300px] lg:h-[470px] max-h-96 md:max-h-[300px] lg:max-h-[470px] overflow-y-auto">
-
-                                <div class="mb-6">
-                                    <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                            style="width: {{ ($paso / $totalPasos) * 100 }}%"></div>
-                                    </div>
-                                    <div class="flex justify-between mt-3">
-                                        <div
-                                            class="flex items-center space-x-1 {{ $paso >= 1 ? 'text-blue-600' : 'text-gray-400' }}">
-                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd"
-                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                                    clip-rule="evenodd"></path>
-                                            </svg>
-                                            <span class="text-sm font-medium">Información</span>
-                                        </div>
-                                        <div
-                                            class="flex items-center space-x-1 {{ $paso >= 2 ? 'text-blue-600' : 'text-gray-400' }}">
-                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <span class="text-sm font-medium">Materias</span>
-                                        </div>
-                                        <div
-                                            class="flex items-center space-x-1 {{ $paso >= 3 ? 'text-blue-600' : 'text-gray-400' }}">
-                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                <path
-                                                    d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z">
-                                                </path>
-                                            </svg>
-                                            <span class="text-sm font-medium">Paralelos</span>
-                                        </div>
-                                        <div
-                                            class="flex items-center space-x-1 {{ $paso >= 4 ? 'text-blue-600' : 'text-gray-400' }}">
-                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <span class="text-sm font-medium">Resumen</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                @if ($paso == 1)
-                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        <div>
-                                            <div class="bg-gray-100 rounded-lg p-4 border border-gray-200">
-                                                <h4 class="font-semibold text-gray-900 mb-3">Información del Estudiante
-                                                </h4>
-                                                <div class="space-y-2 text-sm">
-                                                    <p><span class="font-medium">Nombre:</span> {{ $estudiante->name }}
-                                                    </p>
-                                                    <p><span class="font-medium">Email:</span> {{ $estudiante->email }}
-                                                    </p>
-                                                    <p><span class="font-medium">Cédula:</span> {{ $estudiante->cedula }}
-                                                    </p>
-                                                    <p><span class="font-medium">Celular:</span> {{ $estudiante->phone }}
-                                                    </p>
-                                                    <p><span class="font-medium">Fecha de nacimiento:</span>
-                                                        {{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->isoFormat('D [de] MMMM [de] YYYY') }}
-                                                        ({{ \Carbon\Carbon::parse($estudiante->fecha_nacimiento)->age }} años)
-                                                    </p>
-                                                    <p><span class="font-medium">Matrícula:</span>
-                                                        {{ $estudiante->matricula_numero }}</p>
-
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="space-y-4">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                    Carrera <span class="text-red-500">*</span>
-                                                </label>
-                                                <select
-                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 @error('carrera_id') border-red-500 @enderror"
-                                                    wire:model="carrera_id">
-                                                    <option value="">Seleccionar carrera</option>
-                                                    @foreach ($carreras as $carrera)
-                                                        <option value="{{ $carrera->id }}">{{ $carrera->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                @error('carrera_id')
-                                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                                @enderror
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                                    Período Académico <span class="text-red-500">*</span>
-                                                </label>
-                                                <select
-                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 @error('periodo_id') border-red-500 @enderror"
-                                                    wire:model="periodo_id">
-                                                    <option value="">Seleccionar período</option>
-                                                    @foreach ($periodos as $periodo)
-                                                        <option value="{{ $periodo->id }}">
-                                                            {{ $periodo->code }} - {{ $periodo->description }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                @error('periodo_id')
-                                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                                @enderror
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de
-                                                    Matrícula</label>
-                                                <select
-                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    wire:model="tipo">
-                                                    <option value="Nueva">Nueva</option>
-                                                    <option value="Renovacion">Renovación</option>
-                                                    <option value="Arrastre">Arrastre</option>
-                                                </select>
-                                            </div>
-
-                                            <div>
-                                                <label
-                                                    class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-                                                <textarea class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    wire:model="observaciones" rows="3" placeholder="Observaciones adicionales..."></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    @if (!empty($materiasArrastradas))
-                                        <div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                                            <div class="flex">
-                                                <div class="flex-shrink-0">
-                                                    <svg class="h-5 w-5 text-yellow-400" fill="currentColor"
-                                                        viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd"
-                                                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                                            clip-rule="evenodd"></path>
-                                                    </svg>
-                                                </div>
-                                                <div class="ml-3">
-                                                    <h3 class="text-sm font-medium text-yellow-800">Materias Arrastradas
-                                                    </h3>
-                                                    <div class="mt-2 text-sm text-yellow-700">
-                                                        <p class="mb-2">Este estudiante tiene las siguientes materias
-                                                            arrastradas:</p>
-                                                        <div class="space-y-3">
-                                                            @foreach ($materiasArrastradas as $index => $materiaArrastrada)
-                                                                @php
-                                                                    $intento            = $materiaArrastrada['numero_intento'] ?? 1;
-                                                                    $sigIntento         = $intento + 1;
-                                                                    $porcentaje         = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
-                                                                    $costoExtra         = $materiaArrastrada['costo_adicional'] ?? 0;
-                                                                    $esUltimo           = $sigIntento >= 3;
-                                                                    $bloqueadoPorLimite = $totalMateriasSeleccionadas >= 8 && !($materiaArrastrada['incluir'] ?? false);
-                                                                @endphp
-                                                                <div class="flex items-start gap-2 {{ $bloqueadoPorLimite ? 'opacity-50' : '' }}">
-                                                                    <input type="checkbox"
-                                                                        class="h-4 w-4 text-amber-500 focus:ring-amber-500 border-gray-300 rounded mt-0.5 flex-shrink-0 {{ $bloqueadoPorLimite ? 'cursor-not-allowed' : '' }}"
-                                                                        wire:model="materiasArrastradas.{{ $index }}.incluir"
-                                                                        id="arrastre_{{ $index }}"
-                                                                        {{ $bloqueadoPorLimite ? 'disabled' : '' }}>
-                                                                    <div class="border-l-2 {{ $esUltimo ? 'border-red-400' : 'border-amber-400' }} pl-2 flex-1">
-                                                                        <label for="arrastre_{{ $index }}" class="cursor-pointer">
-                                                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                                                <strong class="text-sm text-gray-900">{{ $materiaArrastrada['materia']['name'] }}</strong>
-                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-bold
-                                                                                    {{ $esUltimo ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700' }}">
-                                                                                    {{ $sigIntento }}° intento{{ $esUltimo ? ' (último)' : '' }}
-                                                                                </span>
-                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">
-                                                                                    +{{ number_format($porcentaje, 0) }}%
-                                                                                </span>
-                                                                            </div>
-                                                                            <p class="text-xs text-gray-500 mt-0.5">
-                                                                                Nota: {{ $materiaArrastrada['nota_obtenida'] }}
-                                                                                &nbsp;·&nbsp;
-                                                                                Extra: <span class="text-amber-600 font-semibold">${{ number_format($costoExtra, 2) }}</span>
-                                                                            </p>
-                                                                        </label>
-                                                                    </div>
-                                                                </div>
-                                                            @endforeach
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endif
-                                @endif
-
-                                @if ($paso == 2)
-                                    <div>
-                                        <div class="flex items-center justify-between mb-4">
-                                            <h4 class="text-lg font-semibold text-gray-900">Materias Disponibles</h4>
-                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                                                {{ $totalMateriasSeleccionadas >= 8
-                                                    ? 'bg-red-100 text-red-700 border border-red-200'
-                                                    : ($totalMateriasSeleccionadas >= 6
-                                                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                                        : 'bg-gray-100 text-gray-600 border border-gray-200') }}">
-                                                {{ $totalMateriasSeleccionadas }} / 8 materias
-                                            </span>
-                                        </div>
-                                        @if (empty($materiasDisponibles))
-                                            <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
-                                                <div class="flex">
-                                                    <div class="flex-shrink-0">
-                                                        <svg class="h-5 w-5 text-blue-400" fill="currentColor"
-                                                            viewBox="0 0 20 20">
-                                                            <path fill-rule="evenodd"
-                                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                                                clip-rule="evenodd"></path>
-                                                        </svg>
-                                                    </div>
-                                                    <div class="ml-3">
-                                                        <p class="text-sm text-blue-700">
-                                                            No hay materias disponibles para inscribir en esta carrera y
-                                                            período.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @else
-                                            @if ($semestreSugerido)
-                                            <div class="bg-sky-500/[0.06] border border-sky-500/20 rounded-xl p-3 flex items-center gap-2 mb-4">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-sky-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <circle cx="12" cy="12" r="10" /><path d="M12 16v-4m0-4h.01" />
-                                                </svg>
-                                                <p class="text-xs text-sky-300">Se han pre-seleccionado las materias del <strong>{{ $semestreSugerido }}</strong> según el historial del estudiante. Puedes ajustar la selección.</p>
-                                            </div>
-                                            @endif
-                                            <div class="space-y-4">
-                                                @foreach ($materiasDisponibles as $semestreNombre => $materias)
-                                                    <div class="bg-white border border-gray-200 rounded-lg">
-                                                        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                                                            <h5 class="text-md font-medium text-gray-900">{{ $semestreNombre }}</h5>
-                                                            @if ($semestreSugerido && $semestreNombre === $semestreSugerido)
-                                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6rem] font-semibold bg-lime-500/10 border border-lime-500/20 text-lime-600">
-                                                                    ✓ Sugerido
-                                                                </span>
-                                                            @endif
-                                                        </div>
-                                                        <div class="p-4">
-                                                            <div
-                                                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                                @foreach ($materias as $materia)
-                                                                    @php
-                                                                        $bloqueadoPorLimite = $totalMateriasSeleccionadas >= 8 && !in_array($materia['id'], $materiasSeleccionadas);
-                                                                        $deshabilitada = !$materia['puede_inscribir'] || $bloqueadoPorLimite;
-                                                                        $noOfertada = !($materia['ofertada'] ?? true);
-                                                                    @endphp
-                                                                    <div class="relative">
-                                                                        <label class="cursor-pointer {{ $deshabilitada ? 'cursor-not-allowed' : '' }}">
-                                                                            <input type="checkbox" class="sr-only peer"
-                                                                                value="{{ $materia['id'] }}"
-                                                                                wire:model="materiasSeleccionadas"
-                                                                                {{ $deshabilitada ? 'disabled' : '' }}>
-                                                                            <div
-                                                                                class="border-2 rounded-lg p-3 transition-all duration-200
-                                                                            {{ $noOfertada ? 'border-gray-200 opacity-60' : '' }}
-                                                                            {{ $deshabilitada ? 'opacity-50 cursor-not-allowed' : (!$noOfertada ? 'hover:border-blue-500' : '') }}
-                                                                            peer-checked:border-blue-500 peer-checked:bg-blue-50">
-                                                                                <h6
-                                                                                    class="font-semibold text-gray-900 mb-1">
-                                                                                    {{ $materia['name'] }}</h6>
-                                                                                <p class="text-sm text-gray-600 mb-2">
-                                                                                    {{ $materia['code'] }}</p>
-                                                                                <div
-                                                                                    class="flex justify-between items-center">
-                                                                                    <span
-                                                                                        class="text-xs text-gray-500">{{ number_format($materia['credits'], 2) }}
-                                                                                        créditos</span>
-                                                                                    <span
-                                                                                        class="px-2 py-1 text-xs rounded-full
-                                                                                    {{ $materia['tipo'] == 'Obligatoria' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800' }}">
-                                                                                        {{ $materia['tipo'] }}
-                                                                                    </span>
-                                                                                </div>
-                                                                                @if ($materia['credits_inconsistente'])
-                                                                                    <div class="mt-1.5 flex items-center gap-1 text-xs text-amber-600">
-                                                                                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                                                                        </svg>
-                                                                                        Créditos desactualizados — corregir en Materias
-                                                                                    </div>
-                                                                                @endif
-                                                                                @if (!$materia['puede_inscribir'] && !empty($materia['prerequisitos_faltantes']))
-                                                                                    <div
-                                                                                        class="mt-2 p-2 bg-red-50 rounded text-xs">
-                                                                                        <p
-                                                                                            class="text-red-700 font-medium">
-                                                                                            Prerequisitos faltantes:</p>
-                                                                                        <ul class="text-red-600 mt-1">
-                                                                                            @foreach ($materia['prerequisitos_faltantes'] as $prerequisito)
-                                                                                                <li>• {{ $prerequisito }}
-                                                                                                </li>
-                                                                                            @endforeach
-                                                                                        </ul>
-                                                                                    </div>
-                                                                                @endif
-                                                                                @if ($noOfertada)
-                                                                                    <div class="mt-2 flex items-center gap-1.5 text-xs text-gray-400">
-                                                                                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                                                                                        </svg>
-                                                                                        No ofertada este período
-                                                                                    </div>
-                                                                                @endif
-                                                                            </div>
-                                                                        </label>
-                                                                    </div>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-
-                                        @error('materias')
-                                            <div class="mt-3 bg-red-50 border border-red-200 rounded-md p-4">
-                                                <p class="text-sm text-red-700">{{ $message }}</p>
-                                            </div>
-                                        @enderror
-                                    </div>
-                                @endif
-
-                                @if ($paso == 3)
-                                    <div>
-                                        <h4 class="text-lg font-semibold text-gray-900 mb-4">Selección de Paralelos</h4>
-                                        @php
-                                            $todasLasMaterias = collect($materiasSeleccionadas)
-                                                ->merge(
-                                                    collect($materiasArrastradas)
-                                                        ->where('incluir', true)
-                                                        ->pluck('materia_id'),
-                                                )
-                                                ->unique();
-                                        @endphp
-
-                                        <div class="space-y-4">
-                                            @foreach ($todasLasMaterias as $materiaId)
-                                                @php
-                                                    $materia = \App\Models\Materia::find($materiaId);
-                                                    $paralelos = isset($paralelosDisponibles[$materiaId])
-                                                        ? $paralelosDisponibles[$materiaId]
-                                                        : [];
-                                                @endphp
-
-                                                <div class="bg-white border border-gray-200 rounded-lg">
-                                                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                                                        <h5 class="text-md font-medium text-gray-900">{{ $materia->name }}
-                                                            ({{ $materia->code }})
-                                                        </h5>
-                                                    </div>
-                                                    <div class="p-4">
-                                                        @if (empty($paralelos))
-                                                            <div
-                                                                class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                                                                <p class="text-sm text-yellow-700">No hay paralelos
-                                                                    disponibles para esta materia.</p>
-                                                            </div>
-                                                        @else
-                                                            <div
-                                                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                                @foreach ($paralelos as $paralelo)
-                                                                    <div class="relative">
-                                                                        <label class="cursor-pointer">
-                                                                            <input type="radio" class="sr-only peer"
-                                                                                name="paralelo_{{ $materiaId }}"
-                                                                                value="{{ $paralelo['id'] }}"
-                                                                                wire:model="paralelosSeleccionados.{{ $materiaId }}"
-                                                                                {{ !$paralelo['tiene_cupo'] ? 'disabled' : '' }}>
-                                                                            <div
-                                                                                class="border-2 rounded-lg p-3 transition-all duration-200
-                                                                            {{ !$paralelo['tiene_cupo'] ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500' }}
-                                                                            peer-checked:border-blue-500 peer-checked:bg-blue-50">
-                                                                                <h6
-                                                                                    class="font-semibold text-gray-900 mb-2">
-                                                                                    {{ $paralelo['name'] }}</h6>
-                                                                                <div
-                                                                                    class="flex justify-between items-center">
-                                                                                    <span
-                                                                                        class="text-sm {{ $paralelo['tiene_cupo'] ? 'text-green-600' : 'text-red-600' }}">
-                                                                                        Cupo:
-                                                                                        {{ $paralelo['cupo_disponible'] }}
-                                                                                        disponibles
-                                                                                    </span>
-                                                                                </div>
-                                                                            </div>
-                                                                        </label>
-                                                                    </div>
-                                                                @endforeach
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-
-                                        @error('paralelos')
-                                            <div class="mt-3 bg-red-50 border border-red-200 rounded-md p-4">
-                                                <p class="text-sm text-red-700">{{ $message }}</p>
-                                            </div>
-                                        @enderror
-                                    </div>
-                                @endif
-
-                                @if ($paso == 4)
-                                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        <div class="lg:col-span-2">
-                                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Resumen de Matrícula</h4>
-
-                                            @if (!empty($materiasSeleccionadas))
-                                                <div class="bg-white border border-gray-200 rounded-lg mb-4">
-                                                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                                                        <h5 class="text-md font-medium text-gray-900">Materias Regulares
-                                                        </h5>
-                                                    </div>
-                                                    <div class="overflow-x-auto">
-                                                        <table class="min-w-full divide-y divide-gray-200">
-                                                            <thead class="bg-gray-50">
-                                                                <tr>
-                                                                    <th
-                                                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                                                        Materia</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                                                        Código</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                                                                        Créditos</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                                                                        Paralelo</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                                                                        Costo</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody class="bg-white divide-y divide-gray-200">
-                                                                @foreach ($materiasSeleccionadas as $materiaId)
-                                                                    @php
-                                                                        $materia = \App\Models\Materia::find(
-                                                                            $materiaId,
-                                                                        );
-                                                                        $carrera = \App\Models\Carrera::find(
-                                                                            $carrera_id,
-                                                                        );
-                                                                        $paralelo = isset(
-                                                                            $paralelosSeleccionados[$materiaId],
-                                                                        )
-                                                                            ? \App\Models\Paralelo::find(
-                                                                                $paralelosSeleccionados[$materiaId],
-                                                                            )
-                                                                            : null;
-                                                                        $creditosVivos = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
-                                                                        $costo = $creditosVivos * $carrera->costo_credito;
-                                                                    @endphp
-                                                                    <tr>
-                                                                        <td class="px-4 py-3 text-sm text-gray-900">
-                                                                            {{ $materia->name }}</td>
-                                                                        <td class="px-4 py-3 text-sm text-gray-500">
-                                                                            {{ $materia->code }}</td>
-                                                                        <td
-                                                                            class="px-4 py-3 text-sm text-center text-gray-900">
-                                                                            {{ number_format($creditosVivos, 2) }}</td>
-                                                                        <td
-                                                                            class="px-4 py-3 text-sm text-center text-gray-500">
-                                                                            {{ $paralelo ? $paralelo->name : 'No asignado' }}
-                                                                        </td>
-                                                                        <td
-                                                                            class="px-4 py-3 text-sm text-right font-medium text-gray-900">
-                                                                            ${{ number_format($costo, 2) }}</td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            @endif
-
-                                            @php
-                                                $materiasArrastradasIncluidas = collect($materiasArrastradas)->where(
-                                                    'incluir',
-                                                    true,
-                                                );
-                                            @endphp
-                                            @if ($materiasArrastradasIncluidas->count() > 0)
-                                                <div class="bg-white border border-gray-200 rounded-lg mb-4">
-                                                    <div class="bg-yellow-50 px-4 py-3 border-b border-gray-200">
-                                                        <h5 class="text-md font-medium text-gray-900">Materias de Arrastre
-                                                        </h5>
-                                                    </div>
-                                                    <div class="overflow-x-auto">
-                                                        <table class="min-w-full divide-y divide-gray-200">
-                                                            <thead class="bg-gray-50">
-                                                                <tr>
-                                                                    <th
-                                                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                                                        Materia</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                                                        Código</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                                                                        Créditos</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                                                                        Paralelo</th>
-                                                                    <th
-                                                                        class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                                                                        Costo</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody class="bg-white divide-y divide-gray-200">
-                                                                @foreach ($materiasArrastradasIncluidas as $materiaArrastrada)
-                                                                    @php
-                                                                        $materia    = \App\Models\Materia::find($materiaArrastrada['materia_id']);
-                                                                        $paralelo   = isset($paralelosSeleccionados[$materiaArrastrada['materia_id']])
-                                                                            ? \App\Models\Paralelo::find($paralelosSeleccionados[$materiaArrastrada['materia_id']])
-                                                                            : null;
-                                                                        $costo      = $materiaArrastrada['costo_adicional'] ?? 0;
-                                                                        $intento    = $materiaArrastrada['numero_intento'] ?? 1;
-                                                                        $sigIntento = $intento + 1;
-                                                                        $porcentaje = $materiaArrastrada['porcentaje_penalizacion'] ?? 30;
-                                                                        $esUltimo   = $sigIntento >= 3;
-                                                                    @endphp
-                                                                    <tr>
-                                                                        <td class="px-4 py-3">
-                                                                            <p class="text-sm text-gray-900">{{ $materia->name }}</p>
-                                                                            <div class="flex items-center gap-1 mt-0.5">
-                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-bold
-                                                                                    {{ $esUltimo ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700' }}">
-                                                                                    {{ $sigIntento }}° intento{{ $esUltimo ? ' (último)' : '' }}
-                                                                                </span>
-                                                                                <span class="px-1.5 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">
-                                                                                    +{{ number_format($porcentaje, 0) }}%
-                                                                                </span>
-                                                                            </div>
-                                                                        </td>
-                                                                        <td class="px-4 py-3 text-sm text-gray-500">{{ $materia->code }}</td>
-                                                                        <td class="px-4 py-3 text-sm text-center text-gray-900">
-                                                                            {{ number_format(($materia->horas_teoricas + $materia->horas_practicas) / 48, 2) }}</td>
-                                                                        <td class="px-4 py-3 text-sm text-center text-gray-500">
-                                                                            {{ $paralelo ? $paralelo->name : 'No asignado' }}</td>
-                                                                        <td class="px-4 py-3 text-sm text-right font-medium text-amber-600">
-                                                                            +${{ number_format($costo, 2) }}</td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        </div>
-
-                                        <div class="lg:col-span-1">
-                                            <div class="bg-white border border-gray-200 rounded-lg sticky top-4">
-                                                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                                                    <h5 class="text-md font-medium text-gray-900">Resumen de Costos</h5>
-                                                </div>
-                                                <div class="p-4">
-                                                    <div class="mb-4">
-                                                        <label
-                                                            class="block text-sm font-medium text-gray-700 mb-2">Descuento
-                                                            ($)</label>
-                                                        <input type="number"
-                                                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 @error('descuento') border-red-500 @enderror"
-                                                            wire:model.blur="descuento" min="0"
-                                                            max="{{ $costoTotal }}" step="0.01" placeholder="0.00">
-                                                        @error('descuento')
-                                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                                        @enderror
-                                                    </div>
-
-                                                    <hr class="my-4">
-
-                                                    <div class="space-y-3">
-                                                        <div class="flex justify-between items-center">
-                                                            <span class="text-sm text-gray-600">Total Créditos:</span>
-                                                            <span class="font-medium text-gray-900">{{ number_format($totalCreditos, 2) }}</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center">
-                                                            <span class="text-sm text-gray-600">Costo Matrícula:</span>
-                                                            <span class="font-medium text-gray-900">${{ number_format($montoMatricula, 2) }}</span>
-                                                        </div>
-                                                        @if ($costoArrastres > 0)
-                                                            <div class="flex justify-between items-center">
-                                                                <span class="text-sm text-amber-600">Costo Arrastres:</span>
-                                                                <span class="font-medium text-amber-600">+${{ number_format($costoArrastres, 2) }}</span>
-                                                            </div>
-                                                            @foreach (collect($materiasArrastradas)->where('incluir', true) as $ma)
-                                                                <div class="flex justify-between items-center pl-3 border-l-2 border-amber-200">
-                                                                    <span class="text-xs text-gray-500 truncate max-w-[160px]">
-                                                                        {{ $ma['materia']['name'] }}
-                                                                        <span class="text-orange-500">(+{{ number_format($ma['porcentaje_penalizacion'] ?? 30, 0) }}%)</span>
-                                                                    </span>
-                                                                    <span class="text-xs text-amber-600 font-medium">+${{ number_format($ma['costo_adicional'] ?? 0, 2) }}</span>
-                                                                </div>
-                                                            @endforeach
-                                                        @endif
-                                                        @if ($valorInscripcion > 0)
-                                                            <div class="flex justify-between items-center">
-                                                                <span class="text-sm text-amber-600">Inscripción (1ª matrícula):</span>
-                                                                <span class="font-medium text-amber-600">${{ number_format($valorInscripcion, 2) }}</span>
-                                                            </div>
-                                                        @endif
-                                                        @if ($descuento > 0)
-                                                            <div class="flex justify-between items-center text-green-600">
-                                                                <span class="text-sm">Descuento:</span>
-                                                                <span class="font-medium">-${{ number_format($descuento, 2) }}</span>
-                                                            </div>
-                                                        @endif
-                                                    </div>
-
-                                                    <hr class="my-4">
-
-                                                    <div class="flex justify-between items-center">
-                                                        <span class="text-lg font-semibold text-gray-900">Total a
-                                                            Pagar:</span>
-                                                        <span
-                                                            class="text-xl font-bold text-blue-600">${{ number_format($totalPagar + $valorInscripcion, 2) }}</span>
-                                                    </div>
-
-                                                    <hr class="my-4">
-
-                                                    <!-- Desglose arancel -->
-                                                    <div class="space-y-2">
-                                                        <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Arancel Semestral</p>
-                                                        <div class="flex justify-between items-center">
-                                                            <span class="text-sm text-gray-600">Base{{ $tipo === 'Validacion' ? ' (Convalidación)' : '' }}:</span>
-                                                            <span class="font-medium text-gray-900">${{ number_format($montoArancelBruto, 2) }}</span>
-                                                        </div>
-                                                        @if ($tieneReintegro)
-                                                            <div class="flex justify-between items-center text-orange-600">
-                                                                <span class="text-sm">Recargo reintegro (+10%):</span>
-                                                                <span class="font-medium">+${{ number_format($montoReintegro, 2) }}</span>
-                                                            </div>
-                                                        @endif
-                                                        @if ($infoBeca)
-                                                            <div class="flex justify-between items-center text-green-600">
-                                                                <span class="text-sm">Beca {{ $infoBeca['nombre'] }} ({{ number_format($infoBeca['porcentaje'], 0) }}%):</span>
-                                                                <span class="font-medium">-${{ number_format($descuentoBeca, 2) }}</span>
-                                                            </div>
-                                                        @endif
-                                                        <div class="flex justify-between items-center font-semibold text-amber-700">
-                                                            <span class="text-sm">Arancel Neto:</span>
-                                                            <span>${{ number_format($montoArancel, 2) }}</span>
-                                                        </div>
-                                                        <div class="mt-2">
-                                                            @if($esGratuidad)
-                                                                <span class="inline-block text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
-                                                                    GRATUIDAD — Arancel $0.00
-                                                                </span>
-                                                            @else
-                                                                <p class="text-xs text-gray-600">
-                                                                    <span class="font-medium">5 cuotas</span> — ${{ number_format($montoArancel / 5, 2) }} c/u, distribuidas en el período
-                                                                </p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-
-                            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        @if ($paso > 1)
-                                            <button type="button"
-                                                class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                                wire:click="pasoAnterior">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M15 19l-7-7 7-7"></path>
-                                                </svg>
-                                                Anterior
-                                            </button>
-                                        @endif
-                                    </div>
-
-                                    <div class="flex space-x-3">
-                                        <button type="button"
-                                            class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                            wire:click="cerrarModal">
-                                            Cancelar
-                                        </button>
-
-                                        @if ($paso < $totalPasos)
-                                            <button type="button"
-                                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                                wire:click="siguientePaso">
-                                                Siguiente
-                                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M9 5l7 7-7 7"></path>
-                                                </svg>
-                                            </button>
-                                        @else
-                                            <button type="button"
-                                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                                wire:click="guardarMatricula">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M5 13l4 4L19 7"></path>
-                                                </svg>
-                                                {{ $matriculaId ? 'Actualizar' : 'Guardar' }} Matrícula
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
-        </div>
-    </div>
-    </div>
- --}}
-
-    @push('js')
-        <script>
-            document.addEventListener('livewire:init', () => {
-
-                Livewire.on('matricula-guardada', (event) => {
-                    const data = event[0] ?? event;
-
-                    if (data.redirigir && data.matricula_id) {
-                        Swal.fire({
-                            title: '¡Matrícula creada!',
-                            text: data.mensaje,
-                            icon: 'success',
-                            confirmButtonText: 'Registrar Pago',
-                            showCancelButton: true,
-                            cancelButtonText: 'Ir a Obligaciones',
-                            confirmButtonColor: '#2563eb',
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                window.location.href =
-                                    '{{ route('administracion.administrativa.matriculas.pago', ['matricula' => '__ID__']) }}'.replace('__ID__', data.matricula_id);
-                            } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                window.location.href =
-                                    '{{ route('administracion.administrativa.obligaciones.index') }}';
-                            }
-                        });
-                    } else {
-                        Swal.fire({
-                            title: '¡Éxito!',
-                            text: data.mensaje,
-                            icon: 'success',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#2563eb',
-                        });
-                    }
-                });
-
-                Livewire.on('error', (event) => {
-                    const data = event[0] ?? event;
-                    Swal.fire({
-                        title: 'Error',
-                        text: data.mensaje,
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                    });
-                });
-            });
-
-            document.addEventListener('keydown', function(event) {
-                if (event.key === 'Escape') {
-                    Livewire.dispatch('cerrarModal');
-                }
             });
         </script>
     @endpush

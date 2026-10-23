@@ -24,7 +24,12 @@ class ObligacionesFinanciera extends Model
         'descripcion',
         'solicitud_id',
         'beca_aplicada_id',
+        'convenio_aplicado_id',
+        'retiro_id',
     ];
+
+    /** Obligaciones que deben estar pagadas para habilitar una matrícula. */
+    public const TIPOS_HABILITACION = ['MATRICULA', 'ARRASTRE', 'REINTEGRO'];
 
     protected $casts = [
         'monto_original'     => 'decimal:2',
@@ -77,6 +82,17 @@ class ObligacionesFinanciera extends Model
     public function becaAplicada()
     {
         return $this->belongsTo(BecaAplicada::class, 'beca_aplicada_id');
+    }
+
+    public function retiro()
+    {
+        return $this->belongsTo(Retiro::class);
+    }
+
+    // 🔹 Convenio que generó el descuento
+    public function convenioAplicado()
+    {
+        return $this->belongsTo(ConvenioAplicado::class, 'convenio_aplicado_id');
     }
 
     /*

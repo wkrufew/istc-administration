@@ -4,7 +4,6 @@ namespace App\Livewire\Estudiante;
 
 use App\Models\Pago;
 use App\Models\Periodo;
-use App\Models\Matricula;
 use App\Models\ObligacionesFinanciera;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -137,22 +136,33 @@ class ObligacionesFinancieras extends Component
             ->sum(fn($ob) => max(0, $ob->monto_final - ($ob->pagado ?? 0)));
     }
 
+    /**
+     * Lo pendiente de pago separado por concepto (matrícula, arancel, arrastres, reintegro…),
+     * en lugar de mezclarlo todo contra el costo de la carrera.
+     */
     #[Computed]
-    public function saldoCarrera()
+    public function saldoPorConcepto(): array
     {
-        $matricula = Matricula::with('carrera')
-            ->where('user_id', $this->idUser)
-            ->latest()
-            ->first();
+        $conceptos = [
+            'MATRICULA'   => 'Matrícula',
+            'COLEGIATURA' => 'Arancel (colegiatura)',
+            'ARRASTRE'    => 'Arrastres',
+            'REINTEGRO'   => 'Reintegro',
+            'OTROS'       => 'Otros valores',
+        ];
 
-        if (! $matricula?->carrera) return 0;
-
-        $totalPagadoHistorico = ObligacionesFinanciera::where('user_id', $this->idUser)
-            ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', \App\Models\Pago::ESTADO_APROBADO)], 'monto')
+        $saldos = ObligacionesFinanciera::where('user_id', $this->idUser)
+            ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
+            ->withSum(['pagos as pagado' => fn($q) => $q->where('estado', Pago::ESTADO_APROBADO)], 'monto')
             ->get()
-            ->sum(fn($ob) => $ob->pagado ?? 0);
+            ->groupBy(fn($ob) => array_key_exists($ob->tipo, $conceptos) ? $ob->tipo : 'OTROS')
+            ->map(fn($grupo) => round($grupo->sum(fn($ob) => max(0, $ob->monto_final - ($ob->pagado ?? 0))), 2));
 
-        return max(0, $matricula->carrera->costo_carrera - $totalPagadoHistorico);
+        return collect($conceptos)
+            ->map(fn($label, $tipo) => ['label' => $label, 'monto' => $saldos[$tipo] ?? 0])
+            ->filter(fn($fila) => $fila['monto'] > 0)
+            ->values()
+            ->all();
     }
 
     // =========================================================================
@@ -303,7 +313,7 @@ class ObligacionesFinancieras extends Component
             'periodos'           => $this->periodos,
             'deudaPeriodoActual' => $this->deudaPeriodoActual,
             'totalPagadoPeriodo' => $this->totalPagadoPeriodo,
-            'saldoCarrera'       => $this->saldoCarrera,
+            'saldoPorConcepto'   => $this->saldoPorConcepto,
             'deudaVencidaGlobal' => $this->deudaVencidaGlobal,
         ]);
     }

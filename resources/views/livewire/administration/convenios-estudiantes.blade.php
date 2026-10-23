@@ -1,4 +1,6 @@
-<div class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-4"
+     x-data
+     x-effect="document.body.style.overflow = ($wire.showModal || $wire.showRevocarModal) ? 'hidden' : ''">
 
     {{-- ══ HEADER ══════════════════════════════════════════════════════════ --}}
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 relative overflow-hidden rounded-xl">
@@ -39,6 +41,12 @@
                     <span class="text-[0.65rem] text-emerald-600 dark:text-emerald-400">Cobertura</span>
                     <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">{{ $statsResumen['cobertura'] }}%</span>
                 </div>
+                @if($statsResumen['ahorro_total'] > 0)
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/30 border border-teal-200/60 dark:border-teal-500/20">
+                    <span class="text-[0.65rem] text-teal-600 dark:text-teal-400">Ahorro</span>
+                    <span class="text-xs font-bold text-teal-700 dark:text-teal-300">${{ number_format($statsResumen['ahorro_total'], 2) }}</span>
+                </div>
+                @endif
             </div>
 
             {{-- Botones de acción --}}
@@ -136,6 +144,7 @@
                     @forelse ($estudiantes as $est)
                         @php
                             $convenioActivo = $est->conveniosAplicados->first();
+                            $usoSemestral   = $convenioActivo?->estadoUsoSemestral();
                             $matriculaAct   = $est->matriculas->first();
                             $carreraNombre  = $matriculaAct?->carrera?->name ?? '—';
                         @endphp
@@ -162,7 +171,19 @@
                                                 @endif
                                             </span>
                                             @if ($convenioActivo->tipoConvenio->tipo_alcance === 'semestral')
-                                                <span class="inline-flex items-center px-1.5 py-0 rounded text-[0.6rem] font-medium bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400">Semestral</span>
+                                                @if ($usoSemestral === 'cumplido')
+                                                    <span class="inline-flex items-center px-1.5 py-0 rounded text-[0.6rem] font-medium bg-slate-500/10 border border-slate-500/20 text-slate-500 dark:text-slate-400">
+                                                        Semestral · usado en {{ $convenioActivo->periodo?->code ?? '—' }} · ya cumplido
+                                                    </span>
+                                                @elseif ($usoSemestral === 'en_uso')
+                                                    <span class="inline-flex items-center px-1.5 py-0 rounded text-[0.6rem] font-medium bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400">
+                                                        Semestral · usado en {{ $convenioActivo->periodo?->code ?? '—' }} · vence al cerrar el período
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center px-1.5 py-0 rounded text-[0.6rem] font-medium bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400">
+                                                        Semestral · sin usar
+                                                    </span>
+                                                @endif
                                             @else
                                                 <span class="inline-flex items-center px-1.5 py-0 rounded text-[0.6rem] font-medium bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">Permanente</span>
                                             @endif
@@ -184,6 +205,19 @@
                             </td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" title="Historial de beneficios"
+                                        wire:click="$dispatch('ver-historial-beneficios', { userId: {{ $est->id }} })"
+                                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800 hover:text-violet-500 hover:border-violet-500/30 transition-all duration-150">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </button>
+                                    @if ($usoSemestral === 'cumplido')
+                                        <button wire:click="abrirModalRenovar({{ $convenioActivo->id }})"
+                                            title="Asignar de nuevo el mismo convenio para su próxima matrícula"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.72rem] font-medium text-violet-600 border border-violet-200/60 dark:border-violet-500/20 bg-violet-50/60 dark:bg-violet-900/[0.06] hover:bg-violet-50 dark:hover:bg-violet-900/10 hover:border-violet-400/50 transition-all duration-150">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                            Renovar
+                                        </button>
+                                    @endif
                                     @if ($convenioActivo)
                                         <button wire:click="abrirModalEditar({{ $convenioActivo->id }})"
                                             class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.72rem] font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800 hover:text-violet-500 hover:border-violet-500/30 hover:bg-violet-500/[0.06] transition-all duration-150">
@@ -233,8 +267,7 @@
 
     {{-- ══ MODAL ASIGNAR / EDITAR ══════════════════════════════════════════ --}}
     @if ($showModal)
-        <div x-data x-init="document.body.style.overflow='hidden'" x-destroy="document.body.style.overflow=''"
-            class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-data class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="cerrarModal"></div>
 
             <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-white/[0.08] max-h-[90vh] overflow-y-auto"
@@ -242,7 +275,7 @@
 
                 <div class="px-6 py-4 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
                     <h3 class="text-base font-semibold text-slate-800 dark:text-white/90">
-                        {{ $convenioId ? 'Editar Convenio Asignado' : 'Asignar Convenio' }}
+                        {{ $convenioId ? 'Editar Convenio Asignado' : ($renovarDeId ? 'Renovar Convenio' : 'Asignar Convenio') }}
                     </h3>
                     <button wire:click="cerrarModal" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
@@ -250,6 +283,15 @@
                 </div>
 
                 <div class="px-6 py-5 space-y-4">
+
+                    @if ($renovarDeId)
+                        <div class="p-3 rounded-lg bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900">
+                            <p class="text-xs text-violet-700 dark:text-violet-300 leading-relaxed">
+                                El convenio usado en <span class="font-semibold">{{ $renovarDeCode ?: '—' }}</span> quedará en el historial como renovado.
+                                El nuevo se aplicará en su próxima matrícula.
+                            </p>
+                        </div>
+                    @endif
 
                     <div>
                         <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Tipo de Convenio *</label>
@@ -290,15 +332,25 @@
                                 class="w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-white/80 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition">
                             @error('fechaInicio') <p class="text-xs text-red-400 mt-1">{{ $message }}</p> @enderror
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                                Fecha Fin
-                                <span class="font-normal text-slate-400">(opcional)</span>
-                            </label>
-                            <input wire:model="fechaFin" type="date"
-                                class="w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-white/80 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition">
-                            @error('fechaFin') <p class="text-xs text-red-400 mt-1">{{ $message }}</p> @enderror
-                        </div>
+                        @php $tipoSel = $tipoConvenioId ? $tiposConvenio->firstWhere('id', $tipoConvenioId) : null; @endphp
+                        @if ($tipoSel?->tipo_alcance === 'semestral')
+                            <div class="flex items-end">
+                                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    <span class="font-medium text-orange-600 dark:text-orange-400">Semestral:</span>
+                                    se aplica en su próxima matrícula y vence al cerrar ese período.
+                                </p>
+                            </div>
+                        @else
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                                    Fecha Fin
+                                    <span class="font-normal text-slate-400">(opcional)</span>
+                                </label>
+                                <input wire:model="fechaFin" type="date"
+                                    class="w-full px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-white/80 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10 transition">
+                                @error('fechaFin') <p class="text-xs text-red-400 mt-1">{{ $message }}</p> @enderror
+                            </div>
+                        @endif
                     </div>
 
                     <div>
@@ -318,12 +370,10 @@
                         @error('observacion') <p class="text-xs text-red-400 mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    @error('tipoConvenioId')
-                        @if (str_contains($message, 'convenio activo'))
-                            <div class="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
-                                <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                            </div>
-                        @endif
+                    @error('bloqueo')
+                        <div class="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
+                            <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                        </div>
                     @enderror
                 </div>
 
@@ -334,7 +384,7 @@
                     </button>
                     <button wire:click="guardar" wire:loading.attr="disabled"
                         class="px-4 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow hover:brightness-110 disabled:opacity-50 transition">
-                        <span wire:loading.remove>{{ $convenioId ? 'Actualizar' : 'Asignar Convenio' }}</span>
+                        <span wire:loading.remove>{{ $convenioId ? 'Actualizar' : ($renovarDeId ? 'Renovar Convenio' : 'Asignar Convenio') }}</span>
                         <span wire:loading>Guardando…</span>
                     </button>
                 </div>
@@ -344,8 +394,7 @@
 
     {{-- ══ MODAL REVOCAR ══════════════════════════════════════════════════ --}}
     @if ($showRevocarModal)
-        <div x-data x-init="document.body.style.overflow='hidden'" x-destroy="document.body.style.overflow=''"
-            class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-data class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="cerrarRevocar"></div>
 
             <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-white/[0.08]"
@@ -464,8 +513,8 @@
                     </div>
                 </div>
 
-                {{-- ── SECCIÓN 2: Cobertura visual + distribución ───────── --}}
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {{-- ── SECCIÓN 2: Cobertura visual + distribución + impacto financiero ── --}}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
                     {{-- Cobertura visual --}}
                     <div class="rounded-2xl border border-slate-200 dark:border-white/[0.07] p-4 bg-white dark:bg-slate-800/20">
@@ -503,6 +552,21 @@
                                     </div>
                                     <span class="text-xs font-semibold text-violet-600 dark:text-violet-400 w-12 text-right">{{ $ind['cobertura'] }}%</span>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Impacto financiero (parte del descuento atribuible a convenios) --}}
+                    <div class="rounded-2xl border border-teal-200/60 dark:border-teal-500/20 p-4 bg-teal-50/40 dark:bg-teal-950/10">
+                        <p class="text-[0.65rem] font-semibold text-teal-500 uppercase tracking-widest mb-3">Impacto financiero</p>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Ahorro total por convenios</p>
+                                <p class="text-xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">${{ number_format($ind['descuento_total'], 2) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Promedio por estudiante beneficiado</p>
+                                <p class="text-base font-semibold text-slate-600 dark:text-slate-300 tabular-nums">${{ number_format($ind['ahorro_promedio'], 2) }}</p>
                             </div>
                         </div>
                     </div>
@@ -568,6 +632,7 @@
                                         <th class="text-center px-3 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-slate-400">Matriculados</th>
                                         <th class="text-center px-3 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-violet-500">Con Convenio</th>
                                         <th class="text-center px-3 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-slate-400">Sin Convenio</th>
+                                        <th class="text-center px-3 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-teal-500">Ahorro ($)</th>
                                         <th class="px-4 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-emerald-500 w-36">Cobertura</th>
                                     </tr>
                                 </thead>
@@ -580,6 +645,11 @@
                                         <td class="px-3 py-3 text-center font-bold text-slate-700 dark:text-slate-200">{{ $fila['matriculados'] }}</td>
                                         <td class="px-3 py-3 text-center font-bold text-violet-600 dark:text-violet-400">{{ $fila['con_convenio'] ?: '—' }}</td>
                                         <td class="px-3 py-3 text-center text-slate-400">{{ $fila['sin_convenio'] ?: '—' }}</td>
+                                        <td class="px-3 py-3 text-center text-teal-600 dark:text-teal-400 font-medium text-xs tabular-nums">
+                                            @if($fila['descuento'] > 0) ${{ number_format($fila['descuento'], 2) }}
+                                            @else <span class="text-slate-300 dark:text-slate-600">—</span>
+                                            @endif
+                                        </td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center gap-2">
                                                 <div class="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
@@ -613,6 +683,7 @@
                                         <th class="text-left px-4 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-slate-400">Período</th>
                                         <th class="text-center px-3 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-slate-400">Matriculados</th>
                                         <th class="text-center px-3 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-violet-500">Con Convenio</th>
+                                        <th class="text-center px-3 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-teal-500">Ahorro ($)</th>
                                         <th class="px-4 py-2.5 text-[0.65rem] font-medium tracking-wider uppercase text-emerald-500 w-36">Cobertura</th>
                                     </tr>
                                 </thead>
@@ -632,6 +703,11 @@
                                         </td>
                                         <td class="px-3 py-3 text-center font-bold text-slate-700 dark:text-slate-200">{{ $fila['matriculados'] }}</td>
                                         <td class="px-3 py-3 text-center font-bold text-violet-600 dark:text-violet-400">{{ $fila['con_convenio'] ?: '—' }}</td>
+                                        <td class="px-3 py-3 text-center text-teal-600 dark:text-teal-400 font-medium text-xs tabular-nums">
+                                            @if($fila['descuento'] > 0) ${{ number_format($fila['descuento'], 2) }}
+                                            @else <span class="text-slate-300 dark:text-slate-600">—</span>
+                                            @endif
+                                        </td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center gap-2">
                                                 <div class="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
@@ -662,5 +738,7 @@
         </div>
     </div>
     @endif
+
+    <livewire:administration.historial-beneficios />
 
 </div>

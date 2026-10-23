@@ -6,6 +6,8 @@ use App\Models\BecaAplicada;
 use App\Models\Convalidacion;
 use App\Models\ConvenioAplicado;
 use App\Models\Matricula;
+use App\Models\ObligacionesFinanciera;
+use App\Services\CalculoMatriculaService;
 use App\Services\MoodleService;
 use App\Services\SettingService;
 use Carbon\Carbon;
@@ -51,11 +53,16 @@ class MatriculaConfirmada extends Mailable
             ->with('tipoBeca')
             ->first();
 
-        $convenioActivo = ConvenioAplicado::where('user_id', $estudianteId)
-            ->where('is_active', true)
-            ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
-            ->with('tipoConvenio')
+        // El convenio que descontó las cuotas de ESTA matrícula; en matrículas anteriores a ese
+        // registro, el aplicable en su período
+        $convenioUsadoId = $this->matricula->obligacionesFinancieras
+            ->where('tipo', 'COLEGIATURA')
+            ->pluck('convenio_aplicado_id')
+            ->filter()
             ->first();
+        $convenioActivo = $convenioUsadoId
+            ? ConvenioAplicado::with('tipoConvenio')->find($convenioUsadoId)
+            : ConvenioAplicado::aplicablesEnPeriodo($estudianteId, $this->matricula->periodo_id)->with('tipoConvenio')->first();
 
         $obligMatricula    = $this->matricula->obligacionesFinancieras
             ->firstWhere('tipo', 'MATRICULA');
@@ -79,6 +86,35 @@ class MatriculaConfirmada extends Mailable
             ->first();
         $materiasValidadas = $convalidacion?->detalles ?? collect();
 
+        // Proceso: validación de conocimientos y semestres exonerados (siempre visibles en el correo)
+        $carrera             = $this->matricula->carrera;
+        $esValidacion        = $materiasValidadas->isNotEmpty();
+        $semestresExonerados = $esValidacion
+            ? CalculoMatriculaService::semestresExonerados($carrera->id, $materiasValidadas->pluck('materia_id')->all())
+            : 0;
+        $semestresACursar    = max(1, CalculoMatriculaService::semestresCarrera($carrera) - $semestresExonerados);
+
+        // Pago inmediato = matrícula + arrastres + reintegro (los que existan). Las matrículas
+        // antiguas no tienen ARRASTRE/REINTEGRO: los arrastres van dentro de la obligación MATRICULA.
+        $obligInmediatas = $this->matricula->obligacionesFinancieras
+            ->whereIn('tipo', ObligacionesFinanciera::TIPOS_HABILITACION)
+            ->where('estado', '!=', 'Invalidado');
+        $obligArrastre   = $obligInmediatas->firstWhere('tipo', 'ARRASTRE');
+        $obligReintegro  = $obligInmediatas->firstWhere('tipo', 'REINTEGRO');
+        $totalInmediato  = (float) $obligInmediatas->sum('monto_final');
+        $pagadoInmediato = (float) $obligInmediatas->sum(fn($ob) => (float) $ob->total_pagado);
+        $saldoInmediato  = (float) $obligInmediatas->sum(fn($ob) => max(0, (float) $ob->saldo));
+        $estadoInmediato = match (true) {
+            ! $obligMatricula                                                  => null,
+            $saldoInmediato <= 0 && $this->matricula->estado === 'Habilitada' => 'Pagado',
+            $pagadoInmediato > 0                                               => 'Parcial',
+            default                                                            => 'Pendiente',
+        };
+
+        $aspirante       = $this->matricula->estudiante?->aspirante;
+        $pagoEnAdmision  = $obligMatricula && $aspirante?->pagoAplicado
+            && (int) $aspirante->pagoAplicado->obligacion_id === (int) $obligMatricula->id;
+
         $arrastresDetalle = $this->matricula->detalles
             ->where('tipo', 'Arrastre')
             ->filter(fn($d) => (float) ($d->costo_materia ?? 0) > 0)
@@ -90,6 +126,13 @@ class MatriculaConfirmada extends Mailable
         $costoArrastresRaw = $this->matricula->detalles
             ->where('tipo', 'Arrastre')
             ->sum('costo_materia');
+
+        $montoBaseMatricula = null;
+        if ($obligMatricula && ($costoArrastresRaw > 0 || $obligReintegro)) {
+            $montoBaseMatricula = $obligArrastre
+                ? (float) $obligMatricula->monto_final
+                : (float) $obligMatricula->monto_final - $costoArrastresRaw;
+        }
 
         return new Content(
             view: 'emails.matricula.confirmacion',
@@ -114,8 +157,7 @@ class MatriculaConfirmada extends Mailable
                 'moodle_url'     => $moodleUrl,
                 'becaActiva'     => $becaActiva,
                 'convenioActivo' => $convenioActivo,
-                'monto'              => $obligMatricula
-                    ? number_format((float) $obligMatricula->monto_final, 2) : null,
+                'monto'              => $obligMatricula ? number_format($totalInmediato, 2) : null,
                 'fechaLimite'        => $obligMatricula?->fecha_vencimiento
                     ? Carbon::parse($obligMatricula->fecha_vencimiento)->format('d/m/Y') : null,
                 'obligColegiaturas'   => $obligColegiaturas,
@@ -132,9 +174,19 @@ class MatriculaConfirmada extends Mailable
                 'arrastresDetalle'    => $arrastresDetalle,
                 'totalCostoArrastres' => $costoArrastresRaw > 0
                     ? number_format((float) $costoArrastresRaw, 2) : null,
-                'montoBaseMatricula'  => $obligMatricula && $costoArrastresRaw > 0
-                    ? number_format((float) $obligMatricula->monto_final - $costoArrastresRaw, 2) : null,
+                'montoBaseMatricula'  => $montoBaseMatricula !== null ? number_format($montoBaseMatricula, 2) : null,
+                'montoReintegro'      => $obligReintegro ? number_format((float) $obligReintegro->monto_final, 2) : null,
+                // La fórmula "total ÷ semestres" solo describe el valor cuando no hay otros conceptos
+                'soloMatricula'       => ! $obligArrastre && ! $obligReintegro && $costoArrastresRaw <= 0,
                 'materiasValidadas'   => $materiasValidadas,
+                'esValidacion'        => $esValidacion,
+                'semestresExonerados' => $semestresExonerados,
+                'semestresACursar'    => $semestresACursar,
+                'matriculaTotalCarrera' => CalculoMatriculaService::matriculaTotalCarrera($carrera),
+                'estadoMatricula'     => $estadoInmediato,
+                'pagadoMatricula'     => $pagadoInmediato,
+                'saldoMatricula'      => $saldoInmediato,
+                'pagoEnAdmision'      => $pagoEnAdmision,
             ],
         );
     }

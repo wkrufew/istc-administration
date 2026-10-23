@@ -10,7 +10,6 @@ use App\Http\Controllers\Administration\HorarioController;
 use App\Http\Controllers\Administration\MateriaController;
 use App\Http\Controllers\Administration\MateriaPeriodoParaleloController;
 use App\Http\Controllers\Administration\MatriculacionController;
-use App\Http\Controllers\Administration\PagosController;
 use App\Http\Controllers\Administration\ParaleloController;
 use App\Http\Controllers\Administration\PeriodoController;
 use App\Http\Controllers\Administration\PracticasPreProfesionalesController;
@@ -132,7 +131,6 @@ Route::middleware([
         // Períodos
         Route::get('periodos', \App\Livewire\Administration\PeriodosIndex::class)->name('periodos.index');
         Route::resource('periodos', PeriodoController::class)->names('periodos')->except('index');
-        Route::post('/periodos/{periodo}/cerrar', [PeriodoController::class, 'cerrar'])->name('periodos.cerrar');
         // Carreras
         Route::resource('carreras', CarreraController::class)->names('carreras');
         // Semestres
@@ -172,8 +170,6 @@ Route::middleware([
              ->name('convalidaciones.index');
         Route::get('convalidacion/{userId}', \App\Livewire\Administration\ConvalidacionConocimiento::class)
              ->name('convalidacion.conocimiento');
-        // Pagos
-        Route::resource('pagos', PagosController::class)->names('pagos');
         // Actas de organo de colegiado superior
         Route::resource('actas-colegiado', ActasOCSController::class)->names('actas-colegiado');
         // Normas Aprobadas

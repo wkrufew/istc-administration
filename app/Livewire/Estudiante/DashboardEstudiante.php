@@ -11,7 +11,9 @@ use App\Models\MateriasArrastrada;
 use App\Models\BecaAplicada;
 use App\Models\ConvenioAplicado;
 use App\Models\ObligacionesFinanciera;
+use App\Models\Pago;
 use App\Models\AsignacionDocente;
+use App\Services\HabilitacionMatriculaService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
@@ -34,6 +36,39 @@ class DashboardEstudiante extends Component
     // =========================================================================
     // COMPUTED
     // =========================================================================
+
+    /**
+     * Matrícula registrada pero aún no habilitada por falta de pago: sin esto el estudiante
+     * entra y ve su portal vacío sin saber por qué.
+     */
+    #[Computed]
+    public function matriculaPendientePago(): ?array
+    {
+        $pendiente = Matricula::where('user_id', $this->idUser)
+            ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+            ->where('estado', 'Pendiente_Pago')
+            ->with('periodo:id,code')
+            ->latest('id')
+            ->first();
+        if (! $pendiente) return null;
+
+        // Matrícula, arrastres y reintegro: lo que bloquea la habilitación
+        $obligacionIds = ObligacionesFinanciera::where('matricula_id', $pendiente->id)
+            ->whereIn('tipo', ObligacionesFinanciera::TIPOS_HABILITACION)
+            ->where('estado', '!=', 'Invalidado')
+            ->pluck('id');
+        if ($obligacionIds->isEmpty()) return null;
+
+        $saldo      = HabilitacionMatriculaService::saldoPendiente($pendiente->id);
+        $enRevision = Pago::whereIn('obligacion_id', $obligacionIds)->where('estado', Pago::ESTADO_PENDIENTE)->exists();
+        if ($saldo <= 0 && ! $enRevision) return null;
+
+        return [
+            'saldo'       => $saldo,
+            'en_revision' => $enRevision,
+            'periodo'     => $pendiente->periodo?->code,
+        ];
+    }
 
     #[Computed]
     public function periodos()
@@ -278,6 +313,7 @@ class DashboardEstudiante extends Component
             'becaYConvenio'       => $this->becaYConvenio,
             'deudaGlobal'         => $this->deudaGlobal,
             'progresoPorSemestre' => $this->progresoPorSemestre,
+            'matriculaPendientePago' => $this->matriculaPendientePago,
         ]);
     }
 }

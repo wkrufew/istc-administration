@@ -151,8 +151,9 @@ class PortalAspirante extends Component
         $aspirante      = auth()->user()?->aspirante?->load(['cohorte', 'carrera.semestres.materias']);
         $primerSemestre = $aspirante?->carrera?->semestres?->first();
         $certPath       = auth()->user()?->certificado_discapacidad_path;
+        $resumenPago    = $aspirante?->resumenPagoAdmision();
 
-        return view('livewire.admision.portal-aspirante', compact('aspirante', 'primerSemestre', 'certPath'))
+        return view('livewire.admision.portal-aspirante', compact('aspirante', 'primerSemestre', 'certPath', 'resumenPago'))
             ->layout('layouts.admision');
     }
 
@@ -406,7 +407,13 @@ class PortalAspirante extends Component
             'pagoMonto'   => 'nullable|numeric|min:0',
         ], ['archivoPago.required' => 'Selecciona el comprobante.', 'archivoPago.mimes' => 'Solo PDF, JPG o PNG.', 'archivoPago.max' => 'Máx. 5 MB.']);
         $path = $this->archivoPago->store("aspirantes/{$aspirante->id}/pago", 'public');
-        $aspirante->update(['pago_comprobante_path' => $path, 'pago_estado' => 'pendiente', 'pago_monto' => $this->pagoMonto ?: null]);
+        $aspirante->update([
+            'pago_comprobante_path' => $path,
+            'pago_estado'           => 'pendiente',
+            'pago_monto'            => $this->pagoMonto ?: null,
+            'pago_metodo'           => null,
+            'pago_verificado_at'    => null,
+        ]);
         $this->archivoPago = null;
         $this->pagoMonto   = '';
         $this->notificarSubida('Comprobante de pago subido correctamente.');

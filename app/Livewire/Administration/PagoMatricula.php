@@ -7,6 +7,7 @@ use App\Jobs\EnviarNotificacionPagoPrimeraMatricula;
 use App\Models\Matricula;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Pago;
+use App\Services\HabilitacionMatriculaService;
 use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -37,6 +38,8 @@ class PagoMatricula extends Component
     public $materiasArrastre = [];
     public $montoInscripcion = 0;
     public $obligInscripcion = null;
+    public $montoReintegro   = 0;
+    public $abonado          = 0; // pagos ya aprobados (p. ej. abono de admisión)
 
     // -------------------------------------------------------------------------
     // MOUNT
@@ -55,22 +58,28 @@ class PagoMatricula extends Component
         $this->obligacion = $this->matricula->obligacionesFinancieras()
             ->where('tipo', 'MATRICULA')
             ->firstOrFail();
-        //dd($this->obligacion->tipo);
-        // Si ya está pagada, redirigir a obligaciones
-        if (in_array($this->obligacion->estado, ['Pagado', 'Parcial'])) {
-            session()->flash('info', 'La obligación de matrícula ya tiene pagos registrados.');
-            return redirect()->route('administracion.administrativa.obligaciones.index');
 
+        // Conceptos que se cobran juntos para habilitar: matrícula, arrastres y reintegro
+        $requeridas = $this->obligacionesRequeridas();
+        $urlObligaciones = route('administracion.administrativa.obligaciones.index', ['estudiante' => $this->matricula->user_id]);
+
+        if (Pago::whereIn('obligacion_id', $requeridas->pluck('id'))->where('estado', Pago::ESTADO_PENDIENTE)->exists()) {
+            session()->flash('info', 'El estudiante subió un comprobante que está pendiente de verificación. Revísalo antes de registrar otro pago.');
+            return redirect()->to($urlObligaciones);
         }
 
-        $this->montoFinal    = $this->obligacion->monto_final;
-        $this->descuento     = $this->obligacion->descuento;
+        if ($requeridas->every(fn($ob) => (float) $ob->saldo <= 0)) {
+            session()->flash('info', 'La matrícula ya no tiene valores pendientes.');
+            return redirect()->to($urlObligaciones);
+        }
 
-        // Calcular desglose matrícula vs arrastres
-        $carrera   = $this->matricula->carrera;
-        $semestres = $carrera->duracion_semestres > 0 ? $carrera->duracion_semestres : 1;
+        $obligArrastre  = $requeridas->firstWhere('tipo', 'ARRASTRE');
+        $obligReintegro = $requeridas->firstWhere('tipo', 'REINTEGRO');
 
-        $this->montoMatricula  = round(($carrera->costo_carrera * 0.10) / $semestres, 2);
+        $this->descuento      = round($requeridas->sum(fn($ob) => (float) $ob->descuento), 2);
+        $this->abonado        = round($requeridas->sum(fn($ob) => (float) $ob->total_pagado), 2);
+        $this->montoReintegro = (float) ($obligReintegro?->monto_original ?? 0);
+        $this->montoFinal     = round($requeridas->sum(fn($ob) => max(0, (float) $ob->saldo)), 2);
 
         $this->materiasArrastre = $this->matricula->detalles
             ->where('tipo', 'Arrastre')
@@ -82,7 +91,15 @@ class PagoMatricula extends Component
             ->values()
             ->toArray();
 
-        $this->montoArrastres = collect($this->materiasArrastre)->sum('costo_adicional');
+        // Base tomada de lo facturado (ya contempla semestres exonerados y cursados).
+        // Matrículas antiguas: los arrastres van sumados dentro de la obligación MATRICULA.
+        if ($obligArrastre) {
+            $this->montoArrastres = (float) $obligArrastre->monto_original;
+            $this->montoMatricula = (float) $this->obligacion->monto_original;
+        } else {
+            $this->montoArrastres = collect($this->materiasArrastre)->sum('costo_adicional');
+            $this->montoMatricula = max(0, round((float) $this->obligacion->monto_original - $this->montoArrastres, 2));
+        }
 
         // Obligación de inscripción — si existe, se auto-liquidará al pagar la matrícula
         $this->obligInscripcion = $this->matricula->obligacionesFinancieras()
@@ -106,12 +123,16 @@ class PagoMatricula extends Component
             'descripcion' => 'nullable|string|max:500',
         ]);
 
-        $numeroCuota = Pago::where('obligacion_id', $this->obligacion->id)
-            ->where('estado', Pago::ESTADO_APROBADO)
-            ->count() + 1;
-
         try {
             DB::beginTransaction();
+
+            // Re-consultar dentro de la transacción: no confiar en montos calculados al cargar la página
+            $pendientes = $this->obligacionesRequeridas()->filter(fn($ob) => (float) $ob->saldo > 0);
+            if ($pendientes->isEmpty()) {
+                DB::rollBack();
+                $this->addError('general', 'La matrícula ya no tiene valores pendientes.');
+                return;
+            }
 
             $comprobantePath = null;
             if ($this->comprobante) {
@@ -121,22 +142,34 @@ class PagoMatricula extends Component
                 //$comprobantePath = $this->comprobante->store('pagos/comprobantes', 'public');
             }
 
-            $pago = Pago::create([
-                'numero_comprobante' => 'TEMP',
-                'codigo_referencia'  => $this->referencia ?: null,
-                'obligacion_id'      => $this->obligacion->id,
-                'monto'              => $this->montoFinal,
-                'metodo_pago'        => $this->metodoPago,
-                'estado'             => Pago::ESTADO_APROBADO, // Aprobado directo por secretaria
-                'fecha_pago'         => now(),
-                'descripcion'        => $this->descripcion ?: 'Pago de matrícula ' . $this->matricula->code,
-                'numero_cuota' => $numeroCuota,
-                'comprobante_path'   => $comprobantePath,
-            ]);
+            $conceptos = ['MATRICULA' => 'Pago de matrícula', 'ARRASTRE' => 'Pago de arrastres', 'REINTEGRO' => 'Pago de reintegro'];
+            $pago = null;
 
-            $pago->update(['numero_comprobante' => $this->generarNumeroComprobante($pago->id)]);
+            // Un pago por concepto, por su saldo: PagoObserver recalcula el estado de cada obligación
+            foreach ($pendientes as $ob) {
+                $numeroCuota = Pago::where('obligacion_id', $ob->id)
+                    ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
+                    ->count() + 1;
 
-            $this->obligacion->update(['estado' => 'Pagado']);
+                $pagoConcepto = Pago::create([
+                    'numero_comprobante' => 'TEMP',
+                    'codigo_referencia'  => $this->referencia ?: null,
+                    'obligacion_id'      => $ob->id,
+                    'monto'              => round((float) $ob->saldo, 2),
+                    'metodo_pago'        => $this->metodoPago,
+                    'estado'             => Pago::ESTADO_APROBADO, // Aprobado directo por secretaria
+                    'fecha_pago'         => now(),
+                    'descripcion'        => $this->descripcion ?: ($conceptos[$ob->tipo] ?? 'Pago') . ' ' . $this->matricula->code,
+                    'numero_cuota'       => $numeroCuota,
+                    'comprobante_path'   => $comprobantePath,
+                ]);
+                $pagoConcepto->update(['numero_comprobante' => $this->generarNumeroComprobante($pagoConcepto->id, $ob->tipo)]);
+
+                // El aviso al estudiante se envía sobre el pago de matrícula (o el primero si ya estaba pagada)
+                if (! $pago || $ob->tipo === 'MATRICULA') {
+                    $pago = $pagoConcepto;
+                }
+            }
 
             // Auto-liquidar INSCRIPCION
             if ($this->obligInscripcion) {
@@ -155,10 +188,9 @@ class PagoMatricula extends Component
                 $pagoInscripcion->update([
                     'numero_comprobante' => 'ISTC-CP-INSCRIPCION-' . now()->year . '-' . str_pad($pagoInscripcion->id, 5, '0', STR_PAD_LEFT),
                 ]);
-                $this->obligInscripcion->update(['estado' => 'Pagado']);
             }
 
-            $this->matricula->update(['estado' => 'Habilitada']);
+            HabilitacionMatriculaService::verificar($this->matricula->fresh());
 
             DB::commit();
 
@@ -187,9 +219,18 @@ class PagoMatricula extends Component
     // =========================================================================
     // HELPER
     // =========================================================================
-    private function generarNumeroComprobante(int $pagoId): string
+    private function generarNumeroComprobante(int $pagoId, string $tipo = 'MATRICULA'): string
     {
-        return 'ISTC-CP-MATRICULA-' . now()->year . '-' . str_pad($pagoId, 5, '0', STR_PAD_LEFT);
+        return 'ISTC-CP-' . $tipo . '-' . now()->year . '-' . str_pad($pagoId, 5, '0', STR_PAD_LEFT);
+    }
+
+    private function obligacionesRequeridas()
+    {
+        return ObligacionesFinanciera::with('pagos')
+            ->where('matricula_id', $this->matricula->id)
+            ->whereIn('tipo', ObligacionesFinanciera::TIPOS_HABILITACION)
+            ->where('estado', '!=', 'Invalidado')
+            ->get();
     }
 
     // =========================================================================

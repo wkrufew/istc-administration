@@ -39,6 +39,9 @@ class CreateUser extends Component
     public $role_id;
     public $is_active = true;
 
+    // Para estudiantes la contraseña inicial es la cédula (la que anuncia el correo de matrícula)
+    public bool $usarCedulaComoPassword = false;
+
     // Consulta cédula — entry modal
     public bool   $apiActiva        = false;
     public bool   $showEntryModal   = false;
@@ -50,13 +53,24 @@ class CreateUser extends Component
         $this->apiActiva = !empty(SettingService::get('cedula_api.token', ''));
     }
 
+    /** Al elegir un rol estudiantil se propone la cédula como contraseña (se puede desmarcar). */
+    public function updatedRoleId($value): void
+    {
+        $role = $value ? Role::find($value) : null;
+        $this->usarCedulaComoPassword = (bool) $role?->hasPermissionTo('acceso_estudiantil');
+        if ($this->usarCedulaComoPassword) {
+            $this->reset(['password', 'password_confirmation']);
+            $this->resetErrorBag('password');
+        }
+    }
+
     protected function rules()
     {
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|min:8|confirmed',
+            'password' => $this->usarCedulaComoPassword ? 'nullable' : 'required|min:8|confirmed',
             'cedula' => 'required|string|unique:users,cedula',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
@@ -245,18 +259,18 @@ class CreateUser extends Component
         }
 
         // Capturar antes de Hash::make() dentro de la transacción
-        $plainPassword = $this->password;
+        $plainPassword = $this->usarCedulaComoPassword ? trim((string) $this->cedula) : $this->password;
 
         $user = null;
         $role = null;
 
-        DB::transaction(function () use ($profilePhotoPath, &$user, &$role) {
+        DB::transaction(function () use ($profilePhotoPath, $plainPassword, &$user, &$role) {
             $user = User::create([
                 'name' => $this->first_name . ' ' . $this->last_name,
                 'first_name' => $this->first_name,
                 'last_name' => $this->last_name,
                 'email' => $this->email,
-                'password' => Hash::make($this->password),
+                'password' => Hash::make($plainPassword),
                 'cedula' => $this->cedula,
                 'phone' => $this->phone,
                 'address' => $this->address,

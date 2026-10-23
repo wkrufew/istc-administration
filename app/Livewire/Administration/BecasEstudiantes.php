@@ -11,6 +11,7 @@ use App\Models\Pago;
 use App\Models\Periodo;
 use App\Models\TipoBeca;
 use App\Models\User;
+use App\Services\BeneficiosService;
 use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -148,11 +149,7 @@ class BecasEstudiantes extends Component
             ->distinct('becas_aplicadas.user_id')
             ->count('becas_aplicadas.user_id');
 
-        $descuentoTotal = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
-            ->where('periodo_id', $periodo->id)
-            ->whereNotNull('beca_aplicada_id')
-            ->where('estado', '!=', 'Invalidado')
-            ->sum('descuento');
+        $descuentoTotal = BeneficiosService::ahorro('beca', fn($q) => $q->where('o.periodo_id', $periodo->id));
 
         $cobertura = $matriculados > 0 ? round($conBeca / $matriculados * 100, 1) : 0;
 
@@ -188,11 +185,7 @@ class BecasEstudiantes extends Component
             ->distinct('becas_aplicadas.user_id')
             ->count('becas_aplicadas.user_id');
 
-        $descuentoTotal = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
-            ->whereNotNull('beca_aplicada_id')
-            ->where('estado', '!=', 'Invalidado')
-            ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
-            ->sum('descuento');
+        $descuentoTotal = BeneficiosService::ahorro('beca', fn($q) => $q->when($periodo, fn($q2) => $q2->where('o.periodo_id', $periodo->id)));
 
         $montoOriginalTotal = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
             ->whereNotNull('beca_aplicada_id')
@@ -258,17 +251,14 @@ class BecasEstudiantes extends Component
                     ->distinct('becas_aplicadas.user_id')
                     ->count('becas_aplicadas.user_id');
 
-                $descCarrera = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
-                    ->whereNotNull('beca_aplicada_id')
-                    ->where('estado', '!=', 'Invalidado')
-                    ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
-                    ->whereIn('user_id', function ($sq) use ($row, $periodo) {
+                $descCarrera = BeneficiosService::ahorro('beca', fn($q) => $q
+                    ->when($periodo, fn($q2) => $q2->where('o.periodo_id', $periodo->id))
+                    ->whereIn('o.user_id', function ($sq) use ($row, $periodo) {
                         $sq->select('user_id')->from('matriculas')
                            ->where('carrera_id', $row->id)
                            ->where('estado', 'Habilitada')
                            ->when($periodo, fn($q2) => $q2->where('periodo_id', $periodo->id));
-                    })
-                    ->sum('descuento');
+                    }));
 
                 $cobertura = $row->total_matriculados > 0
                     ? round($conBecaCarrera / $row->total_matriculados * 100, 1)
@@ -307,11 +297,7 @@ class BecasEstudiantes extends Component
                     ->distinct('becas_aplicadas.user_id')
                     ->count('becas_aplicadas.user_id');
 
-                $descPer = ObligacionesFinanciera::where('tipo', 'COLEGIATURA')
-                    ->where('periodo_id', $row->id)
-                    ->whereNotNull('beca_aplicada_id')
-                    ->where('estado', '!=', 'Invalidado')
-                    ->sum('descuento');
+                $descPer = BeneficiosService::ahorro('beca', fn($q) => $q->where('o.periodo_id', $row->id));
 
                 $cobertura = $row->total_matriculados > 0
                     ? round($conBecaPer / $row->total_matriculados * 100, 1)
@@ -595,14 +581,9 @@ class BecasEstudiantes extends Component
             }
         }
 
-        // Revoke the beca record
-        $beca->update([
-            'is_active'             => false,
-            'fecha_ultima_revision' => now()->toDateString(),
-            'observacion'           => $beca->observacion
-                ? $beca->observacion . ' | REVOCADA: ' . trim($this->motivo)
-                : 'REVOCADA: ' . trim($this->motivo),
-        ]);
+        // Revoke the beca record (queda en el historial con fecha, usuario y motivo)
+        $beca->update(['fecha_ultima_revision' => now()->toDateString()]);
+        BeneficiosService::desactivar($beca, 'revocacion_manual', trim($this->motivo) ?: null);
 
         dispatch(new EnviarNotificacionBecaRevocada(
             $beca->id,

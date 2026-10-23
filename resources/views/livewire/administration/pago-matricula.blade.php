@@ -111,6 +111,14 @@
                             </div>
                         @endif
 
+                        {{-- Reintegro por retiro anterior --}}
+                        @if ($montoReintegro > 0)
+                            <div class="flex justify-between items-center border-t border-slate-700 pt-2.5">
+                                <span class="text-orange-400/80">Reintegro (retiro anterior)</span>
+                                <span class="font-medium text-orange-400">+${{ number_format($montoReintegro, 2) }}</span>
+                            </div>
+                        @endif
+
                         {{-- Inscripción (primera matrícula) --}}
                         @if ($montoInscripcion > 0)
                             <div class="flex justify-between items-center border-t border-slate-700 pt-2.5">
@@ -124,6 +132,14 @@
                             <div class="flex justify-between items-center border-t border-slate-700 pt-2.5">
                                 <span class="text-emerald-400">Descuento</span>
                                 <span class="font-medium text-emerald-400">-${{ number_format($descuento, 2) }}</span>
+                            </div>
+                        @endif
+
+                        {{-- Abonos ya aprobados (p. ej. pago de admisión) --}}
+                        @if ($abonado > 0)
+                            <div class="flex justify-between items-center border-t border-slate-700 pt-2.5">
+                                <span class="text-emerald-400">Ya abonado</span>
+                                <span class="font-medium text-emerald-400">-${{ number_format($abonado, 2) }}</span>
                             </div>
                         @endif
 
