@@ -116,6 +116,10 @@ class AuditoriaAdmin extends Component
             'App\\Models\\Semestre'               => 'Semestre',
             'App\\Models\\Materia'                => 'Materia',
             'App\\Models\\ObligacionesFinanciera'  => 'Obligación Fin.',
+            'App\\Models\\User'                   => 'Usuario',
+            'App\\Models\\DetalleMatricula'       => 'Materia de matrícula',
+            'App\\Models\\Aspirante'              => 'Aspirante',
+            'App\\Models\\AsignacionDocente'      => 'Asignación docente',
             default                               => class_basename($class),
         };
     }

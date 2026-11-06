@@ -2,13 +2,15 @@
 
 namespace App\Livewire\Administration;
 
+use App\Models\AuditoriaGeneral;
 use App\Models\Carrera;
 use App\Models\Comunitaria;
 use App\Models\NotaTitulacion;
-use App\Models\ObligacionesFinanciera;
 use App\Models\PracticaPreprofesional;
 use App\Models\User;
 use App\Services\BeneficiosService;
+use App\Services\EstadoAcademicoService;
+use App\Services\SaldoValidacionService;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
@@ -41,7 +43,14 @@ class ProcesoTitulacion extends Component
     public $semestresDetalle    = [];
     public int $semestresOk     = 0;
     public int $semestresTotal  = 0;
-    public bool $obligacionesAlDia = true; // sin deudas vencidas
+    public bool $obligacionesAlDia = true; // sin ningún saldo pendiente
+    public float $saldoPendiente   = 0;
+    public bool $exigeSinSaldo     = false; // Ajustes → Matrícula: el saldo bloquea la titulación
+    public string $estadoAcademico = '';
+
+    // Revertir egreso (marcado por error o antes de generar su saldo)
+    public string $motivoReversionEgreso = '';
+    public bool $reactivarBeneficios     = false;
 
     // -------------------------------------------------------------------------
     // PASO 1 — PRÁCTICAS PREPROFESIONALES
@@ -116,30 +125,7 @@ class ProcesoTitulacion extends Component
     // =========================================================================
     public function estadoMallaEstudiante(int $userId, int $carreraId): array
     {
-        $carrera = Carrera::with('semestres.materias')->find($carreraId);
-        if (! $carrera) return ['completa' => false, 'semestres_ok' => 0, 'semestres_total' => 0];
-
-        $total = $carrera->semestres->count();
-        $ok    = 0;
-
-        foreach ($carrera->semestres as $semestre) {
-            $completo = true;
-            foreach ($semestre->materias as $materia) {
-                $aprobada = \App\Models\Calificacion::whereHas(
-                    'detalleMatricula',
-                    fn($q) =>
-                    $q->where('user_id', $userId)->where('materia_id', $materia->id)
-                )->where('estado_final', 'Aprobado')->exists();
-
-                if (! $aprobada) {
-                    $completo = false;
-                    break;
-                }
-            }
-            if ($completo) $ok++;
-        }
-
-        return ['completa' => $ok === $total, 'semestres_ok' => $ok, 'semestres_total' => $total];
+        return EstadoAcademicoService::estadoMalla($userId, $carreraId);
     }
 
     public function estadoPracticaEstudiante(int $userId, int $carreraId): ?PracticaPreprofesional
@@ -180,6 +166,7 @@ class ProcesoTitulacion extends Component
         $this->estudianteId     = $estudianteId;
         $this->estudianteNombre = $estudiante->name;
         $this->carreraId        = $matricula->carrera_id;
+        $this->estadoAcademico  = (string) $estudiante->estado_academico;
 
         // Calcular malla
         $estadoMalla = $this->estadoMallaEstudiante($estudianteId, $this->carreraId);
@@ -189,10 +176,10 @@ class ProcesoTitulacion extends Component
         $this->promedioMalla    = NotaTitulacion::calcularPromedioMalla($estudianteId, $this->carreraId);
         $this->semestresDetalle = $this->calcularDetalleSemestres($estudianteId, $this->carreraId);
 
-        // Verificar obligaciones al día (sin vencidas)
-        $this->obligacionesAlDia = ! ObligacionesFinanciera::where('user_id', $estudianteId)
-            ->where('estado', 'Vencido')
-            ->exists();
+        // Saldo pendiente (vencido o no): bloquea la titulación solo si está activo en Ajustes
+        $this->saldoPendiente    = EstadoAcademicoService::saldoPendiente($estudianteId);
+        $this->obligacionesAlDia = $this->saldoPendiente <= 0;
+        $this->exigeSinSaldo     = EstadoAcademicoService::exigeSinSaldoParaTitulacion();
 
         // Cargar práctica si existe
         $practica = $this->estadoPracticaEstudiante($estudianteId, $this->carreraId);
@@ -323,8 +310,12 @@ class ProcesoTitulacion extends Component
             return;
         }
 
-        if (! $this->obligacionesAlDia) {
-            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El estudiante tiene obligaciones financieras vencidas. Deben estar al día para registrar la titulación.']);
+        // Se recalcula aquí: el estudiante pudo pagar (o generarse un cobro) con el modal abierto
+        $this->saldoPendiente    = EstadoAcademicoService::saldoPendiente((int) $this->estudianteId);
+        $this->obligacionesAlDia = $this->saldoPendiente <= 0;
+        $this->exigeSinSaldo     = EstadoAcademicoService::exigeSinSaldoParaTitulacion();
+        if ($this->exigeSinSaldo && ! $this->obligacionesAlDia) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El estudiante tiene $' . number_format($this->saldoPendiente, 2) . ' pendientes. Debe estar sin saldo para registrar la titulación.']);
             return;
         }
 
@@ -476,13 +467,94 @@ class ProcesoTitulacion extends Component
         $estudiante = User::find($this->estudianteId);
         if (! $estudiante) return;
 
+        if ($estudiante->estado_academico !== 'Activo') {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => "El estudiante ya está como {$estudiante->estado_academico}."]);
+            $this->estadoAcademico = (string) $estudiante->estado_academico;
+            return;
+        }
+
+        // Un Egresado ya no aparece para matricular y pierde becas/convenios: su saldo de
+        // validación de conocimientos tiene que generarse antes
+        $saldoValidacion = SaldoValidacionService::detectar($estudiante->id, (int) $this->carreraId);
+        if ($saldoValidacion && ! $saldoValidacion['generado']) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'Primero genera su saldo de validación de conocimientos en Matriculación. Después podrás marcarlo como Egresado.']);
+            return;
+        }
+
         DB::transaction(function () use ($estudiante) {
             $estudiante->update(['estado_academico' => 'Egresado']);
             // Ya no tendrá más matrículas: sus becas y convenios terminan (quedan en el historial)
             BeneficiosService::desactivarTodos($estudiante->id, 'egreso');
         });
 
+        $this->estadoAcademico = 'Egresado';
         $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => "{$estudiante->name} ha sido marcado como Egresado correctamente."]);
+        unset($this->estudiantes);
+    }
+
+    // =========================================================================
+    // REVERTIR EGRESO (marcado por error o antes de generar su saldo)
+    // =========================================================================
+    public function revertirEgreso(): void
+    {
+        if ($this->sinPermiso('gestionar_titulacion')) return;
+
+        $this->resetErrorBag('motivoReversionEgreso');
+        $motivo = trim($this->motivoReversionEgreso);
+        if (mb_strlen($motivo) < 5) {
+            $this->addError('motivoReversionEgreso', 'Indica el motivo (mínimo 5 caracteres).');
+            return;
+        }
+
+        // Con titulación registrada el proceso ya avanzó: no se revierte desde aquí
+        if (NotaTitulacion::where('user_id', $this->estudianteId)->where('carrera_id', $this->carreraId)->exists()) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El estudiante ya tiene una titulación registrada. No se puede revertir su egreso.']);
+            return;
+        }
+
+        $resultado = DB::transaction(function () use ($motivo) {
+            $estudiante = User::lockForUpdate()->find($this->estudianteId);
+            if (! $estudiante || $estudiante->estado_academico !== 'Egresado') return null;
+
+            $estudiante->update(['estado_academico' => 'Activo']);
+            $reactivados = $this->reactivarBeneficios
+                ? BeneficiosService::reactivarDesactivadosPor($estudiante->id, 'egreso')
+                : 0;
+
+            // User no tiene observer de auditoría: se registra a mano con el motivo
+            AuditoriaGeneral::create([
+                'auditable_type'  => User::class,
+                'auditable_id'    => $estudiante->id,
+                'evento'          => 'updated',
+                'valores_antes'   => ['estado_academico' => 'Egresado'],
+                'valores_despues' => [
+                    'estado_academico'       => 'Activo',
+                    'motivo'                 => 'Egreso revertido: ' . $motivo,
+                    'beneficios_reactivados' => $reactivados,
+                ],
+                'user_id'         => auth()->id(),
+                'ip_address'      => request()?->ip(),
+            ]);
+
+            return ['nombre' => $estudiante->name, 'reactivados' => $reactivados];
+        });
+
+        if (! $resultado) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => 'El estudiante ya no está como Egresado.']);
+            $this->cerrarModal();
+            unset($this->estudiantes);
+            return;
+        }
+
+        $detalle = $this->reactivarBeneficios
+            ? ($resultado['reactivados'] > 0
+                ? " Se reactivaron {$resultado['reactivados']} beneficio(s)."
+                : ' No había becas ni convenios del egreso para reactivar.')
+            : '';
+
+        $this->estadoAcademico = 'Activo';
+        $this->reset(['motivoReversionEgreso', 'reactivarBeneficios']);
+        $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => "{$resultado['nombre']} vuelve a estar Activo.{$detalle}"]);
         unset($this->estudiantes);
     }
 
@@ -521,6 +593,11 @@ class ProcesoTitulacion extends Component
             'semestresOk',
             'semestresTotal',
             'obligacionesAlDia',
+            'saldoPendiente',
+            'exigeSinSaldo',
+            'estadoAcademico',
+            'motivoReversionEgreso',
+            'reactivarBeneficios',
             'promedioMalla',
             'semestresDetalle',
             'practicaId',

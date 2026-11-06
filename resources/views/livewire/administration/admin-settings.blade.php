@@ -701,6 +701,24 @@
                     </div>
                 </div>
 
+                {{-- Requisito de pago para titulación --}}
+                <div class="flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Exigir estar sin saldo para registrar la titulación</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Activado: no se puede registrar la titulación mientras el estudiante tenga cualquier saldo pendiente.
+                            Desactivado: el saldo se muestra como información pero no bloquea. Se guarda al moverlo.
+                        </p>
+                    </div>
+                    <button type="button" wire:click="alternarExigirSinSaldo" wire:loading.attr="disabled" wire:target="alternarExigirSinSaldo"
+                            role="switch" aria-checked="{{ $titulacion_exigir_sin_saldo === '1' ? 'true' : 'false' }}"
+                            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors
+                                   {{ $titulacion_exigir_sin_saldo === '1' ? 'bg-amber-600' : 'bg-gray-300 dark:bg-gray-600' }}">
+                        <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
+                                     {{ $titulacion_exigir_sin_saldo === '1' ? 'translate-x-6' : 'translate-x-1' }}"></span>
+                    </button>
+                </div>
+
                 <div
                     class="rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-3 text-xs text-blue-700 dark:text-blue-400">
                     <strong>Nota:</strong> El valor de inscripción genera una obligación financiera separada de tipo

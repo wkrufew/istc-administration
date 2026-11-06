@@ -93,6 +93,11 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
+    // Archivos del expediente (estudiantes y docentes): el controlador verifica que quien lo
+    // abre sea el dueño o personal con permiso. Fuera de 'admin' porque también lo usan los portales.
+    Route::get('expediente/archivo/{documento}', [\App\Http\Controllers\ExpedienteArchivoController::class, 'ver'])
+        ->name('expediente.archivo');
+
     // Rutas específicas por rol
     Route::middleware('permisos:acceso_administrativo')->prefix('admin')->name('administracion.administrativa.')->group(function () {
         Route::get('/', function () {
@@ -102,29 +107,47 @@ Route::middleware([
         Route::middleware('permission:asignar_roles')->group(function () {
             Route::resource('roles', RoleController::class)->names('roles')->except('show');
         });
-        // GESTIÓN DE USUARIOS
-        //Route::middleware('permission:gestionar_usuarios')->group(function () {
-        Route::get('users/eliminados', \App\Livewire\Administration\UsersEliminados::class)->name('users.eliminados');
-        Route::get('users/reporte/estudiantes', [UserController::class, 'reporteEstudiantes'])->name('users.reporte.estudiantes');
-        Route::resource('users', UserController::class)->names('users')->only('index', 'edit', 'update');
-        //});
-        // Perfil de usuario (disponible para todos los administrativos)
+        // ── PERSONAS ──────────────────────────────────────────────────────────
+        // Cada sección tiene sus propias direcciones (así el menú queda marcado bien y "volver"
+        // regresa a la sección correcta) y exige su permiso. Las acciones dentro de cada pantalla
+        // verifican además su permiso propio (editar_usuarios, asignar_roles, crear_usuarios...).
+
+        // Perfil propio (disponible para todos los administrativos)
         Route::get('users/profile', [UserController::class, 'profile'])->name('users.profile');
+        // Reporte de estudiantes (verifica 'gestionar_estudiantes' en el controlador)
+        Route::get('users/reporte/estudiantes', [UserController::class, 'reporteEstudiantes'])->name('users.reporte.estudiantes');
 
-        Route::resource('docentes', DocenteController::class)->names('docentes')->except('show');
-        Route::get('docentes/{docente}/asignar', [DocenteController::class, 'showAsignar'])->name('docentes.asignar.form');
-        Route::post('docentes/{docente}/asignar', [DocenteController::class, 'storeAsignacion'])->name('docentes.asignar.store');
-        Route::delete('/docentes/{id}', [DocenteController::class, 'destroy'])->name('docentes.asignar.destroy');
-        Route::get('docentes/{user}/documentos', DocumentosPersonalForm::class)->name('docentes.documentos');
+        // USUARIOS: cuentas de acceso (rol, correo, estado, credenciales)
+        Route::middleware('permission:gestionar_usuarios')->group(function () {
+            Route::get('users', [UserController::class, 'index'])->name('users.index');
+            Route::get('users/crear', [UserController::class, 'create'])->name('users.create');
+            Route::get('users/eliminados', \App\Livewire\Administration\UsersEliminados::class)->name('users.eliminados');
+            Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+            Route::get('users/{usuario}/moodle', \App\Livewire\Administration\MoodleGestion::class)->name('users.moodle');
+        });
 
+        // DOCENTES: datos del docente, documentos y materias asignadas
+        Route::middleware('permission:gestionar_docentes')->group(function () {
+            Route::get('docentes', [DocenteController::class, 'index'])->name('docentes.index');
+            Route::get('docentes/crear', [DocenteController::class, 'create'])->name('docentes.create');
+            Route::get('docentes/{docente}/editar', [DocenteController::class, 'edit'])->name('docentes.edit');
+            Route::get('docentes/{usuario}/moodle', \App\Livewire\Administration\MoodleGestion::class)->name('docentes.moodle');
+            Route::get('docentes/{docente}/asignar', [DocenteController::class, 'showAsignar'])->name('docentes.asignar.form');
+            Route::post('docentes/{docente}/asignar', [DocenteController::class, 'storeAsignacion'])->name('docentes.asignar.store');
+            Route::get('docentes/{user}/documentos', DocumentosPersonalForm::class)->name('docentes.documentos');
+            Route::get('docentes/{docente}/ficha-pdf', [\App\Http\Controllers\Administration\FichaPdfController::class, 'docente'])->name('docentes.ficha-pdf');
+            Route::get('documentacion-personal', [DocumentacionPersonalController::class, 'index'])->name('documentacion-personal.index');
+        });
 
-        //});
-        // GESTIÓN DE ESTUDIANTES
-        //Route::middleware('permission:gestionar_estudiantes')->group(function () {
-        Route::resource('estudiantes', EstudianteController::class)->names('estudiantes')->except('show');
-        //crear una ruta para importar estudiantes
-        Route::get('estudiantes/import-users', [EstudianteController::class, 'import'])->name('estudiantes.import');
-        //});
+        // ESTUDIANTES: datos del estudiante
+        Route::middleware('permission:gestionar_estudiantes')->group(function () {
+            Route::get('estudiantes', [EstudianteController::class, 'index'])->name('estudiantes.index');
+            Route::get('estudiantes/create', [EstudianteController::class, 'create'])->name('estudiantes.create');
+            Route::get('estudiantes/import-users', [EstudianteController::class, 'import'])->name('estudiantes.import');
+            Route::get('estudiantes/{estudiante}/edit', [EstudianteController::class, 'edit'])->name('estudiantes.edit');
+            Route::get('estudiantes/{usuario}/moodle', \App\Livewire\Administration\MoodleGestion::class)->name('estudiantes.moodle');
+            Route::get('estudiantes/{estudiante}/ficha-pdf', [\App\Http\Controllers\Administration\FichaPdfController::class, 'estudiante'])->name('estudiantes.ficha-pdf');
+        });
         //Crear un permiso para la parte de gestion academica
         // GESTIÓN ACADÉMICA
         //Route::middleware('permission:gestionar_estructura_academica')->group(function () {
@@ -174,7 +197,6 @@ Route::middleware([
         Route::resource('actas-colegiado', ActasOCSController::class)->names('actas-colegiado');
         // Normas Aprobadas
         Route::resource('normas-aprobadas', NormasAprobadasController::class)->names('normas-aprobadas');
-        Route::get('documentacion-personal', [DocumentacionPersonalController::class, 'index'])->name('documentacion-personal.index');
 
         Route::get('reportes-carrera-materia', [ReporteCarreraMateriaController::class, 'index'])->name('reportes.carrera-materia');
         Route::get('reportes-horarios', [ReporteHorariosController::class, 'index'])->name('reportes.horarios');
@@ -191,9 +213,6 @@ Route::middleware([
 
         // Configuración del sistema
         Route::get('settings', \App\Livewire\Administration\AdminSettings::class)->name('settings');
-
-        // Gestión Moodle por usuario
-        Route::get('users/{usuario}/moodle', \App\Livewire\Administration\MoodleGestion::class)->name('users.moodle');
 
         // Módulo Solicitudes
         Route::get('solicitudes', SolicitudesGestion::class)->name('solicitudes.index');
@@ -214,6 +233,8 @@ Route::middleware([
         Route::get('aspirantes/reporte-cohorte/{cohorte}', \App\Http\Controllers\Administration\ReporteCohorteAspirantesController::class)->name('aspirantes.reporte-cohorte');
         Route::get('aspirantes/{id}/eliminar', \App\Livewire\Administration\EliminarAspirantePermanente::class)->name('aspirantes.eliminar');
         Route::get('aspirantes', \App\Livewire\Administration\GestionAspirantes::class)->name('aspirantes.index');
+        Route::get('aspirantes/{aspirante}/ficha-pdf', [\App\Http\Controllers\Administration\FichaPdfController::class, 'aspirante'])
+            ->middleware('permission:gestionar_aspirantes')->name('aspirantes.ficha-pdf');
 
     });
 

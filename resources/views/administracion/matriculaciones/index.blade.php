@@ -7,4 +7,5 @@
     {{-- Livewire component --}}
     @livewire('administration.matriculacion')
     @livewire('administration.anular-matricula')
+    @livewire('administration.ver-matricula')
 </x-admin-layout>

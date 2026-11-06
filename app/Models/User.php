@@ -11,6 +11,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
@@ -26,6 +27,11 @@ class User extends Authenticatable
     use Notifiable;
     use TwoFactorAuthenticatable;
 
+    /**
+     * Minutos de espera entre dos envíos de credenciales a la misma persona (aspirantes y
+     * Usuarios). Evita duplicados por doble clic o dos personas a la vez; no es regla de negocio.
+     */
+    const ESPERA_REENVIO_CREDENCIALES_MINUTOS = 2;
 
     /**
      * The attributes that are mass assignable.
@@ -93,6 +99,12 @@ class User extends Authenticatable
 
         // Estado académico
         'estado_academico',
+
+        // Revisión de la ficha por secretaría (App\Support\FichaPersona)
+        'ficha_estado',
+        'ficha_observacion',
+        'ficha_revisada_por',
+        'ficha_revisada_at',
     ];
 
     /**
@@ -133,6 +145,8 @@ class User extends Authenticatable
             'tiene_discapacidad'   => 'boolean',
             'porcentaje_discapacidad' => 'integer',
             'estado_academico'        => 'string',
+            'ficha_revisada_at'       => 'datetime',
+            'is_facturador'           => 'boolean',
         ];
     }
 
@@ -296,6 +310,12 @@ class User extends Authenticatable
     public function aspirante(): HasOne
     {
         return $this->hasOne(Aspirante::class);
+    }
+
+    /** Expediente de documentos (todas las versiones; ->vigentes() para las actuales). */
+    public function expediente(): HasMany
+    {
+        return $this->hasMany(ExpedienteDocumento::class);
     }
 
     public function becasAplicadas()

@@ -139,6 +139,10 @@
                         <option value="App\Models\Carrera">Carrera</option>
                         <option value="App\Models\Semestre">Semestre</option>
                         <option value="App\Models\Materia">Materia</option>
+                        <option value="App\Models\User">Usuario</option>
+                        <option value="App\Models\DetalleMatricula">Materia de matrícula</option>
+                        <option value="App\Models\Aspirante">Aspirante</option>
+                        <option value="App\Models\AsignacionDocente">Asignación docente</option>
                     </select>
                 </div>
 
@@ -153,6 +157,7 @@
                         <option value="created">Creación</option>
                         <option value="updated">Modificación</option>
                         <option value="deleted">Eliminación</option>
+                        <option value="exportado">Exportación (PDF)</option>
                     </select>
                 </div>
 
@@ -322,29 +327,43 @@
             $userIds = collect($pageRecords)->flatMap(fn($r) => array_filter([
                 $r->valores_antes['user_id']  ?? null,
                 $r->valores_despues['user_id'] ?? null,
+                // Registros sobre un estudiante (p. ej. egreso revertido): su nombre en la columna ID
+                $r->auditable_type === \App\Models\User::class ? $r->auditable_id : null,
             ]))->unique()->filter()->values()->all();
             $usersMap = !empty($userIds)
                 ? \App\Models\User::whereIn('id', $userIds)->pluck('name', 'id')
                 : collect();
+
+            // Nombres de materias y paralelos (cambios hechos desde "Ver matrícula")
+            $idsDe = fn(string $campo) => collect($pageRecords)->flatMap(fn($r) => array_filter([
+                $r->valores_antes[$campo]   ?? null,
+                $r->valores_despues[$campo] ?? null,
+            ]))->unique()->values()->all();
+            $materiaIds   = $idsDe('materia_id');
+            $paraleloIds  = $idsDe('paralelo_id');
+            $materiasMap  = $materiaIds  ? \App\Models\Materia::whereIn('id', $materiaIds)->pluck('name', 'id')   : collect();
+            $paralelosMap = $paraleloIds ? \App\Models\Paralelo::whereIn('id', $paraleloIds)->pluck('name', 'id') : collect();
 
             // Para 'updated': mostrar solo campos que realmente cambiaron (claves de valores_despues).
             // Para 'created': todos los campos nuevos. Para 'deleted': todos los campos eliminados.
             $camposDe = fn($r) => match($r->evento) {
                 'updated' => array_keys($r->valores_despues ?? []),
                 'created' => array_keys($r->valores_despues ?? []),
-                'deleted' => array_keys($r->valores_antes   ?? []),
+                'exportado' => array_keys($r->valores_despues ?? []),
+                // + valores_despues: un borrado registrado a mano puede traer su motivo ahí
+                'deleted' => array_keys(($r->valores_antes ?? []) + ($r->valores_despues ?? [])),
                 default   => [],
             };
 
             // Resolver valor legible: user_id → nombre, fechas → formato corto, resto truncado
-            $resolveVal = fn($campo, $valor) =>
-                $valor === null || $valor === ''
-                    ? '—'
-                    : ($campo === 'user_id' && $usersMap->has((int) $valor)
-                        ? $usersMap[(int) $valor]
-                        : (in_array($campo, ['created_at','updated_at','fecha_vencimiento','fecha_pago'])
-                            ? \Carbon\Carbon::parse($valor)->format('d/m/Y')
-                            : \Str::limit((string) $valor, 22)));
+            $resolveVal = fn($campo, $valor) => match (true) {
+                $valor === null || $valor === ''                                  => '—',
+                $campo === 'user_id'     && $usersMap->has((int) $valor)          => $usersMap[(int) $valor],
+                $campo === 'materia_id'  && $materiasMap->has((int) $valor)       => $materiasMap[(int) $valor],
+                $campo === 'paralelo_id' && $paralelosMap->has((int) $valor)      => $paralelosMap[(int) $valor],
+                in_array($campo, ['created_at','updated_at','fecha_vencimiento','fecha_pago','pago_fecha','pago_verificado_at']) => \Carbon\Carbon::parse($valor)->format('d/m/Y'),
+                default                                                           => \Str::limit((string) $valor, 22),
+            };
 
             // Etiquetas legibles para nombres de campo
             $labelCampo = fn($campo) => match($campo) {
@@ -369,6 +388,25 @@
                 'code'               => 'Código',
                 'is_active'          => 'Activo',
                 'costo_carrera'      => 'Costo carrera',
+                'materia_id'         => 'Materia',
+                'paralelo_id'        => 'Paralelo',
+                'matricula'          => 'Matrícula',
+                'motivo'             => 'Motivo',
+                'estado_academico'   => 'Estado académico',
+                'beneficios_reactivados' => 'Beneficios reactivados',
+                'credenciales'       => 'Credenciales',
+                'cedula'             => 'Cédula',
+                'email'              => 'Correo',
+                'rol'                => 'Rol',
+                'accion'             => 'Acción',
+                'resumen_financiero' => 'Con resumen financiero',
+                'pago_estado'        => 'Estado del pago',
+                'pago_monto'         => 'Monto del pago',
+                'pago_metodo'        => 'Método del pago',
+                'pago_fecha'         => 'Fecha del pago',
+                'pago_verificado_at' => 'Verificado el',
+                'pago_comprobante_path' => 'Comprobante del pago',
+                'pago_observacion'   => 'Observación del pago',
                 default              => ucfirst(str_replace('_', ' ', $campo)),
             };
         @endphp
@@ -412,6 +450,11 @@
                             </td>
                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs">
                                 #{{ $r->auditable_id }}
+                                @if ($r->auditable_type === \App\Models\User::class && $usersMap->has($r->auditable_id))
+                                    <div class="font-sans text-gray-700 dark:text-gray-200">{{ $usersMap[$r->auditable_id] }}</div>
+                                @elseif (! empty($r->valores_despues['matricula']))
+                                    <div class="font-sans text-gray-700 dark:text-gray-200">{{ $r->valores_despues['matricula'] }}</div>
+                                @endif
                             </td>
                             <td class="px-4 py-3">
                                 @if ($r->evento === 'created')
@@ -425,6 +468,12 @@
                                         bg-yellow-50 text-yellow-700 border border-yellow-200
                                         dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800">
                                         <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>Modificación
+                                    </span>
+                                @elseif ($r->evento === 'exportado')
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold
+                                        bg-blue-50 text-blue-700 border border-blue-200
+                                        dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Exportación
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold
@@ -521,6 +570,12 @@
                                     dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800">
                                     Modificación
                                 </span>
+                            @elseif ($r->evento === 'exportado')
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold
+                                    bg-blue-50 text-blue-700 border border-blue-200
+                                    dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                    Exportación
+                                </span>
                             @else
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold
                                     bg-red-50 text-red-700 border border-red-200
@@ -531,7 +586,13 @@
                         </div>
                     </div>
                     <div class="text-xs text-gray-400 dark:text-gray-500 mb-2">
-                        ID #{{ $r->auditable_id }} · IP: {{ $r->ip_address ?? '—' }}
+                        ID #{{ $r->auditable_id }}
+                        @if ($r->auditable_type === \App\Models\User::class && $usersMap->has($r->auditable_id))
+                            · {{ $usersMap[$r->auditable_id] }}
+                        @elseif (! empty($r->valores_despues['matricula']))
+                            · {{ $r->valores_despues['matricula'] }}
+                        @endif
+                        · IP: {{ $r->ip_address ?? '—' }}
                     </div>
                     @if (count($campos) > 0)
                         <button @click="open = !open"

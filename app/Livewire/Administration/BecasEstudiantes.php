@@ -407,15 +407,15 @@ class BecasEstudiantes extends Component
             'fechaAsignacion'        => 'required|date',
         ]);
 
-        if (!$this->becaId) {
-            $yaActiva = BecaAplicada::where('user_id', $this->estudianteId)
-                ->where('is_active', true)
-                ->exists();
-
-            if ($yaActiva) {
-                $this->addError('tipoBecaId', 'Este estudiante ya tiene una beca activa. Revoca la actual antes de asignar otra.');
+        if ($this->becaId) {
+            // Una beca revocada no se reactiva editándola: queda en el historial
+            if (! BecaAplicada::whereKey($this->becaId)->where('is_active', true)->exists()) {
+                $this->addError('tipoBecaId', 'Esta beca ya no está activa. Asigna una nueva si corresponde.');
                 return;
             }
+        } elseif (BecaAplicada::where('user_id', $this->estudianteId)->where('is_active', true)->exists()) {
+            $this->addError('tipoBecaId', 'Este estudiante ya tiene una beca activa. Revoca la actual antes de asignar otra.');
+            return;
         }
 
         $documentoPath = null;
@@ -431,76 +431,47 @@ class BecasEstudiantes extends Component
             'observacion'            => trim($this->observacion) ?: null,
             'fecha_asignacion'       => $this->fechaAsignacion,
             'fecha_ultima_revision'  => now()->toDateString(),
-            'is_active'              => true,
-            'asignado_por'           => Auth::id(),
         ];
 
         if ($documentoPath) {
             $data['documento_path'] = $documentoPath;
         }
 
-        if ($this->becaId) {
-            $beca = BecaAplicada::findOrFail($this->becaId);
-            $beca->update($data);
-            $msg = 'Beca actualizada correctamente.';
-        } else {
-            $beca = BecaAplicada::create($data);
-            $msg = 'Beca asignada correctamente.';
-        }
+        // Todo o nada: la beca y el recálculo de las cuotas aún sin pagar del período en curso
+        $resultado = DB::transaction(function () use ($data) {
+            if ($this->becaId) {
+                $beca = BecaAplicada::lockForUpdate()->findOrFail($this->becaId);
+                if (! $beca->is_active) return null;
+                // Editar nunca cambia de estudiante ni quién la asignó
+                $beca->update(collect($data)->except('user_id')->all());
+            } else {
+                // Bloquea al estudiante: dos clics seguidos no deben crear dos becas activas
+                User::whereKey($this->estudianteId)->lockForUpdate()->first();
+                if (BecaAplicada::where('user_id', $this->estudianteId)->where('is_active', true)->exists()) return null;
 
-        $this->aplicarDescuentoObligaciones($beca);
+                $beca = BecaAplicada::create($data + ['is_active' => true, 'asignado_por' => Auth::id()]);
+            }
+
+            return [$beca, BeneficiosService::recalcularCuotasPendientes($beca->user_id)];
+        });
+
+        if (! $resultado) {
+            if ($documentoPath) Storage::disk('public')->delete($documentoPath);
+            $this->addError('tipoBecaId', $this->becaId
+                ? 'Esta beca ya no está activa. Asigna una nueva si corresponde.'
+                : 'Este estudiante ya tiene una beca activa. Revoca la actual antes de asignar otra.');
+            return;
+        }
+        [$beca, $cambiadas] = $resultado;
+        $msg = $this->becaId ? 'Beca actualizada correctamente.' : 'Beca asignada correctamente.';
+
+        if (! $this->becaId && $cambiadas > 0) {
+            dispatch(new EnviarNotificacionBecaAsignada($beca->id));
+        }
 
         unset($this->estudiantes);
         $this->cerrarModal();
         $this->dispatch('swal', ['toast' => true, 'icon' => 'success', 'title' => $msg]);
-    }
-
-    private function aplicarDescuentoObligaciones(BecaAplicada $beca): void
-    {
-        $periodo = Periodo::periodoActivoGlobal();
-        $pct     = (float) $beca->porcentaje_aplicado;
-
-        $pendientes = ObligacionesFinanciera::where('user_id', $beca->user_id)
-            ->where('tipo', 'COLEGIATURA')
-            ->whereIn('estado', ['Pendiente', 'Parcial'])
-            ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
-            ->orderBy('fecha_vencimiento')
-            ->get();
-
-        if ($pendientes->isEmpty()) return;
-
-        $totalOriginal = ObligacionesFinanciera::where('user_id', $beca->user_id)
-            ->where('tipo', 'COLEGIATURA')
-            ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
-            ->sum('monto_original');
-
-        $totalPagado = DB::table('pagos')
-            ->join('obligaciones_financieras', 'pagos.obligacion_id', '=', 'obligaciones_financieras.id')
-            ->where('obligaciones_financieras.user_id', $beca->user_id)
-            ->where('obligaciones_financieras.tipo', 'COLEGIATURA')
-            ->when($periodo, fn($q) => $q->where('obligaciones_financieras.periodo_id', $periodo->id))
-            ->where('pagos.estado', Pago::ESTADO_APROBADO)
-            ->sum('pagos.monto');
-
-        $montoFinalTotal = $totalOriginal * (1 - $pct / 100);
-        $saldo           = max(0, round($montoFinalTotal - $totalPagado, 2));
-        $numPendientes   = $pendientes->count();
-
-        $porcionBase    = floor(($saldo / $numPendientes) * 100) / 100;
-        $residuo        = round($saldo - $porcionBase * $numPendientes, 2);
-
-        foreach ($pendientes as $i => $ob) {
-            $porcion    = $porcionBase + ($i === $numPendientes - 1 ? $residuo : 0);
-            $montoFinal = max(0, $porcion);
-            $ob->update([
-                'monto_final'      => $montoFinal,
-                'descuento'        => round($ob->monto_original - $montoFinal, 2),
-                'beca_aplicada_id' => $beca->id,
-                'estado'           => $montoFinal <= 0 ? 'Pagado' : $ob->estado,
-            ]);
-        }
-
-        dispatch(new EnviarNotificacionBecaAsignada($beca->id));
     }
 
     public function abrirRevocar(int $becaId): void
@@ -531,9 +502,10 @@ class BecasEstudiantes extends Component
         $beca    = BecaAplicada::with(['estudiante', 'tipoBeca'])->findOrFail($this->becaRevocarId);
         $periodo = Periodo::periodoActivoGlobal();
 
-        // Collect totals before revoking (for email)
+        // Totales del período para el correo (sin cuotas invalidadas)
         $totalOriginal = ObligacionesFinanciera::where('user_id', $beca->user_id)
             ->where('tipo', 'COLEGIATURA')
+            ->where('estado', '!=', 'Invalidado')
             ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
             ->sum('monto_original');
 
@@ -541,49 +513,18 @@ class BecasEstudiantes extends Component
             ->join('obligaciones_financieras', 'pagos.obligacion_id', '=', 'obligaciones_financieras.id')
             ->where('obligaciones_financieras.user_id', $beca->user_id)
             ->where('obligaciones_financieras.tipo', 'COLEGIATURA')
+            ->where('obligaciones_financieras.estado', '!=', 'Invalidado')
             ->when($periodo, fn($q) => $q->where('obligaciones_financieras.periodo_id', $periodo->id))
             ->where('pagos.estado', Pago::ESTADO_APROBADO)
             ->sum('pagos.monto');
 
-        // Revert pending/gratuidad obligations to original price
-        $pendientes = ObligacionesFinanciera::where('user_id', $beca->user_id)
-            ->where('tipo', 'COLEGIATURA')
-            ->where(fn($q) => $q
-                ->whereIn('estado', ['Pendiente', 'Parcial'])
-                ->orWhere(fn($q2) => $q2
-                    ->where('estado', 'Pagado')
-                    ->where('monto_final', 0)
-                    ->where('beca_aplicada_id', $beca->id)
-                )
-            )
-            ->when($periodo, fn($q) => $q->where('periodo_id', $periodo->id))
-            ->orderBy('fecha_vencimiento')
-            ->get();
-
-        if ($pendientes->isNotEmpty()) {
-            $saldo         = max(0, round($totalOriginal - $totalPagado, 2));
-            $numPendientes = $pendientes->count();
-            $porcionBase   = floor(($saldo / $numPendientes) * 100) / 100;
-            $residuo       = round($saldo - $porcionBase * $numPendientes, 2);
-
-            foreach ($pendientes as $i => $ob) {
-                $porcion    = $porcionBase + ($i === $numPendientes - 1 ? $residuo : 0);
-                $updateData = [
-                    'monto_final'      => max(0, $porcion),
-                    'descuento'        => 0,
-                    'beca_aplicada_id' => null,
-                ];
-                // Obligación que era Pagado por gratuidad ($0) → vuelve a Pendiente
-                if ($ob->estado === 'Pagado' && (float) $ob->monto_final <= 0) {
-                    $updateData['estado'] = 'Pendiente';
-                }
-                $ob->update($updateData);
-            }
-        }
-
-        // Revoke the beca record (queda en el historial con fecha, usuario y motivo)
-        $beca->update(['fecha_ultima_revision' => now()->toDateString()]);
-        BeneficiosService::desactivar($beca, 'revocacion_manual', trim($this->motivo) ?: null);
+        // Se revoca (queda en el historial con fecha, usuario y motivo) y las cuotas sin pagar
+        // vuelven a calcularse solo con lo que quede vigente (el convenio, si lo tiene)
+        DB::transaction(function () use ($beca) {
+            $beca->update(['fecha_ultima_revision' => now()->toDateString()]);
+            BeneficiosService::desactivar($beca, 'revocacion_manual', trim($this->motivo) ?: null);
+            BeneficiosService::recalcularCuotasPendientes($beca->user_id);
+        });
 
         dispatch(new EnviarNotificacionBecaRevocada(
             $beca->id,

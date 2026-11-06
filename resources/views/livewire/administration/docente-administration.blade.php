@@ -46,11 +46,21 @@
                            bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200"
-                    placeholder="Buscar docente…">
+                    placeholder="Buscar por nombre, cédula o correo…">
             </div>
 
             {{-- Botones --}}
             <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
+                @can('crear_usuarios')
+                <a href="{{ route('administracion.administrativa.docentes.create') }}"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
+                           text-white/90 bg-gradient-to-r from-green-800/70 via-sky-800/60 to-purple-900/55 border border-lime-500/25
+                           hover:from-green-700/80 hover:via-sky-700/70 hover:to-purple-800/65 hover:-translate-y-0.5 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16m8-8H4" /></svg>
+                    Nuevo docente
+                </a>
+                @endcan
+
 
                 <a href="{{ route('administracion.administrativa.documentacion-personal.index') }}"
                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-wide
@@ -235,7 +245,7 @@
                                 <div class="flex items-center justify-center gap-1.5">
 
                                     <a title="Editar datos"
-                                        href="{{ route('administracion.administrativa.estudiantes.edit', $user) }}?from=docentes"
+                                        href="{{ route('administracion.administrativa.docentes.edit', $user) }}"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[0.7rem] font-medium
                                                text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                                hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]

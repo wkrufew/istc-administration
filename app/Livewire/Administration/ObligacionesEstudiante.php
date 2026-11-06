@@ -330,7 +330,7 @@ class ObligacionesEstudiante extends Component
         }
 
         // Monto precargado: saldo de matrícula + inscripción si aplica
-        $this->montoPago = $obligacion->saldo + ($this->obligInscripcionModal?->monto_final ?? 0);
+        $this->montoPago = $obligacion->saldo + ($this->obligInscripcionModal?->saldo ?? 0);
 
         $this->showModalPago = true;
         $this->dispatch('modal-opened');
@@ -365,8 +365,15 @@ class ObligacionesEstudiante extends Component
                 ->first();
         }
 
+        // Nunca se registra un pago de $0: una obligación ya saldada no se cobra otra vez
+        // (la inscripción pendiente se cobra desde su propia obligación)
+        if ((float) ($this->obligacionSeleccionada?->fresh()?->saldo ?? 0) <= 0) {
+            $this->addError('montoPago', 'Esta obligación ya está pagada.');
+            return;
+        }
+
         $maxPago = ($this->obligacionSeleccionada?->saldo ?? 0)
-                 + ($obligInscripcion?->monto_final ?? 0);
+                 + ($obligInscripcion?->saldo ?? 0);
 
         $this->validate([
             'montoPago'       => 'required|numeric|min:0.01|max:' . $maxPago,
@@ -400,10 +407,15 @@ class ObligacionesEstudiante extends Component
                 ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
                 ->count() + 1;
 
-            // Si hay inscripción, el monto de MATRICULA es su saldo exacto (no el acumulado del campo)
+            // Con inscripción el monto recibido cubre primero la matrícula y lo que sobre, la
+            // inscripción: nunca se registra más de lo que realmente se cobró
+            $montoRecibido   = round((float) $this->montoPago, 2);
             $montoObligacion = $obligInscripcion
-                ? $this->obligacionSeleccionada->saldo
-                : $this->montoPago;
+                ? min($montoRecibido, round((float) $this->obligacionSeleccionada->saldo, 2))
+                : $montoRecibido;
+            $montoInscripcion = $obligInscripcion
+                ? min(round($montoRecibido - $montoObligacion, 2), round((float) $obligInscripcion->saldo, 2))
+                : 0;
 
             $pago = Pago::create([
                 'numero_comprobante' => 'TEMP',
@@ -425,12 +437,12 @@ class ObligacionesEstudiante extends Component
             // Refrescar desde DB para leer el estado que calculó el observer
             $this->obligacionSeleccionada->refresh();
 
-            // Si MATRICULA quedó Pagada: auto-liquidar INSCRIPCION
+            // Si MATRICULA quedó Pagada y sobró dinero: va a la INSCRIPCION
             if ($this->obligacionSeleccionada->tipo === 'MATRICULA'
                 && $this->obligacionSeleccionada->estado === 'Pagado'
                 && $this->obligacionSeleccionada->matricula_id) {
 
-                if ($obligInscripcion) {
+                if ($obligInscripcion && $montoInscripcion > 0) {
                     $numeroCuotaInsc = Pago::where('obligacion_id', $obligInscripcion->id)
                         ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE])
                         ->count() + 1;
@@ -439,7 +451,7 @@ class ObligacionesEstudiante extends Component
                         'numero_comprobante' => 'TEMP',
                         'codigo_referencia'  => $this->referencia ?: null,
                         'obligacion_id'      => $obligInscripcion->id,
-                        'monto'              => $obligInscripcion->monto_final,
+                        'monto'              => $montoInscripcion,
                         'metodo_pago'        => $this->metodoPago,
                         'estado'             => Pago::ESTADO_APROBADO,
                         'fecha_pago'         => now(),

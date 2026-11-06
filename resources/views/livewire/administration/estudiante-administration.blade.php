@@ -27,7 +27,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-semibold text-slate-800 dark:text-white/90 leading-none">Listado de Estudiantes</h1>
-                    <p class="text-xs text-lime-400/70 tracking-widest uppercase mt-1">Administración · Usuarios</p>
+                    <p class="text-xs text-lime-400/70 tracking-widest uppercase mt-1">Administración · Estudiantes</p>
                 </div>
             </div>
 
@@ -46,7 +46,69 @@
                            bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08]
                            focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10
                            transition-all duration-200"
-                    placeholder="Buscar por nombre o correo…">
+                    placeholder="Buscar por nombre, cédula o correo…">
+            </div>
+
+            <div class="flex flex-wrap gap-2 ml-auto">
+                @can('crear_usuarios')
+                <a href="{{ route('administracion.administrativa.estudiantes.create') }}"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
+                           text-white/90 bg-gradient-to-r from-green-800/70 via-sky-800/60 to-purple-900/55 border border-lime-500/25
+                           hover:from-green-700/80 hover:via-sky-700/70 hover:to-purple-800/65 hover:-translate-y-0.5 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16m8-8H4" /></svg>
+                    Nuevo estudiante
+                </a>
+                @endcan
+
+                @can('crear_usuarios')
+                <a href="{{ route('administracion.administrativa.estudiantes.import') }}"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
+                           text-amber-700 dark:text-amber-300/90
+                           bg-amber-500/10 border border-amber-500/25
+                           hover:bg-amber-500/20 hover:border-amber-400/40 hover:text-amber-600 dark:hover:text-amber-200
+                           hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-900/20
+                           active:translate-y-0 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    Importar estudiantes
+                </a>
+                @endcan
+
+                @can('gestionar_estudiantes')
+                <a href="{{ route('administracion.administrativa.users.reporte.estudiantes') }}"
+                   x-data="{ cargando: false }"
+                   @click="cargando = true; setTimeout(() => cargando = false, 5000)"
+                   :class="cargando ? 'opacity-60 pointer-events-none' : ''"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium tracking-widest uppercase
+                           text-emerald-700 dark:text-emerald-300/90
+                           bg-emerald-500/10 border border-emerald-500/25
+                           hover:bg-emerald-500/20 hover:border-emerald-400/40 hover:text-emerald-800 dark:hover:text-emerald-200
+                           hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/20
+                           active:translate-y-0 transition-all duration-200">
+                    <span x-show="!cargando" class="flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        Reportes
+                    </span>
+                    <span x-show="cargando" class="flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                        Generando…
+                    </span>
+                </a>
+                @endcan
             </div>
 
         </div>
@@ -199,7 +261,7 @@
                                     <label class="relative inline-flex cursor-pointer items-center">
                                         <input type="checkbox" class="peer sr-only" id="switch-{{ $estudiante->id }}"
                                             @if ($estudiante->is_active) checked @endif
-                                            wire:click="toggleStatus({{ $estudiante }})">
+                                            wire:click="toggleStatus({{ $estudiante->id }})">
                                         <div
                                             class="peer h-5 w-9 rounded-full bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-white/[0.06]
                                                     after:absolute after:left-[2px] after:top-[2px]
@@ -219,7 +281,7 @@
 
                                 @can('moodle_gestion')
                                 @if((int) env('MOODLE_MODE', 0) === 1)
-                                <a href="{{ route('administracion.administrativa.users.moodle', $estudiante) }}?from=estudiantes"
+                                <a href="{{ route('administracion.administrativa.estudiantes.moodle', $estudiante) }}"
                                     title="Gestión Moodle"
                                     class="inline-flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-150
                                            {{ $estudiante->moodle_id
@@ -233,8 +295,8 @@
                                 @endif
                                 @endcan
 
-                                <a href="{{ route('administracion.administrativa.estudiantes.edit', $estudiante) }}?from=estudiantes"
-                                    title="Editar Usuario"
+                                <a href="{{ route('administracion.administrativa.estudiantes.edit', $estudiante) }}"
+                                    title="Ficha del estudiante"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
                                            text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                            hover:text-lime-400 hover:border-lime-500/30 hover:bg-lime-500/[0.06]
@@ -245,7 +307,7 @@
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                     </svg>
-                                    Editar
+                                    Ficha
                                 </a>
 
                                 </div>

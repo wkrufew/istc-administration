@@ -5,6 +5,9 @@ namespace App\Livewire\Administration;
 use App\Jobs\EnviarBienvenidaAccesoInternoJob;
 use App\Models\User;
 use App\Services\SettingService;
+use App\Support\PerfilUsuario;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +40,10 @@ class CreateUser extends Component
     // Otros
     public $profile_photo;
     public $role_id;
+
+    /** Sección desde la que se crea: estudiante, docente o cuenta (administrativos). Define los roles posibles. */
+    #[Locked]
+    public string $perfil = PerfilUsuario::CUENTA;
     public $is_active = true;
 
     // Para estudiantes la contraseña inicial es la cédula (la que anuncia el correo de matrícula)
@@ -48,9 +55,34 @@ class CreateUser extends Component
     public string $cedulaModalInput = '';
     public array  $cedulaModalData  = [];
 
-    public function mount(): void
+    public function mount(string $perfil = PerfilUsuario::CUENTA): void
     {
+        $this->requierePermiso('crear_usuarios');
+
+        $this->perfil    = in_array($perfil, [PerfilUsuario::ESTUDIANTE, PerfilUsuario::DOCENTE], true) ? $perfil : PerfilUsuario::CUENTA;
         $this->apiActiva = !empty(SettingService::get('cedula_api.token', ''));
+
+        // Si la sección tiene un solo rol posible (Estudiante, Docente) queda elegido
+        $roles = $this->rolesPermitidos();
+        if ($roles->count() === 1) {
+            $this->role_id = $roles->first()->id;
+            $this->updatedRoleId($this->role_id);
+        }
+    }
+
+    private function rolesPermitidos()
+    {
+        return PerfilUsuario::rolesAsignables($this->perfil);
+    }
+
+    /** Listado al que vuelve: el de la sección desde la que se creó. */
+    public function rutaListado(): string
+    {
+        return route(match ($this->perfil) {
+            PerfilUsuario::ESTUDIANTE => 'administracion.administrativa.estudiantes.index',
+            PerfilUsuario::DOCENTE    => 'administracion.administrativa.docentes.index',
+            default                   => 'administracion.administrativa.users.index',
+        });
     }
 
     /** Al elegir un rol estudiantil se propone la cédula como contraseña (se puede desmarcar). */
@@ -94,7 +126,8 @@ class CreateUser extends Component
             'fact_direccion' => 'nullable|string',
             'fact_telefono' => 'nullable|string|max:20',
             'profile_photo' => 'nullable|image|max:2048',
-            'role_id' => 'required|exists:roles,id',
+            // Solo los roles de esta sección; Super Admin solo lo asigna otro Super Admin
+            'role_id' => ['required', Rule::in($this->rolesPermitidos()->pluck('id')->all())],
         ];
     }
 
@@ -110,6 +143,7 @@ class CreateUser extends Component
         'cedula.required' => 'La cédula es obligatoria',
         'cedula.unique' => 'Esta cédula ya está registrada',
         'role_id.required' => 'Debe seleccionar un rol',
+        'role_id.in'       => 'Ese rol no se puede asignar desde aquí.',
     ];
 
     public function updatedIsFacturador($value)
@@ -344,12 +378,12 @@ class CreateUser extends Component
 
         session()->flash('message', 'Usuario creado exitosamente.');
 
-        return redirect()->route('administracion.administrativa.users.index');
+        return redirect()->to($this->rutaListado());
     }
 
     public function render()
     {
-        $roles = Role::where('name', '!=', 'Super Admin')->orderBy('name')->get();
+        $roles = $this->rolesPermitidos();
 
         return view('livewire.administration.create-user', [
             'roles' => $roles

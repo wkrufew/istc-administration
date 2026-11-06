@@ -434,23 +434,33 @@ class ConveniosEstudiantes extends Component
             'observacion'         => trim($this->observacion) ?: null,
             'fecha_inicio'        => $this->fechaInicio,
             'fecha_fin'           => $this->fechaFin ?: null,
-            'is_active'           => true,
-            'registrado_por'      => Auth::id(),
         ];
 
         if ($documentoPath) {
             $data['documento_path'] = $documentoPath;
         }
 
+        // En los tres casos las cuotas aún sin pagar del período en curso se recalculan
+        // (beca + convenio); un semestral que llega a descontar queda usado en este período
         if ($this->convenioId) {
-            ConvenioAplicado::findOrFail($this->convenioId)->update($data);
+            $convenio = ConvenioAplicado::findOrFail($this->convenioId);
+            if (! $convenio->is_active) {
+                $this->addError('bloqueo', 'Este convenio ya no está activo. Asigna uno nuevo si corresponde.');
+                return;
+            }
+            DB::transaction(function () use ($convenio, $data) {
+                $convenio->update($data);
+                BeneficiosService::recalcularCuotasPendientes($convenio->user_id);
+            });
             $msg = 'Convenio actualizado correctamente.';
         } else {
             DB::transaction(function () use ($aRenovar, $data) {
                 foreach ($aRenovar as $anterior) {
                     BeneficiosService::desactivar($anterior, 'renovacion', 'Usado en ' . ($anterior->periodo?->code ?? '—'));
                 }
-                ConvenioAplicado::create($data);
+                // Quién lo registró solo se guarda al crearlo
+                ConvenioAplicado::create($data + ['is_active' => true, 'registrado_por' => Auth::id()]);
+                BeneficiosService::recalcularCuotasPendientes((int) $this->estudianteId);
             });
             $msg = $aRenovar->isNotEmpty() ? 'Convenio renovado correctamente.' : 'Convenio asignado correctamente.';
         }
@@ -478,7 +488,11 @@ class ConveniosEstudiantes extends Component
         if ($this->sinPermiso('gestionar_convenios')) return;
 
         $convenio = ConvenioAplicado::findOrFail($this->convenioRevocarId);
-        BeneficiosService::desactivar($convenio, 'revocacion_manual', trim($this->motivoRevocacion) ?: null);
+        DB::transaction(function () use ($convenio) {
+            BeneficiosService::desactivar($convenio, 'revocacion_manual', trim($this->motivoRevocacion) ?: null);
+            // Las cuotas aún sin pagar vuelven a calcularse solo con la beca, si la tiene
+            BeneficiosService::recalcularCuotasPendientes($convenio->user_id);
+        });
 
         unset($this->estudiantes);
         $this->cerrarRevocar();

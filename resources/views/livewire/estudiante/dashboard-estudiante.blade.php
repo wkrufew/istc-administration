@@ -42,6 +42,43 @@
             </div>
         @endif
 
+        {{-- Camino a la titulación: solo cuando aprobó toda la malla --}}
+        @if ($estadoEgreso)
+            @if ($estadoEgreso['saldo'] > 0)
+                <div class="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border p-5 bg-indigo-50 border-indigo-200">
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-indigo-900">¡Completaste tu malla curricular!</p>
+                        <p class="text-sm text-indigo-800 mt-1">
+                            @if ($estadoEgreso['exige_pago'])
+                                Para continuar con tu titulación debes cancelar tu saldo pendiente:
+                                <strong class="tabular-nums">${{ number_format($estadoEgreso['saldo'], 2) }}</strong>.
+                            @else
+                                Tienes un saldo pendiente de <strong class="tabular-nums">${{ number_format($estadoEgreso['saldo'], 2) }}</strong>.
+                                Ponte al día para culminar tu proceso de titulación sin inconvenientes.
+                            @endif
+                        </p>
+                        @if ($estadoEgreso['en_revision'])
+                            <p class="text-xs text-indigo-700 mt-1.5">Tienes pagos en revisión: el saldo bajará cuando secretaría los apruebe.</p>
+                        @endif
+                    </div>
+                    <a href="{{ route('administracion.estudiantil.obligaciones-financieras') }}"
+                       class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors flex-shrink-0">
+                        Ver mis obligaciones
+                    </a>
+                </div>
+            @elseif ($estadoEgreso['en_titulacion'])
+                <div class="rounded-2xl border p-5 bg-emerald-50 border-emerald-200">
+                    <p class="text-sm font-semibold text-emerald-900">Tu proceso de titulación está en curso</p>
+                    <p class="text-sm text-emerald-800 mt-1">Aprobaste toda tu malla y estás al día. Secretaría te informará los siguientes pasos.</p>
+                </div>
+            @else
+                <div class="rounded-2xl border p-5 bg-emerald-50 border-emerald-200">
+                    <p class="text-sm font-semibold text-emerald-900">¡Felicidades! Aprobaste todas tus materias y estás al día</p>
+                    <p class="text-sm text-emerald-800 mt-1">Ya puedes iniciar tu proceso de titulación. Acércate a secretaría para comenzar.</p>
+                </div>
+            @endif
+        @endif
+
         {{-- ================================================================
              HEADER: Perfil + selector de periodo
              ================================================================ --}}
@@ -210,6 +247,12 @@
                         d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <p class="font-semibold">Selecciona un periodo para ver tu información</p>
+            </div>
+        @elseif (!$matricula && $estadoEgreso)
+            {{-- Ya aprobó toda la malla: no tener materias en el período es lo esperado --}}
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center text-gray-600">
+                <p class="font-semibold">Ya completaste tu malla curricular</p>
+                <p class="text-sm mt-1">No tienes materias en este período. Puedes consultar tus calificaciones de períodos anteriores en el selector de período.</p>
             </div>
         @elseif (!$matricula)
             <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center text-yellow-700">

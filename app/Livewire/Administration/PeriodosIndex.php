@@ -95,10 +95,19 @@ class PeriodosIndex extends Component
                 ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
                 ->select('user_id');
 
+            // Quien no se matriculó pero pagó en este período un saldo de validación de
+            // conocimientos usó aquí su beca/convenio: también le vencen al cerrar
+            $conSaldoValidacion = ObligacionesFinanciera::where('periodo_id', $periodo->id)
+                ->where('estado', '!=', 'Invalidado')
+                ->whereHas('matricula', fn($m) => $m
+                    ->where('carrera_id', $carreraId)
+                    ->where('tipo', Matricula::TIPO_VALIDACION))
+                ->select('user_id');
+
             // Las becas se renuevan manualmente cada período: al cerrar se desactivan TODAS las de
             // los estudiantes de esta carrera matriculados en el período, hayan pagado o no.
             $becasADesactivar = BecaAplicada::where('is_active', true)
-                ->whereIn('user_id', $matriculadosEnPeriodo)
+                ->where(fn($q) => $q->whereIn('user_id', $matriculadosEnPeriodo)->orWhereIn('user_id', $conSaldoValidacion))
                 ->get();
 
             // Convenios semestrales usados en este período (los permanentes siguen vigentes; los
@@ -106,7 +115,7 @@ class PeriodosIndex extends Component
             $conveniosADesactivar = ConvenioAplicado::where('is_active', true)
                 ->where('periodo_id', $periodo->id)
                 ->whereHas('tipoConvenio', fn($t) => $t->where('tipo_alcance', 'semestral'))
-                ->whereIn('user_id', $matriculadosEnPeriodo)
+                ->where(fn($q) => $q->whereIn('user_id', $matriculadosEnPeriodo)->orWhereIn('user_id', $conSaldoValidacion))
                 ->get();
 
             // Marcar obligaciones impagas como Vencido

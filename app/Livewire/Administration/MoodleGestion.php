@@ -24,10 +24,12 @@ class MoodleGestion extends Component
         $this->requierePermiso('moodle_gestion');
         $this->usuario = $usuario;
 
-        $this->volverRuta = match(request()->query('from')) {
-            'docentes'    => route('administracion.administrativa.docentes.index'),
-            'estudiantes' => route('administracion.administrativa.estudiantes.index'),
-            default       => route('administracion.administrativa.users.index'),
+        // Se entra por la dirección de cada sección (estudiantes/…/moodle, docentes/…/moodle,
+        // users/…/moodle): "volver" regresa a esa misma sección
+        $this->volverRuta = match (request()->route()?->getName()) {
+            'administracion.administrativa.docentes.moodle'    => route('administracion.administrativa.docentes.edit', $usuario),
+            'administracion.administrativa.estudiantes.moodle' => route('administracion.administrativa.estudiantes.index'),
+            default                                            => route('administracion.administrativa.users.index'),
         };
     }
 

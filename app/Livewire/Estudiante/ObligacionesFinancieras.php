@@ -60,11 +60,11 @@ class ObligacionesFinancieras extends Component
     #[Computed]
     public function periodos()
     {
-        return Periodo::whereHas(
-            'matriculas',
-            fn($q) =>
-            $q->where('user_id', $this->idUser)
-        )
+        // También los períodos donde solo tiene cobros (p. ej. el saldo de validación de conocimientos)
+        return Periodo::where(fn($q) => $q
+                ->whereHas('matriculas', fn($m) => $m->where('user_id', $this->idUser))
+                ->orWhereHas('obligacionesFinancieras', fn($o) => $o->where('user_id', $this->idUser))
+            )
             ->orderByDesc('fecha_inicio')
             ->get();
     }

@@ -74,6 +74,7 @@ class AdminSettings extends Component
     // =========================================================================
     public string $matricula_valor_inscripcion   = '10.00';
     public string $matricula_porcentaje_arrastre = '10';
+    public string $titulacion_exigir_sin_saldo   = '0';
 
     // =========================================================================
     // GRUPO: API CÉDULA
@@ -157,6 +158,7 @@ class AdminSettings extends Component
         // Matrícula
         $this->matricula_valor_inscripcion   = $s['matricula.valor_inscripcion']   ?? '10.00';
         $this->matricula_porcentaje_arrastre = $s['matricula.porcentaje_arrastre'] ?? '10';
+        $this->titulacion_exigir_sin_saldo   = $s['titulacion.exigir_sin_saldo']   ?? '0';
 
         // API Cédula
         $this->cedula_api_url   = $s['cedula_api.url']   ?? '';
@@ -482,6 +484,23 @@ class AdminSettings extends Component
         ]);
 
         $this->dispatch('swal', ['icon' => 'success', 'title' => 'Configuración de matrícula guardada.', 'timer' => 2000]);
+    }
+
+    /** Requisito de pago para titulación: se guarda al instante al mover el interruptor. */
+    public function alternarExigirSinSaldo(): void
+    {
+        if ($this->sinPermiso('gestionar_configuracion')) return;
+
+        $this->titulacion_exigir_sin_saldo = $this->titulacion_exigir_sin_saldo === '1' ? '0' : '1';
+        $this->upsertGroup('titulacion', ['exigir_sin_saldo' => $this->titulacion_exigir_sin_saldo]);
+
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => $this->titulacion_exigir_sin_saldo === '1'
+                ? 'Titulación: ahora se exige estar sin saldo pendiente.'
+                : 'Titulación: el saldo pendiente ya no bloquea.',
+            'timer' => 2500,
+        ]);
     }
 
     // =========================================================================

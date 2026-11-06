@@ -3,6 +3,7 @@
 namespace App\Livewire\Administration;
 
 use App\Models\User;
+use App\Support\PerfilUsuario;
 use App\Traits\WithAuthorization;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -27,9 +28,15 @@ class UsersAdministration extends Component
     public function updatingFiltroEstado(): void     { $this->resetPage(); }
     public function updatingFiltroCumpleanos(): void { $this->resetPage(); }
 
-    public function eliminar(User $user): void
+    public function eliminar(int $userId): void
     {
         if ($this->sinPermiso('eliminar_usuarios')) return;
+
+        $user = User::findOrFail($userId);
+        if ($motivo = PerfilUsuario::motivoNoPuedeModificar($user, 'eliminar')) {
+            $this->dispatch('swal', ['icon' => 'warning', 'title' => 'No permitido', 'text' => $motivo]);
+            return;
+        }
 
         try {
             $user->is_active = false;
@@ -89,9 +96,15 @@ class UsersAdministration extends Component
         return view('livewire.administration.users-administration', compact('users', 'roles'));
     }
 
-    public function toggleStatus(User $user): void
+    public function toggleStatus(int $userId): void
     {
         if ($this->sinPermiso('editar_usuarios')) return;
+
+        $user = User::findOrFail($userId);
+        if ($motivo = PerfilUsuario::motivoNoPuedeModificar($user, $user->is_active ? 'desactivar' : 'modificar')) {
+            $this->dispatch('alert', ['message' => $motivo, 'type' => 'error', 'title' => 'No permitido']);
+            return;
+        }
 
         try {
             $user->is_active = ! $user->is_active;

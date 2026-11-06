@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Administration;
 
+use App\Models\Aspirante;
+use App\Models\Asistencia;
 use App\Models\AuditoriaAnulacionMatricula;
-use App\Models\BecaAplicada;
+use App\Models\Calificacion;
 use App\Models\Convalidacion;
 use App\Models\ConvenioAplicado;
 use App\Models\DetalleMatricula;
@@ -11,6 +13,7 @@ use App\Models\Matricula;
 use App\Models\MateriasArrastrada;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Pago;
+use App\Models\Retiro;
 use App\Models\User;
 use App\Services\BeneficiosService;
 use Illuminate\Support\Facades\Auth;
@@ -38,6 +41,8 @@ class AnularMatricula extends Component
     #[On('abrir-anulacion-matricula')]
     public function abrir(int $estudianteId): void
     {
+        if (! $this->esAdministrador()) return;
+
         $user = User::findOrFail($estudianteId);
 
         $this->estudianteId = $estudianteId;
@@ -64,6 +69,7 @@ class AnularMatricula extends Component
                 'total_obligaciones' => $m->obligacionesFinancieras->count(),
                 'tiene_pagos'      => $m->pagos->count() > 0,
                 'total_pagado'     => $m->pagos->sum('monto'),
+                'bloqueo'          => $this->motivoBloqueo($m),
             ])
             ->toArray();
 
@@ -77,6 +83,8 @@ class AnularMatricula extends Component
 
     public function seleccionarMatricula(int $matriculaId): void
     {
+        if (! $this->esAdministrador()) return;
+
         $m = Matricula::with(['periodo', 'carrera', 'detalles.materia', 'detalles.paralelo', 'obligacionesFinancieras', 'pagos'])
             ->findOrFail($matriculaId);
 
@@ -104,6 +112,7 @@ class AnularMatricula extends Component
             ])->toArray(),
             'pagos_count'  => $m->pagos->count(),
             'total_pagado' => (float) $m->pagos->sum('monto'),
+            'bloqueo'      => $this->motivoBloqueo($m),
         ];
 
         $this->codigoIngresado = '';
@@ -135,6 +144,8 @@ class AnularMatricula extends Component
 
     public function anular(): void
     {
+        if (! $this->esAdministrador()) return;
+
         $codigoEsperado = $this->matriculaSeleccionada['code'] ?? '';
 
         if ($this->codigoIngresado !== $codigoEsperado) {
@@ -158,8 +169,32 @@ class AnularMatricula extends Component
                     'obligacionesFinancieras.pagos',
                 ])->findOrFail($matriculaId);
 
+                abort_if($matricula->user_id !== $this->estudianteId, 403);
+
+                // Con notas, asistencias o algo construido encima ya no es un error de registro
+                if ($bloqueo = $this->motivoBloqueo($matricula)) {
+                    throw new \DomainException($bloqueo);
+                }
+
                 // 1. Snapshot antes de borrar
                 $snapshot = $this->buildSnapshot($matricula);
+
+                // 1b. Lo que esta matrícula consumió vuelve a quedar pendiente de aplicar/cobrar:
+                //     el pago verificado en admisión y el reintegro de un retiro anterior
+                $pagosIds = $matricula->obligacionesFinancieras->flatMap(fn($o) => $o->pagos->pluck('id'));
+                Aspirante::whereIn('pago_aplicado_id', $pagosIds)->get()->each(function ($aspirante) use ($matricula) {
+                    $sigueMatriculado = Matricula::where('user_id', $matricula->user_id)
+                        ->where('id', '!=', $matricula->id)
+                        ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+                        ->exists();
+                    $aspirante->update([
+                        'pago_aplicado_id' => null,
+                        'estado'           => $sigueMatriculado ? $aspirante->estado : 'aprobado',
+                    ]);
+                });
+
+                $matricula->obligacionesFinancieras->where('tipo', 'REINTEGRO')->pluck('retiro_id')->filter()->unique()
+                    ->each(fn($retiroId) => Retiro::find($retiroId)?->update(['recargo_cobrado' => false]));
 
                 // 2. Archivos físicos + pagos
                 foreach ($matricula->obligacionesFinancieras as $obligacion) {
@@ -171,26 +206,49 @@ class AnularMatricula extends Component
                     }
                 }
 
-                // 3. Obligaciones financieras — recoger becas vinculadas antes de borrar
-                $becasADesactivar = $matricula->obligacionesFinancieras
-                    ->whereNotNull('beca_aplicada_id')
-                    ->pluck('beca_aplicada_id')
-                    ->unique()
-                    ->values();
-
+                // 3. Obligaciones financieras
                 $matricula->obligacionesFinancieras()->delete();
 
-                // 3b. Desactivar becas que estaban aplicadas a esta matrícula (quedan en el historial)
-                BecaAplicada::whereIn('id', $becasADesactivar)->get()
-                    ->each(fn($beca) => BeneficiosService::desactivar($beca, 'anulacion_matricula', "Matrícula {$matricula->code}"));
-
-                // 3c. Un convenio semestral usado por esta matrícula vuelve a quedar disponible:
-                //     la matrícula se anuló, así que el beneficio no llegó a aprovecharse.
-                ConvenioAplicado::where('user_id', $matricula->user_id)
+                // 3b. Beneficios: una matrícula del período en curso que se anula nunca se usó, así
+                //     que sus becas y convenios terminan (quedan en el historial). Se conservan si
+                //     el estudiante sigue teniendo obligaciones vigentes de otra matrícula en un
+                //     período en curso, o si la anulada es de un período pasado (no tiene que ver
+                //     con los beneficios que tenga ahora).
+                $esDelPeriodoEnCurso = DB::table('carrera_periodo')
+                    ->where('carrera_id', $matricula->carrera_id)
                     ->where('periodo_id', $matricula->periodo_id)
+                    ->where('is_current', true)
                     ->where('is_active', true)
-                    ->whereHas('tipoConvenio', fn($t) => $t->where('tipo_alcance', 'semestral'))
-                    ->update(['periodo_id' => null]);
+                    ->exists();
+
+                $sigueEnCurso = ObligacionesFinanciera::where('user_id', $matricula->user_id)
+                    ->where('matricula_id', '!=', $matricula->id)
+                    ->where('estado', '!=', 'Invalidado')
+                    ->whereExists(fn($q) => $q->selectRaw(1)
+                        ->from('matriculas as m')
+                        ->join('carrera_periodo as cp', 'cp.carrera_id', '=', 'm.carrera_id')
+                        ->whereColumn('m.id', 'obligaciones_financieras.matricula_id')
+                        ->whereColumn('cp.periodo_id', 'obligaciones_financieras.periodo_id')
+                        ->where('cp.is_current', true)
+                        ->where('cp.is_active', true))
+                    ->exists();
+
+                if ($esDelPeriodoEnCurso && ! $sigueEnCurso) {
+                    BeneficiosService::desactivarTodos($matricula->user_id, 'anulacion_matricula', "Matrícula {$matricula->code}");
+                } else {
+                    // Se conservan: un convenio semestral marcado con este período solo se libera
+                    // si ninguna otra obligación vigente de ese período lo usa
+                    ConvenioAplicado::where('user_id', $matricula->user_id)
+                        ->where('periodo_id', $matricula->periodo_id)
+                        ->where('is_active', true)
+                        ->whereHas('tipoConvenio', fn($t) => $t->where('tipo_alcance', 'semestral'))
+                        ->get()
+                        ->reject(fn($convenio) => ObligacionesFinanciera::where('convenio_aplicado_id', $convenio->id)
+                            ->where('periodo_id', $matricula->periodo_id)
+                            ->where('estado', '!=', 'Invalidado')
+                            ->exists())
+                        ->each(fn($convenio) => $convenio->update(['periodo_id' => null]));
+                }
 
                 // 4. Convalidación (si existe)
                 $convalidacion = Convalidacion::where('matricula_id', $matriculaId)->first();
@@ -234,6 +292,13 @@ class AnularMatricula extends Component
                 'title' => "Matrícula {$codigoAnulado} anulada correctamente.",
                 'timer' => 3000,
             ]);
+        } catch (\DomainException $e) {
+            $this->procesando = false;
+            $this->dispatch('swal', [
+                'icon'  => 'warning',
+                'title' => 'No se puede anular',
+                'text'  => $e->getMessage(),
+            ]);
         } catch (\Throwable $e) {
             $this->procesando = false;
             $this->dispatch('swal', [
@@ -246,6 +311,50 @@ class AnularMatricula extends Component
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private function esAdministrador(): bool
+    {
+        if (auth()->user()?->hasAnyRole(['Administrador', 'Super Admin'])) return true;
+
+        $this->dispatch('swal', ['icon' => 'error', 'title' => 'Acceso denegado', 'text' => 'Solo un administrador puede anular matrículas.']);
+        return false;
+    }
+
+    /**
+     * Por qué no se puede anular (null = se puede). Una matrícula regular con notas o asistencias
+     * ya se usó: se corrige desde "Ver matrícula". La de validación de conocimientos guarda las
+     * notas convalidadas: no se anula si ya se cursaron semestres regulares después de ella o si
+     * su saldo tiene pagos (aprobados o en revisión).
+     */
+    private function motivoBloqueo(Matricula $matricula): ?string
+    {
+        if ($matricula->tipo === Matricula::TIPO_VALIDACION) {
+            $posteriores = Matricula::where('user_id', $matricula->user_id)
+                ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+                ->where('id', '>', $matricula->id)
+                ->exists();
+            if ($posteriores) {
+                return 'El estudiante ya tiene matrículas regulares posteriores a esta validación de conocimientos; anularla borraría las notas convalidadas en las que se basan.';
+            }
+
+            $conPagos = Pago::whereHas('obligacion', fn($q) => $q->where('matricula_id', $matricula->id))
+                ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE, Pago::ESTADO_PROCESANDO])
+                ->exists();
+            return $conPagos
+                ? 'El saldo de esta validación de conocimientos ya tiene pagos registrados (aprobados o en revisión).'
+                : null;
+        }
+
+        $detalles = DetalleMatricula::withTrashed()->where('matricula_id', $matricula->id)->pluck('id');
+        if ($detalles->isEmpty()) return null;
+
+        $conRegistros = Calificacion::whereIn('detalle_matricula_id', $detalles)->exists()
+            || Asistencia::whereIn('detalle_matricula_id', $detalles)->exists();
+
+        return $conRegistros
+            ? 'Esta matrícula ya tiene notas o asistencias registradas. Usa "Ver matrícula" para cambiar paralelo, agregar o quitar materias.'
+            : null;
+    }
 
     private function resetConfirmacion(): void
     {

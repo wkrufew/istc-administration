@@ -23,6 +23,18 @@ class Aspirante extends Model
     const DOC_ESTADOS  = ['pendiente', 'aprobado', 'rechazado'];
     const PAGO_ESTADOS = ['pendiente', 'verificado', 'rechazado'];
 
+    /**
+     * Cambios de estado que secretaría puede hacer a mano desde la gestión de admisión.
+     * Pasar a 'verificacion' lo hace el aspirante al enviar sus documentos y a 'matriculado'
+     * su primera matrícula; un aprobado o matriculado ya no cambia desde aquí.
+     */
+    const TRANSICIONES = [
+        'pendiente'    => ['proceso' => 'Poner en proceso', 'rechazado' => 'Rechazar'],
+        'proceso'      => ['rechazado' => 'Rechazar'],
+        'verificacion' => ['aprobado' => 'Aprobar', 'rechazado' => 'Rechazar'],
+        'aprobado'     => [],
+    ];
+
     protected $fillable = [
         'user_id',
         'cohorte_id',
@@ -46,8 +58,11 @@ class Aspirante extends Model
 
         'pago_monto',
         'pago_metodo',
+        'pago_fecha',
         'pago_verificado_at',
         'pago_aplicado_id',
+        'credenciales_enviadas_at',
+        'credenciales_enviadas_por',
         'pago_comprobante_path',
         'pago_estado',
         'pago_observacion',
@@ -71,8 +86,13 @@ class Aspirante extends Model
 
     protected $casts = [
         'pago_monto'         => 'decimal:2',
-        'pago_verificado_at' => 'datetime',
+        'pago_fecha'               => 'date',
+        'pago_verificado_at'       => 'datetime',
+        'credenciales_enviadas_at' => 'datetime',
     ];
+
+    /** Estados en los que el aspirante tiene acceso al portal de admisión (credenciales vigentes). */
+    const ESTADOS_CON_ACCESO = ['proceso', 'verificacion', 'aprobado'];
 
     // ── Relaciones ────────────────────────────────────────────────────────────
 
@@ -94,6 +114,11 @@ class Aspirante extends Model
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registrado_por');
+    }
+
+    public function credencialesEnviadasPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'credenciales_enviadas_por');
     }
 
     public function pagoAplicado(): BelongsTo
@@ -150,10 +175,47 @@ class Aspirante extends Model
      */
     public function tienePagoAdmisionPorAplicar(): bool
     {
+        return $this->pagoConfirmado() && ! $this->pago_aplicado_id;
+    }
+
+    /**
+     * Secretaría confirmó monto y método. Un pago "verificado" sin pago_verificado_at es de
+     * antes de registrar monto/método: el monto que tenga lo escribió el aspirante, no está confirmado.
+     */
+    public function pagoConfirmado(): bool
+    {
         return $this->pago_estado === 'verificado'
             && $this->pago_verificado_at !== null
-            && (float) $this->pago_monto > 0
-            && ! $this->pago_aplicado_id;
+            && (float) $this->pago_monto > 0;
+    }
+
+    /** Verificado antes de que se registrara monto y método (hay que completarlo en Aspirantes). */
+    public function pagoVerificadoSinMonto(): bool
+    {
+        return $this->pago_estado === 'verificado' && ! $this->pagoConfirmado();
+    }
+
+    /** El pago de admisión se puede registrar o corregir: aspirante en Verificación o Aprobado y pago aún no aplicado a una matrícula. */
+    public function pagoEditable(): bool
+    {
+        return in_array($this->estado, ['verificacion', 'aprobado'], true) && ! $this->pago_aplicado_id;
+    }
+
+    /** Pago confirmado por secretaría y, si ya se usó, la matrícula a la que se aplicó. Null si no está confirmado. */
+    public function resumenPago(): ?array
+    {
+        if (! $this->pagoConfirmado()) return null;
+
+        $pago = $this->pago_aplicado_id ? \App\Models\Pago::with('obligacion.matricula')->find($this->pago_aplicado_id) : null;
+
+        return [
+            'monto'      => (float) $this->pago_monto,
+            'metodo'     => $this->pago_metodo,
+            'fecha_pago' => ($this->pago_fecha ?? $this->pago_verificado_at)?->format('d/m/Y'),
+            'verificado' => $this->pago_verificado_at?->format('d/m/Y'),
+            'matricula'  => $pago?->obligacion?->matricula?->code,
+            'aplicado'   => (bool) $this->pago_aplicado_id,
+        ];
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -200,5 +262,78 @@ class Aspirante extends Model
     public function estadoLabel(): string
     {
         return self::ESTADOS[$this->estado] ?? $this->estado;
+    }
+
+    /** Por qué no se le pueden (re)enviar credenciales (null = se puede). */
+    public function motivoNoReenvioCredenciales(): ?string
+    {
+        if (! in_array($this->estado, self::ESTADOS_CON_ACCESO, true)) {
+            return match ($this->estado) {
+                'pendiente'   => 'Aún no tiene acceso al portal: ponlo en proceso y recibirá sus credenciales.',
+                'matriculado' => 'Ya es estudiante: sus credenciales se reenvían desde Usuarios.',
+                default       => 'Un aspirante rechazado no tiene acceso al portal.',
+            };
+        }
+        if (! $this->user?->cedula) return 'No tiene cédula registrada (la contraseña se restablece a la cédula).';
+        if (! $this->user?->email)  return 'No tiene correo registrado.';
+
+        return null;
+    }
+
+    /** Segundos que faltan para poder volver a enviarle credenciales (0 = ya se puede). */
+    public function segundosParaReenvio(): int
+    {
+        return \App\Services\CredencialesService::segundosDesde($this->credenciales_enviadas_at);
+    }
+
+    public function puedeCambiarA(string $estado): bool
+    {
+        return array_key_exists($estado, self::TRANSICIONES[$this->estado] ?? []);
+    }
+
+    /** Campos obligatorios de la ficha (catálogo único en App\Support\FichaPersona). */
+    public function camposFichaRequeridos(): array
+    {
+        return \App\Support\FichaPersona::camposRequeridos($this->user);
+    }
+
+    /**
+     * Por qué aún no se puede aprobar (vacío = se puede): ficha completa, documentos
+     * requeridos aprobados (pago verificado) y ninguno subido que esté rechazado.
+     */
+    public function razonesNoPuedeAprobar(): array
+    {
+        $u = $this->user;
+        $fichaFaltantes = collect($this->camposFichaRequeridos())->filter(fn($c) => empty($u?->$c))->count();
+
+        $docsReqAprobados = $this->cedula_estado === 'aprobado'
+            && ($this->bachiller_estado === 'aprobado' || $this->habilitante_estado === 'aprobado')
+            && $this->pago_estado === 'verificado';
+
+        $documentos = ['cedula' => 'cedula_path', 'bachiller' => 'bachiller_path', 'habilitante' => 'habilitante_path', 'pago' => 'pago_comprobante_path'];
+        if ($this->esValidacionConocimientos()) {
+            $docsReqAprobados = $docsReqAprobados
+                && $this->hoja_vida_estado      === 'aprobado'
+                && $this->cert_laborales_estado === 'aprobado'
+                && $this->cert_cursos_estado    === 'aprobado';
+            $documentos += ['hoja_vida' => 'hoja_vida_path', 'cert_laborales' => 'cert_laborales_path', 'cert_cursos' => 'cert_cursos_path'];
+        }
+
+        $hayDocRechazado = collect($documentos)
+            ->contains(fn($path, $campo) => $this->$path && $this->{"{$campo}_estado"} === 'rechazado');
+
+        $razones = [];
+        if ($fichaFaltantes > 0)
+            $razones[] = "Ficha incompleta ({$fichaFaltantes} campo" . ($fichaFaltantes > 1 ? 's' : '') . ')';
+        if ($hayDocRechazado)
+            $razones[] = 'Hay documentos rechazados sin corregir';
+        elseif (! $docsReqAprobados)
+            $razones[] = 'Documentos requeridos aún no están todos aprobados';
+
+        // Verificado antes de registrar monto y método: sin monto, la matrícula no podría aplicarlo
+        if ($this->pagoVerificadoSinMonto())
+            $razones[] = 'Registra el monto del pago de matrícula';
+
+        return $razones;
     }
 }

@@ -24,7 +24,7 @@
         {{-- Estado del expediente --}}
         @php
             $total = collect(['file_curriculum', 'file_senescyt', 'file_cedula'])
-                ->filter(fn($f) => $document?->$f)
+                ->filter(fn($f) => $urls[$f] ?? null)
                 ->count();
         @endphp
         <div @class([
@@ -74,131 +74,8 @@
         </div>
     @endif
 
-    {{-- ── DOCUMENTOS PERMANENTES ─────────────────────────────────────────────── --}}
-    @php
-        $slots = [
-            [
-                'prop'   => 'fileCurriculum',
-                'column' => 'file_curriculum',
-                'label'  => 'Hoja de Vida (Curriculum)',
-                'desc'   => 'Curriculum vitae actualizado del docente.',
-                'icon'   => 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM1.5 20.25a6.75 6.75 0 0 1 13.5 0H1.5Z',
-            ],
-            [
-                'prop'   => 'fileSenescyt',
-                'column' => 'file_senescyt',
-                'label'  => 'Título Senescyt',
-                'desc'   => 'Registro de título en la Senescyt.',
-                'icon'   => 'M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5',
-            ],
-            [
-                'prop'   => 'fileCedula',
-                'column' => 'file_cedula',
-                'label'  => 'Cédula de Identidad',
-                'desc'   => 'Copia de cédula de identidad del docente.',
-                'icon'   => 'M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z',
-            ],
-        ];
-    @endphp
-
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        @foreach ($slots as $slot)
-            @php
-                $prop       = $slot['prop'];
-                $column     = $slot['column'];
-                $tieneActual = (bool) $document?->$column;
-                $hayNuevo   = (bool) $this->$prop;
-            @endphp
-            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
-                <div class="flex items-center justify-between px-5 pt-5 pb-3">
-                    <div class="flex items-center gap-3">
-                        <div @class(['h-9 w-9 rounded-xl flex items-center justify-center shrink-0', 'bg-green-100 dark:bg-green-950' => $tieneActual, 'bg-gray-100 dark:bg-gray-800' => !$tieneActual])>
-                            <svg @class(['w-4 h-4', 'text-green-600 dark:text-green-400' => $tieneActual, 'text-gray-400 dark:text-gray-600' => !$tieneActual])
-                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $slot['icon'] }}" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{{ $slot['label'] }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{{ $slot['desc'] }}</p>
-                        </div>
-                    </div>
-                    @if ($tieneActual && !$hayNuevo)
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 shrink-0">
-                            <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.333a1 1 0 0 1-1.425.006L3.29 9.704A1 1 0 1 1 4.704 8.29l3.01 3.01 6.54-6.61a1 1 0 0 1 1.45.6Z" clip-rule="evenodd" />
-                            </svg>
-                            Cargado
-                        </span>
-                    @elseif ($hayNuevo)
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 shrink-0">
-                            Listo
-                        </span>
-                    @else
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500 shrink-0">Sin archivo</span>
-                    @endif
-                </div>
-
-                @if ($tieneActual && !$hayNuevo)
-                    <div class="mx-5 mb-3 flex items-center gap-2 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 px-3 py-2">
-                        <svg class="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625Z" clip-rule="evenodd" />
-                            <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z" />
-                        </svg>
-                        <a href="{{ asset('storage/' . $document->$column) }}" target="_blank"
-                            class="text-xs font-semibold text-green-700 dark:text-green-300 hover:underline truncate">
-                            Ver archivo actual
-                        </a>
-                    </div>
-                @elseif ($hayNuevo)
-                    <div class="mx-5 mb-3 flex items-center gap-2 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 px-3 py-2">
-                        <span class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">
-                            {{ $this->$prop?->getClientOriginalName() }}
-                        </span>
-                    </div>
-                @endif
-
-                <div class="px-5 pb-5">
-                    <input wire:model="{{ $prop }}" type="file" accept="application/pdf"
-                        class="block w-full text-sm text-gray-600 dark:text-gray-400
-                               file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0
-                               file:text-xs file:font-bold file:cursor-pointer
-                               file:bg-blue-600 file:text-white hover:file:bg-blue-700
-                               cursor-pointer rounded-xl border border-gray-200 dark:border-gray-700
-                               bg-gray-50 dark:bg-gray-950 py-2 pr-3 focus:outline-none transition" />
-                    <div wire:loading wire:target="{{ $prop }}" class="mt-2">
-                        <div class="h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-blue-500 rounded-full animate-pulse w-3/4"></div>
-                        </div>
-                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">Cargando archivo…</p>
-                    </div>
-                    @error($prop)
-                        <p class="text-xs font-semibold text-red-600 dark:text-red-400 mt-2">{{ $message }}</p>
-                    @enderror
-                    <p class="text-xs text-gray-400 dark:text-gray-600 mt-1.5">Solo PDF — máximo 10 MB</p>
-                </div>
-            </div>
-        @endforeach
-    </div>
-
-    {{-- ── BOTÓN GUARDAR DOCUMENTOS ───────────────────────────────────────────── --}}
-    <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
-        <a href="{{ route('administracion.administrativa.docentes.index') }}"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700
-                   bg-white dark:bg-gray-950 px-5 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200
-                   hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clip-rule="evenodd" />
-            </svg>
-            Volver a Docentes
-        </a>
-        <button wire:click="save" wire:loading.attr="disabled"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700
-                   disabled:opacity-60 disabled:cursor-not-allowed px-6 py-2.5 text-sm font-bold text-white shadow-sm transition">
-            <span wire:loading.remove wire:target="save">Guardar Documentos</span>
-            <span wire:loading wire:target="save">Guardando…</span>
-        </button>
-    </div>
+    {{-- ── DOCUMENTOS PERSONALES: panel del expediente (subir, revisar, historial) ── --}}
+    @livewire('expediente.panel-documentos', ['user' => $user, 'perfil' => 'docente'], key('panel-docs-docente-' . $user->id))
 
     {{-- ── CONTRATOS POR MÓDULO ───────────────────────────────────────────────── --}}
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
@@ -247,8 +124,8 @@
 
                             {{-- Estado y acciones --}}
                             <div class="flex items-center gap-2 shrink-0">
-                                @if ($asignacion->file_contrato)
-                                    <a href="{{ asset('storage/' . $asignacion->file_contrato) }}" target="_blank"
+                                @if ($contratos[$asignacion->id] ?? null)
+                                    <a href="{{ $contratos[$asignacion->id] }}" target="_blank"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
                                                bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800
                                                text-green-700 dark:text-green-300 hover:bg-green-100 transition">
@@ -258,8 +135,16 @@
                                         </svg>
                                         Ver contrato
                                     </a>
+                                    @if ($puedeEliminar)
+                                        <button wire:click="abrirEliminarContrato({{ $asignacion->id }})"
+                                            title="Solo si se subió por error: borra el archivo para siempre"
+                                            class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white bg-red-600 hover:bg-red-700 transition">
+                                            Eliminar definitivamente
+                                        </button>
+                                    @endif
                                     <button wire:click="eliminarContrato({{ $asignacion->id }})"
-                                        wire:confirm="¿Eliminar este contrato?"
+                                        wire:confirm="¿Quitar este contrato? Quedará en el historial del expediente."
+                                        title="Quitar (queda en el historial)"
                                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs
                                                bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800
                                                text-red-500 dark:text-red-400 hover:bg-red-100 transition">
@@ -280,7 +165,7 @@
                                     <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
                                     </svg>
-                                    {{ $asignacion->file_contrato ? 'Reemplazar' : 'Subir' }}
+                                    {{ ($contratos[$asignacion->id] ?? null) ? 'Reemplazar' : 'Subir' }}
                                 </button>
                             </div>
                         </div>
@@ -328,6 +213,29 @@
             </div>
         @endif
     </div>
+
+    {{-- ── MODAL: ELIMINAR CONTRATO DEFINITIVAMENTE (solo Administrador) ── --}}
+    @if ($contratoEliminarId)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div class="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">Eliminar contrato definitivamente</h3>
+                </div>
+                <div class="px-6 py-5 space-y-3 text-sm">
+                    <p class="text-xs rounded-lg px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
+                        El archivo se borra del servidor y no se puede recuperar. Úsalo solo si se subió por error. Queda registrado en Auditoría con tu motivo.
+                    </p>
+                    <textarea wire:model="motivoEliminarContrato" rows="3" maxlength="500" placeholder="Motivo (ej.: se subió el contrato de otro docente)"
+                              class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-100"></textarea>
+                    @error('motivoEliminarContrato') <p class="text-xs text-red-500">{{ $message }}</p> @enderror
+                </div>
+                <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2">
+                    <button wire:click="cerrarEliminarContrato" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Cancelar</button>
+                    <button wire:click="confirmarEliminarContrato" wire:loading.attr="disabled" class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700">Eliminar para siempre</button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @push('js')
         <script>

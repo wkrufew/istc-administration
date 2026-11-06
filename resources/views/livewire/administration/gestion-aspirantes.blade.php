@@ -226,6 +226,18 @@
                                         Ver
                                     </button>
                                     @can('gestionar_aspirantes')
+                                    @php $noReenvio = $asp->motivoNoReenvioCredenciales(); @endphp
+                                    <button wire:click="abrirReenvio({{ $asp->id }})"
+                                            @disabled($noReenvio)
+                                            title="{{ $noReenvio ?? 'Reenviar credenciales de acceso al portal' }}"
+                                            class="inline-flex items-center p-1.5 rounded-lg text-xs font-medium transition-colors
+                                                   {{ $noReenvio
+                                                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                                                      : 'text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20 hover:text-sky-700' }}">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+                                        </svg>
+                                    </button>
                                     <button
                                         x-on:click="Swal.fire({
                                             title: '¿Eliminar aspirante?',
@@ -272,13 +284,8 @@
             'rechazado'    => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
             'matriculado'  => 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
         ];
-        $transiciones = [
-            'pendiente'    => ['proceso' => 'Poner en proceso', 'rechazado' => 'Rechazar'],
-            'proceso'      => [/* 'verificacion' => 'Marcar verificando', */ 'rechazado' => 'Rechazar'],
-            'verificacion' => ['aprobado' => 'Aprobar', 'rechazado' => 'Rechazar'],
-            'aprobado'     => [],
-        ];
-        $transicionesPosibles = $transiciones[$asp->estado] ?? [];
+        // Mismas reglas que valida el servidor (Aspirante::TRANSICIONES)
+        $transicionesPosibles = \App\Models\Aspirante::TRANSICIONES[$asp->estado] ?? [];
 
         $docsInfo = [
             ['label' => 'Cédula de identidad y papeleta de votación', 'path' => $asp->cedula_path,          'estado' => $asp->cedula_estado,         'obs' => $asp->cedula_observacion,         'campo' => 'cedula',      'req' => true,  'esPago' => false],
@@ -302,64 +309,20 @@
 
         $docsConProblema = collect($docsInfo)->filter(fn($d) => $d['estado'] === 'rechazado')->count();
 
-        // Campos obligatorios de la ficha — espejo de portal-aspirante.blade.php
-        $camposReqFicha = [
-            'phone','sexo','genero','estado_civil','tipo_sangre','etnia',
-            'fecha_nacimiento','nacionalidad',
-            'address','pais_residencia','provincia_residencia','canton_residencia',
-            'provincia_nacimiento','canton_nacimiento',
-            'tipo_colegio','nombre_colegio','ocupacion','empleo_ingresos',
-            'bono_dh','ingresos_hogar','miembros_hogar',
-            'padre','formacion_padre','madre','formacion_madre',
-            'contacto_emergencia','telefono_emergencia','parentesco_emergencia',
-        ];
-        if ($u->etnia === 'Indígena')
-            $camposReqFicha[] = 'pueblo_nacionalidad';
-        if ($u->tiene_discapacidad)
-            array_push($camposReqFicha, 'tipo_discapacidad', 'porcentaje_discapacidad', 'nro_conadis');
-        if (! $u->is_facturador)
-            array_push($camposReqFicha, 'fact_nombre', 'fact_documento', 'fact_correo', 'fact_direccion', 'fact_telefono');
-
+        // Campos obligatorios de la ficha y condición para Aprobar: Aspirante (lo valida también el servidor)
+        $camposReqFicha = $asp->camposFichaRequeridos();
         $fMiss = fn(string $campo) => in_array($campo, $camposReqFicha) && empty($u->$campo);
         $fichaFaltantes = collect($camposReqFicha)->filter(fn($c) => empty($u->$c))->count();
 
-        // ── Condición para habilitar el botón Aprobar global ─────────────────
-        // Docs requeridos deben estar aprobados/verificados
-        $docsReqAprobados =
-            $asp->cedula_estado === 'aprobado' &&
-            ($asp->bachiller_estado === 'aprobado' || $asp->habilitante_estado === 'aprobado') &&
-            $asp->pago_estado === 'verificado';
-        if ($asp->esValidacionConocimientos()) {
-            $docsReqAprobados = $docsReqAprobados
-                && $asp->hoja_vida_estado      === 'aprobado'
-                && $asp->cert_laborales_estado === 'aprobado'
-                && $asp->cert_cursos_estado    === 'aprobado';
-        }
-        // Ningún documento (subido) puede estar rechazado
-        $hayDocRechazado = collect($docsInfo)
-            ->filter(fn($d) => $d['path'] && $d['estado'] === 'rechazado')
-            ->isNotEmpty();
-
-        $puedeAprobar = $fichaFaltantes === 0 && $docsReqAprobados && !$hayDocRechazado;
-
-        // Razones para mostrar al admin cuando está deshabilitado
-        $razonesNoPuede = [];
-        if ($fichaFaltantes > 0)
-            $razonesNoPuede[] = "Ficha incompleta ({$fichaFaltantes} campo" . ($fichaFaltantes > 1 ? 's' : '') . ')';
-        if ($hayDocRechazado)
-            $razonesNoPuede[] = 'Hay documentos rechazados sin corregir';
-        elseif (!$docsReqAprobados)
-            $razonesNoPuede[] = 'Documentos requeridos aún no están todos aprobados';
+        $razonesNoPuede = $asp->razonesNoPuedeAprobar();
+        $puedeAprobar   = empty($razonesNoPuede);
     @endphp
 
     <div class="fixed inset-0 z-50 flex items-start justify-center pt-6 pb-4 px-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
          x-data="{
             tab: '{{ $asp->estado === 'verificacion' ? 'documentos' : 'ficha' }}',
             rechazando: null,
-            obs: '',
-            verificandoPago: false,
-            montoPago: '{{ number_format((float) ($asp->pago_monto ?: $asp->valorMatriculaAdmision()), 2, '.', '') }}',
-            metodoPago: '{{ $asp->pago_metodo ?? 'Transferencia' }}'
+            obs: ''
          }">
         <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl mb-4"
              @click.outside.stop>
@@ -381,9 +344,12 @@
                     @endif
                     @if($convenioAspirante)
                     <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                        Convenio: {{ $convenioAspirante->tipoConvenio?->nombre }} · {{ number_format($convenioAspirante->porcentaje_aplicado, 0) }}%
+                        Convenio: {{ $convenioAspirante->tipoConvenio?->nombre }} · {{ $convenioAspirante->porcentajeTexto() }}
                     </span>
                     @endif
+                </div>
+                <div class="flex-shrink-0 ml-2">
+                    <x-boton-ficha-pdf :url="route('administracion.administrativa.aspirantes.ficha-pdf', $asp)" :financiero="true" />
                 </div>
                 <button wire:click="cerrarDetalle"
                         class="flex-shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ml-2">
@@ -632,22 +598,34 @@
                     <div class="border-t border-slate-100 dark:border-slate-700 pt-4">
                         <div class="flex items-center justify-between mb-2">
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inscripción</p>
-                            @if($asp->estado !== 'matriculado')
                             @can('gestionar_aspirantes')
-                            <button wire:click="abrirEditar"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium
-                                           text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700
-                                           hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
-                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
-                                Editar
-                            </button>
+                            <div class="flex items-center gap-1.5">
+                                @if(! $asp->motivoNoReenvioCredenciales())
+                                <button wire:click="abrirReenvio({{ $asp->id }})"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium
+                                               text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-700
+                                               hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                                    Reenviar credenciales
+                                </button>
+                                @endif
+                                @if($asp->estado !== 'matriculado')
+                                <button wire:click="abrirEditar"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium
+                                               text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700
+                                               hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+                                    Editar
+                                </button>
+                                @endif
+                            </div>
                             @endcan
-                            @endif
                         </div>
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             @foreach([
                                 ['Cohorte', $asp->cohorte?->nombre ?? '—'],
                                 ['Carrera', $asp->carrera?->name ?? '—'],
+                                ['Tipo de proceso', $asp->esValidacionConocimientos() ? 'Validación de conocimientos' : 'Regular'],
                                 ['Registrado por', $asp->registradoPor->name ?? 'Sistema'],
                                 ['Fecha de registro', $asp->created_at->format('d/m/Y H:i')],
                             ] as [$label, $valor])
@@ -656,6 +634,34 @@
                                 <p class="font-medium text-slate-700 dark:text-slate-300">{{ $valor }}</p>
                             </div>
                             @endforeach
+                        </div>
+
+                        {{-- Convenio: los mismos datos que se editan, en solo lectura --}}
+                        <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                            <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-1.5">Convenio</p>
+                            @if($convenioAspirante)
+                                @php $esSemestral = $convenioAspirante->tipoConvenio?->tipo_alcance === 'semestral'; @endphp
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $convenioAspirante->tipoConvenio?->nombre ?? '—' }}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                                        {{ $convenioAspirante->porcentajeTexto() }}
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                        {{ $esSemestral ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' }}">
+                                        {{ $esSemestral ? 'Semestral' : 'Permanente' }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Desde {{ $convenioAspirante->fecha_inicio?->format('d/m/Y') ?? '—' }}
+                                    @if($convenioAspirante->fecha_fin) · hasta {{ $convenioAspirante->fecha_fin->format('d/m/Y') }} @endif
+                                    @if($esSemestral)
+                                        · {{ $convenioAspirante->periodo ? 'usado en ' . $convenioAspirante->periodo->code : 'se aplicará en su primera matrícula' }}
+                                    @endif
+                                    @if($convenioAspirante->motivo) · {{ $convenioAspirante->motivo }} @endif
+                                </p>
+                            @else
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Sin convenio</p>
+                            @endif
                         </div>
                     </div>
 
@@ -776,7 +782,7 @@
                     <div class="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600">
                         <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            La revisión y aprobación de documentos solo se habilita cuando el aspirante envíe su solicitud (estado <strong>Verificación</strong>).
+                            La revisión y aprobación de documentos solo se habilita cuando el aspirante envíe su solicitud (estado <strong>Verificación</strong>){{ $asp->estado === 'aprobado' ? ', excepto registrar o corregir el pago de matrícula' : '' }}.
                         </p>
                     </div>
                     @endif
@@ -806,11 +812,6 @@
                                 @if($doc['req'])<span class="text-red-500 text-xs leading-none">*</span>@endif
                             </div>
                             <div class="flex items-center gap-2">
-                                @if($doc['esPago'] && isset($doc['monto']) && $doc['monto'])
-                                <span class="text-xs font-bold text-slate-600 dark:text-slate-400">
-                                    ${{ number_format($doc['monto'], 2) }}@if($doc['estado'] === 'verificado' && $asp->pago_metodo) · {{ $asp->pago_metodo }}@endif
-                                </span>
-                                @endif
                                 @if($doc['path'])
                                 <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $docEstadoBadge[$doc['estado']] ?? 'bg-slate-100 text-slate-500' }}">
                                     {{ ucfirst($doc['estado']) }}
@@ -845,12 +846,12 @@
                                 @if($doc['campo'] && $asp->estado === 'verificacion')
                                 <div class="flex items-center gap-2">
                                     {{-- Botones cuando no está en modo rechazo --}}
-                                    <div x-show="rechazando !== {{ $alpineKey }}{{ $doc['esPago'] ? ' && ! verificandoPago' : '' }}" class="flex gap-1.5">
+                                    <div x-show="rechazando !== {{ $alpineKey }}" class="flex gap-1.5">
                                         @php $yaAprobado = in_array($doc['estado'], ['aprobado', 'verificado']); @endphp
                                         <button
                                             @if(!$yaAprobado)
                                             @if($doc['esPago'])
-                                            @click="verificandoPago = true"
+                                            wire:click="abrirPago"
                                             @else
                                             @click="$wire.actualizarDocumento('{{ $doc['campo'] }}', 'aprobado')"
                                             @endif
@@ -875,44 +876,6 @@
                                 @endif
                                 @endcan
                             </div>
-
-                            {{-- Formulario inline de verificación de pago --}}
-                            @can('gestionar_aspirantes')
-                            @if($doc['esPago'] && $asp->estado === 'verificacion' && $doc['estado'] !== 'verificado')
-                            <div x-show="verificandoPago" x-cloak class="space-y-2.5 border-t border-emerald-100 dark:border-emerald-800/40 pt-2.5">
-                                <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                                    Confirma lo que consta en el comprobante
-                                    <span class="font-normal text-slate-500 dark:text-slate-400">· valor de matrícula esperado: ${{ number_format($asp->valorMatriculaAdmision(), 2) }}</span>
-                                </p>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 text-sm">$</span>
-                                        <input x-model="montoPago" type="number" step="0.01" min="0.01"
-                                               class="w-full pl-6 pr-3 py-2 text-sm rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/40">
-                                    </div>
-                                    <select x-model="metodoPago"
-                                            class="w-full px-3 py-2 text-sm rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/40">
-                                        @foreach(['Transferencia' => 'Transferencia', 'Deposito' => 'Depósito', 'Efectivo' => 'Efectivo', 'Tarjeta' => 'Tarjeta', 'Payphone' => 'Payphone'] as $valor => $etiqueta)
-                                            <option value="{{ $valor }}">{{ $etiqueta }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button @click="$wire.verificarPagoAdmision(montoPago, metodoPago); verificandoPago = false"
-                                            :disabled="!(parseFloat(montoPago) > 0)"
-                                            class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold
-                                                   bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors">
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                        Confirmar pago verificado
-                                    </button>
-                                    <button @click="verificandoPago = false"
-                                            class="text-xs px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                                        Cancelar
-                                    </button>
-                                </div>
-                            </div>
-                            @endif
-                            @endcan
 
                             {{-- Formulario inline de rechazo --}}
                             @can('gestionar_aspirantes')
@@ -943,6 +906,120 @@
                             @endif
                             @endcan
 
+                        </div>
+                        @endif
+
+                        {{-- Pago de admisión: lo confirmado, lo declarado por el aspirante, y registrar/corregir --}}
+                        @if($doc['esPago'])
+                        @php
+                            $resPago      = $asp->resumenPago();
+                            $motivoNoPago = \App\Services\PagoAdmisionService::motivoNoEditable($asp);
+                            $botonPago    = match (true) {
+                                $asp->pagoConfirmado()             => 'Corregir pago',
+                                $asp->pago_estado === 'verificado' => 'Registrar pago',
+                                ! $asp->pago_comprobante_path      => 'Subir comprobante y verificar',
+                                default                            => null, // pendiente/rechazado con comprobante: usa "Verificar pago" de arriba
+                            };
+                        @endphp
+                        <div class="px-4 py-3 space-y-2.5 {{ $doc['path'] ? 'border-t border-slate-100 dark:border-slate-700/60' : '' }}">
+                            @if($resPago)
+                                <p class="text-xs flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300">
+                                    <strong>${{ number_format($resPago['monto'], 2) }}</strong>
+                                    @if($resPago['metodo'])<span>· {{ \App\Services\PagoAdmisionService::METODOS[$resPago['metodo']] ?? $resPago['metodo'] }}</span>@endif
+                                    @if($resPago['fecha_pago'])<span>· Pagado el {{ $resPago['fecha_pago'] }}</span>@endif
+                                    <span>· Verificado el {{ $resPago['verificado'] }}</span>
+                                    <span class="font-semibold">· {{ $resPago['aplicado'] ? 'Aplicado a ' . ($resPago['matricula'] ?? 'su matrícula') : 'Por aplicar en la matrícula' }}</span>
+                                </p>
+                            @elseif($asp->pagoVerificadoSinMonto())
+                                <p class="text-xs rounded-lg px-2.5 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300">
+                                    <strong>Verificado sin monto registrado.</strong>
+                                    @if((float) $asp->pago_monto > 0) El aspirante declaró ${{ number_format($asp->pago_monto, 2) }}. @endif
+                                    Regístralo para que se aplique solo en la matrícula.
+                                </p>
+                            @elseif($asp->pago_comprobante_path && (float) $asp->pago_monto > 0)
+                                <p class="text-xs text-slate-600 dark:text-slate-400">
+                                    <strong>${{ number_format($asp->pago_monto, 2) }}</strong> declarado por el aspirante · pendiente de confirmar
+                                </p>
+                            @elseif($asp->pago_comprobante_path)
+                                <p class="text-xs text-slate-500 dark:text-slate-400 italic">El aspirante no indicó el monto.</p>
+                            @endif
+
+                            @can('gestionar_aspirantes')
+                            @if(! $showPago)
+                                @if($botonPago && ! $motivoNoPago)
+                                    <button wire:click="abrirPago"
+                                            class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors
+                                                   {{ $asp->pagoConfirmado() ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-800/50 dark:text-emerald-300' }}">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6"/></svg>
+                                        {{ $botonPago }}
+                                    </button>
+                                @elseif($motivoNoPago && $asp->pago_aplicado_id)
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $motivoNoPago }}</p>
+                                @endif
+                            @else
+                                {{-- Formulario: verificar, registrar o corregir --}}
+                                <div class="space-y-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 p-3">
+                                    <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                                        {{ $asp->pagoConfirmado() ? 'Corregir el pago confirmado' : 'Confirma lo que consta en el comprobante' }}
+                                        <span class="font-normal text-slate-500 dark:text-slate-400">· valor de matrícula esperado: ${{ number_format($asp->valorMatriculaAdmision(), 2) }}</span>
+                                    </p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <label class="block">
+                                            <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ $asp->pagoConfirmado() ? 'Monto' : 'Monto (sugerido, compáralo con el comprobante)' }}</span>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 text-sm">$</span>
+                                                <input wire:model="pagoMonto" type="number" step="0.01" min="0.01"
+                                                       class="w-full pl-6 pr-3 py-2 text-sm rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/40">
+                                            </div>
+                                        </label>
+                                        <label class="block">
+                                            <span class="text-[11px] text-slate-500 dark:text-slate-400">Método</span>
+                                            <select wire:model="pagoMetodo"
+                                                    class="w-full px-3 py-2 text-sm rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/40">
+                                                <option value="">Selecciona…</option>
+                                                @foreach(\App\Services\PagoAdmisionService::METODOS as $valor => $etiqueta)
+                                                    <option value="{{ $valor }}">{{ $etiqueta }}</option>
+                                                @endforeach
+                                            </select>
+                                        </label>
+                                        <label class="block">
+                                            <span class="text-[11px] text-slate-500 dark:text-slate-400">Fecha del pago</span>
+                                            <input wire:model="pagoFecha" type="date" min="{{ \App\Services\PagoAdmisionService::fechaMinima($asp) }}" max="{{ now()->format('Y-m-d') }}"
+                                                   class="w-full px-3 py-2 text-sm rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/40">
+                                        </label>
+                                    </div>
+                                    <label class="block">
+                                        <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                                            {{ $asp->pago_comprobante_path ? 'Reemplazar comprobante (opcional)' : 'Comprobante del pago (PDF, JPG o PNG)' }}
+                                        </span>
+                                        <input wire:model="pagoComprobante" type="file" accept=".pdf,.jpg,.jpeg,.png"
+                                               class="block w-full text-xs text-slate-600 dark:text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-slate-100 dark:file:bg-slate-700 file:text-slate-700 dark:file:text-slate-200">
+                                        <span wire:loading wire:target="pagoComprobante" class="text-[11px] text-slate-500">Subiendo…</span>
+                                    </label>
+                                    @if($asp->pagoConfirmado())
+                                    <label class="block">
+                                        <span class="text-[11px] text-slate-500 dark:text-slate-400">Motivo de la corrección <span class="text-red-500">*</span></span>
+                                        <textarea wire:model="pagoMotivo" rows="2" placeholder="Ej.: el monto registrado no coincide con el comprobante"
+                                                  class="w-full text-sm rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 resize-none"></textarea>
+                                    </label>
+                                    @endif
+                                    @foreach(['pagoMonto', 'pagoMetodo', 'pagoFecha', 'pagoComprobante', 'pagoMotivo'] as $campoPago)
+                                        @error($campoPago)<p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                                    @endforeach
+                                    <div class="flex gap-2">
+                                        <button wire:click="guardarPago" wire:loading.attr="disabled" wire:target="guardarPago,pagoComprobante"
+                                                class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition-colors">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                            {{ $asp->pagoConfirmado() ? 'Guardar corrección' : 'Confirmar pago verificado' }}
+                                        </button>
+                                        <button wire:click="cerrarPago"
+                                                class="text-xs px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                            @endcan
                         </div>
                         @endif
                     </div>
@@ -1216,6 +1293,142 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+    @endif
+
+    {{-- ══ MODAL REENVIAR CREDENCIALES ══════════════════════════════════════ --}}
+    @if($showReenvio && $this->aspiranteReenvio)
+    @php
+        $ra          = $this->aspiranteReenvio;
+        $noAplica    = $ra->motivoNoReenvioCredenciales();
+        $smtpActivo  = \App\Services\SettingService::get('smtp.activo', '0') === '1';
+        $espera      = $ra->segundosParaReenvio();
+    @endphp
+    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        {{-- La espera corre en el navegador y habilita el botón al llegar a 0; el servidor la vuelve
+             a verificar al enviar. La clave cambia con cada espera nueva para reiniciar el contador. --}}
+        <div wire:key="reenvio-{{ $ra->id }}-{{ $espera }}"
+             x-data="{
+                s: {{ $espera }},
+                t: null,
+                init() { if (this.s > 0) this.t = setInterval(() => { if (--this.s <= 0) clearInterval(this.t) }, 1000) },
+                destroy() { clearInterval(this.t) },
+                get reloj() { return Math.floor(this.s / 60) + ':' + String(this.s % 60).padStart(2, '0') },
+             }"
+             class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div class="h-1 bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-500"></div>
+
+            <div class="px-6 py-4 flex items-start gap-3 border-b border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow flex-shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-base font-semibold text-slate-800 dark:text-white">Reenviar credenciales</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ $ra->user?->name }} · C.I. {{ $ra->user?->cedula ?? '—' }}</p>
+                </div>
+            </div>
+
+            <div class="px-6 py-5 space-y-4 text-sm">
+                @if($reenvioResultado === 'ok')
+                    <div class="flex flex-col items-center text-center gap-3 py-4">
+                        <div class="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                            <svg class="w-7 h-7 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                        </div>
+                        <p class="font-semibold text-slate-800 dark:text-white">Credenciales enviadas</p>
+                        <p class="text-slate-500 dark:text-slate-400">{{ $reenvioMensaje }}</p>
+                    </div>
+                @else
+                    @if($reenvioAviso)
+                        <div class="flex gap-2 rounded-xl px-4 py-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-300">
+                            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+                            <p class="text-xs leading-relaxed"><strong>Datos guardados.</strong> {{ $reenvioAviso }}</p>
+                        </div>
+                    @endif
+
+                    {{-- Destinatario --}}
+                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4 space-y-2">
+                        <div class="flex justify-between gap-3">
+                            <span class="text-slate-500 dark:text-slate-400">Se enviará a</span>
+                            <span class="font-semibold text-slate-800 dark:text-white break-all text-right">{{ $ra->user?->email ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <span class="text-slate-500 dark:text-slate-400">Usuario</span>
+                            <span class="font-medium text-slate-700 dark:text-slate-200 break-all text-right">{{ $ra->user?->email ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <span class="text-slate-500 dark:text-slate-400">Contraseña</span>
+                            <span class="font-medium text-slate-700 dark:text-slate-200">Su número de cédula</span>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <span class="text-slate-500 dark:text-slate-400">Último envío</span>
+                            <span class="text-slate-700 dark:text-slate-200 text-right">
+                                @if($ra->credenciales_enviadas_at)
+                                    {{ $ra->credenciales_enviadas_at->format('d/m/Y H:i') }}
+                                    @if($ra->credencialesEnviadasPor) · {{ $ra->credencialesEnviadasPor->name }} @endif
+                                @else
+                                    Sin registro
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+
+                    <ul class="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 list-disc pl-4">
+                        <li>El correo incluye el enlace al portal de admisión, su usuario y su contraseña.</li>
+                        <li><strong class="text-slate-700 dark:text-slate-200">La contraseña se restablecerá a su número de cédula.</strong> Si la había cambiado, deberá usar la cédula de nuevo.</li>
+                        <li>¿El correo está mal escrito? Ciérralo y corrígelo con <strong>Editar</strong> en el detalle del aspirante antes de enviar.</li>
+                    </ul>
+
+                    @if($noAplica)
+                        <p class="text-xs rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">{{ $noAplica }}</p>
+                    @elseif(! $smtpActivo)
+                        <p class="text-xs rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
+                            El envío de correos está desactivado en Ajustes → Correo. Actívalo para poder reenviar credenciales.
+                        </p>
+                    @endif
+
+                    @if($espera > 0 && ! $noAplica && $smtpActivo)
+                        <p x-show="s > 0" class="flex items-center gap-2 text-xs rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>Se le enviaron hace un momento. Podrás reenviar en <strong class="tabular-nums" x-text="reloj"></strong>.</span>
+                        </p>
+                    @endif
+
+                    @if($reenvioResultado === 'error' && ! ($espera > 0 && str_starts_with($reenvioMensaje, 'Ya se enviaron')))
+                        <p class="text-xs rounded-lg px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">{{ $reenvioMensaje }}</p>
+                    @endif
+
+                    {{-- Indicador mientras se envía --}}
+                    <div wire:loading.flex wire:target="reenviarCredenciales"
+                         class="items-center gap-3 rounded-xl px-4 py-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800">
+                        <svg class="w-5 h-5 text-sky-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-sky-700 dark:text-sky-300">Enviando credenciales a {{ $ra->user?->email }}…</span>
+                    </div>
+                @endif
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+                <button wire:click="cerrarReenvio" wire:loading.attr="disabled" wire:target="reenviarCredenciales"
+                        class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors">
+                    {{ $reenvioResultado === 'ok' ? 'Listo' : 'Cancelar' }}
+                </button>
+                @if($reenvioResultado !== 'ok')
+                <button wire:click="reenviarCredenciales" wire:loading.attr="disabled" wire:target="reenviarCredenciales"
+                        @disabled($noAplica || ! $smtpActivo || $espera > 0)
+                        @if(! $noAplica && $smtpActivo) x-bind:disabled="s > 0" @endif
+                        class="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white shadow
+                               bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500
+                               disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                    <span wire:loading.remove wire:target="reenviarCredenciales">
+                        {{ $reenvioResultado === 'error' ? 'Intentar de nuevo' : 'Reenviar credenciales' }}
+                    </span>
+                    <span wire:loading wire:target="reenviarCredenciales">Enviando…</span>
+                </button>
+                @endif
+            </div>
         </div>
     </div>
     @endif

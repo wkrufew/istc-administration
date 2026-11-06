@@ -2,39 +2,58 @@
 
 namespace App\Livewire\Administration;
 
-use App\Models\User;
+use App\Support\PerfilUsuario;
+use App\Traits\WithAuthorization;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+/**
+ * Sección Docentes: quienes dictan clases, incluidas las autoridades que también son docentes
+ * (sin Administrador ni Super Admin).
+ */
 class DocenteAdministration extends Component
 {
-    use WithPagination;
+    use WithPagination, WithAuthorization;
 
     public $search;
 
+    public function mount(): void
+    {
+        $this->requierePermiso('gestionar_docentes');
+    }
+
     public function render()
     {
-        $users = User::permission('acceso_docencia')
-            ->where(function ($query) {
-                $query->where('name', 'LIKE', '%' . $this->search . '%')
-                    ->orWhere('email', 'LIKE', '%' . $this->search . '%');
-            })
+        $users = PerfilUsuario::docentes()
+            ->when($this->search, fn($q) => $q->where(fn($sub) =>
+                $sub->where('name', 'LIKE', '%' . $this->search . '%')
+                    ->orWhere('cedula', 'LIKE', '%' . $this->search . '%')
+                    ->orWhere('email', 'LIKE', '%' . $this->search . '%')
+            ))
             ->with('roles')
             ->paginate(10);
 
-        $totalDocentes  = User::permission('acceso_docencia')->count();
-        $totalActivos   = User::permission('acceso_docencia')->where('is_active', true)->count();
-        $totalInactivos = User::permission('acceso_docencia')->where('is_active', false)->count();
+        $totalDocentes  = PerfilUsuario::docentes()->count();
+        $totalActivos   = PerfilUsuario::docentes()->where('is_active', true)->count();
+        $totalInactivos = PerfilUsuario::docentes()->where('is_active', false)->count();
 
         return view('livewire.administration.docente-administration', compact(
             'users', 'totalDocentes', 'totalActivos', 'totalInactivos'
         ));
     }
 
-    public function toggleStatus(User $user)
+    public function toggleStatus(int $userId)
     {
+        if ($this->sinPermiso('gestionar_docentes')) return;
+
+        $user = PerfilUsuario::docentes()->findOrFail($userId);
+        if ($user->is_active && ($motivo = PerfilUsuario::motivoNoPuedeModificar($user, 'desactivar'))) {
+            $this->dispatch('alert', ['message' => $motivo, 'type' => 'error', 'title' => 'No permitido']);
+            return;
+        }
+
         try {
-            $user->is_active = !$user->is_active;
+            $user->is_active = ! $user->is_active;
             $user->save();
 
             $this->dispatch('alert', [

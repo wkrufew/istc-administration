@@ -336,18 +336,22 @@
 
                                 {{-- Obligaciones --}}
                                 <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
-                                    {{ $obligacionesAlDia ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                    {{ $obligacionesAlDia ? 'bg-green-100 text-green-700' : ($exigeSinSaldo ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') }}">
                                     @if($obligacionesAlDia)
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                                        Obligaciones al día
+                                        Sin saldo pendiente
                                     @else
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>
-                                        Tiene deudas vencidas
+                                        Saldo pendiente: ${{ number_format($saldoPendiente, 2) }}{{ $exigeSinSaldo ? '' : ' · no bloquea' }}
                                     @endif
                                 </div>
 
                                 {{-- Botón Marcar Egresado (solo si malla completa y aún es Activo) --}}
-                                @if($mallaCompleta)
+                                @if($estadoAcademico === 'Egresado')
+                                <span class="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                    Egresado
+                                </span>
+                                @elseif($mallaCompleta && $estadoAcademico === 'Activo')
                                 <button wire:click="marcarEgresado"
                                     wire:confirm="¿Marcar a este estudiante como Egresado? Dejará de aparecer en las listas de matrícula y becas."
                                     class="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold
@@ -360,6 +364,45 @@
                                 </button>
                                 @endif
                             </div>
+
+                            {{-- Revertir egreso: solo Egresados sin titulación registrada --}}
+                            @if($estadoAcademico === 'Egresado' && ! $titulacionId)
+                            @can('gestionar_titulacion')
+                            <details class="mt-3 text-xs" @if($errors->has('motivoReversionEgreso')) open @endif>
+                                <summary class="cursor-pointer font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
+                                    ¿Se marcó como Egresado por error? Revertir egreso
+                                </summary>
+                                <div class="mt-2 p-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 space-y-2">
+                                    <p class="text-amber-800 dark:text-amber-300">
+                                        El estudiante vuelve a <strong>Activo</strong> y aparece otra vez en Matriculación.
+                                        Úsalo, por ejemplo, si se marcó antes de generar su saldo de validación de conocimientos.
+                                    </p>
+                                    <textarea wire:model="motivoReversionEgreso" rows="2" placeholder="Motivo (queda en la auditoría)"
+                                        class="w-full rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100
+                                               shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm resize-none px-3 py-2"></textarea>
+                                    @error('motivoReversionEgreso')
+                                        <p class="text-red-600 dark:text-red-400">{{ $message }}</p>
+                                    @enderror
+                                    <label class="flex items-start gap-2 text-gray-700 dark:text-slate-300">
+                                        <input type="checkbox" wire:model="reactivarBeneficios"
+                                            class="mt-0.5 rounded border-gray-300 dark:border-slate-600 text-amber-600 focus:ring-amber-500">
+                                        <span>
+                                            Reactivar las becas y convenios que se desactivaron por el egreso
+                                            <span class="block text-gray-500 dark:text-slate-400">Solo esos; no los vencidos por cierre de período ni los revocados a mano.</span>
+                                        </span>
+                                    </label>
+                                    <div class="flex justify-end">
+                                        <button wire:click="revertirEgreso"
+                                            wire:confirm="¿Revertir el egreso de este estudiante? Volverá a estar Activo."
+                                            wire:loading.attr="disabled" wire:target="revertirEgreso"
+                                            class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 transition">
+                                            Revertir egreso
+                                        </button>
+                                    </div>
+                                </div>
+                            </details>
+                            @endcan
+                            @endif
                         </div>
 
                         {{-- ================================================

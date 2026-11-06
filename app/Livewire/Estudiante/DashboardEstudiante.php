@@ -13,6 +13,8 @@ use App\Models\ConvenioAplicado;
 use App\Models\ObligacionesFinanciera;
 use App\Models\Pago;
 use App\Models\AsignacionDocente;
+use App\Models\NotaTitulacion;
+use App\Services\EstadoAcademicoService;
 use App\Services\HabilitacionMatriculaService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +69,31 @@ class DashboardEstudiante extends Component
             'saldo'       => $saldo,
             'en_revision' => $enRevision,
             'periodo'     => $pendiente->periodo?->code,
+        ];
+    }
+
+    /**
+     * Camino a la titulación: solo aparece cuando aprobó toda la malla. Le dice si aún tiene saldo
+     * por pagar (requisito para titularse) o si ya puede iniciar el proceso. Usa la misma regla
+     * que el módulo de titulación de secretaría.
+     */
+    #[Computed]
+    public function estadoEgreso(): ?array
+    {
+        if (Auth::user()->estado_academico === 'Titulado') return null;
+
+        $carreraId = Matricula::where('user_id', $this->idUser)->latest('id')->value('carrera_id');
+        if (! $carreraId) return null;
+
+        if (! EstadoAcademicoService::estadoMalla($this->idUser, (int) $carreraId)['completa']) return null;
+
+        $saldo = EstadoAcademicoService::saldoPendiente($this->idUser);
+
+        return [
+            'saldo'         => $saldo,
+            'en_revision'   => $saldo > 0 && EstadoAcademicoService::pagosEnRevision($this->idUser),
+            'en_titulacion' => NotaTitulacion::where('user_id', $this->idUser)->where('carrera_id', $carreraId)->exists(),
+            'exige_pago'    => EstadoAcademicoService::exigeSinSaldoParaTitulacion(),
         ];
     }
 
@@ -314,6 +341,7 @@ class DashboardEstudiante extends Component
             'deudaGlobal'         => $this->deudaGlobal,
             'progresoPorSemestre' => $this->progresoPorSemestre,
             'matriculaPendientePago' => $this->matriculaPendientePago,
+            'estadoEgreso'           => $this->estadoEgreso,
         ]);
     }
 }

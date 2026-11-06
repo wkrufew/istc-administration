@@ -27,21 +27,20 @@
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
                     <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold mr-1">1</span>
-                    Período
+                    Período y carrera
                 </label>
-                <select wire:model.live="periodoId"
+                {{-- Agrupado por período; dentro, cada carrera donde ese período está vigente --}}
+                <select wire:model.live="periodoCarrera"
                     class="w-full rounded-xl border border-gray-300 dark:border-gray-600
                         bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm
                         focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 px-3">
-                    <option value="">— Seleccionar período —</option>
+                    <option value="">— Seleccionar —</option>
                     @foreach ($periodos as $periodo)
-                        <option value="{{ $periodo->id }}">
-                            {{ $periodo->code }}
-                            @if($periodo->description) · {{ Str::limit($periodo->description, 25) }} @endif
-                            @if($periodo->carreras->isNotEmpty())
-                                — {{ $periodo->carreras->pluck('code')->implode(', ') }}
-                            @endif
-                        </option>
+                        <optgroup label="{{ $periodo->code }}{{ $periodo->description ? ' · ' . Str::limit($periodo->description, 30) : '' }}">
+                            @foreach ($periodo->carreras as $carrera)
+                                <option value="{{ $periodo->id }}:{{ $carrera->id }}">{{ Str::title(Str::lower($carrera->name)) }}</option>
+                            @endforeach
+                        </optgroup>
                     @endforeach
                 </select>
                 @if ($periodos->isEmpty())
@@ -55,7 +54,7 @@
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
                     <span class="inline-flex items-center justify-center w-5 h-5 rounded-full
-                        {{ $periodoId ? 'bg-indigo-600 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-500' }}
+                        {{ $carreraId ? 'bg-indigo-600 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-500' }}
                         text-xs font-bold mr-1">2</span>
                     Materia
                 </label>
@@ -69,7 +68,7 @@
                     ])->values()->toArray();
                 @endphp
 
-                <div wire:key="materia-combo-{{ $periodoId }}"
+                <div wire:key="materia-combo-{{ $periodoId }}-{{ $carreraId }}"
                      wire:ignore
                      x-data="{
                          open: false,
@@ -115,8 +114,8 @@
                             x-model="search"
                             @focus="open = true; search = ''"
                             @input="open = true"
-                            placeholder="{{ $periodoId ? 'Escribir para buscar materia…' : 'Primero selecciona un período' }}"
-                            :disabled="{{ $periodoId ? 'false' : 'true' }}"
+                            placeholder="{{ $carreraId ? 'Escribir para buscar materia…' : 'Primero selecciona período y carrera' }}"
+                            :disabled="{{ $carreraId ? 'false' : 'true' }}"
                             class="w-full rounded-xl border border-gray-300 dark:border-gray-600
                                 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm
                                 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 py-2.5 pl-3 pr-9
@@ -162,9 +161,9 @@
                     </div>
                 </div>
 
-                @if ($periodoId && $materias->isEmpty())
+                @if ($carreraId && $materias->isEmpty())
                     <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                        Este período no tiene materias en Materia-Período-Paralelo.
+                        Esta carrera no tiene materias de este período en Materia-Período-Paralelo.
                     </p>
                 @endif
             </div>
@@ -221,9 +220,9 @@
         <div class="mt-6 flex justify-end">
             <button wire:click="asignar"
                 wire:loading.attr="disabled"
-                @disabled($yaExiste || !$periodoId || !$materiaId || !$paraleloId)
+                @disabled($yaExiste || !$carreraId || !$materiaId || !$paraleloId)
                 class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition shadow-sm
-                    {{ ($yaExiste || !$periodoId || !$materiaId || !$paraleloId)
+                    {{ ($yaExiste || !$carreraId || !$materiaId || !$paraleloId)
                         ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         : 'bg-indigo-600 hover:bg-indigo-700 text-white' }}">
                 <span wire:loading.remove wire:target="asignar">
@@ -253,25 +252,21 @@
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Asignaciones registradas</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
                     {{ $asignaciones->count() }} {{ $asignaciones->count() === 1 ? 'asignación' : 'asignaciones' }}
-                    {{ $filtroPeriodoId ? 'en el período seleccionado' : 'en total' }}
+                    {{ $filtro !== '' ? 'en el período y carrera seleccionados' : 'en total' }}
                 </p>
             </div>
 
             {{-- Filtro por período --}}
             <div class="flex items-center gap-2">
                 <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Filtrar período:</label>
-                <select wire:model.live="filtroPeriodoId"
+                {{-- Solo los períodos y carreras donde este docente tiene materias (vigentes y pasados) --}}
+                <select wire:model.live="filtro"
                     class="rounded-xl border border-gray-300 dark:border-gray-600
                         bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm
                         focus:ring-2 focus:ring-indigo-500 py-1.5 px-3">
                     <option value="">Todos</option>
-                    @foreach ($periodos as $p)
-                        <option value="{{ $p->id }}">
-                            {{ $p->code }}
-                            @if($p->carreras->isNotEmpty())
-                                — {{ $p->carreras->pluck('name')->implode(', ') }}
-                            @endif
-                        </option>
+                    @foreach ($opcionesFiltro as $op)
+                        <option value="{{ $op['valor'] }}">{{ $op['etiqueta'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -303,8 +298,8 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($asignaciones as $asignacion)
                             @php
-                                $esActivo = $asignacion->periodo?->carreras
-                                    ->where('pivot.is_current', true)->isNotEmpty();
+                                // Vigente para la carrera de la materia (no para el período general)
+                                $esActivo = (bool) $asignacion->es_vigente;
                             @endphp
                             <tr class="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition">
                                 <td class="px-4 py-3">
@@ -341,8 +336,26 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">
+                                    <div class="inline-flex items-center gap-1.5">
+                                    @if ($asignacion->es_vigente)
+                                        <button wire:click="abrirCambio({{ $asignacion->id }})"
+                                            title="Cambiar docente (conserva horarios, asistencias y notas)"
+                                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg
+                                                bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800
+                                                text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
+                                        </button>
+                                    @endif
+                                    @if ($asignacion->motivo_bloqueo)
+                                        {{-- No se puede eliminar: historial o con asistencias/notas --}}
+                                        <span title="{{ $asignacion->motivo_bloqueo }}"
+                                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg cursor-help
+                                                bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                                        </span>
+                                    @else
                                     <button
-                                        wire:click="$dispatch('confirmarEliminar', { id: {{ $asignacion->id }} })"
+                                        wire:click="$dispatch('confirmarEliminar', { id: {{ $asignacion->id }}, aviso: {{ Js::from($asignacion->aviso_eliminar) }} })"
                                         class="inline-flex items-center justify-center w-8 h-8 rounded-lg
                                             bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800
                                             hover:bg-red-100 dark:hover:bg-red-900/50 transition"
@@ -352,6 +365,8 @@
                                             <path d="M135.2 17.7C140.6 6.8 151.7 0 163.8 0L284.2 0c12.1 0 23.2 6.8 28.6 17.7L320 32l96 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 96C14.3 96 0 81.7 0 64S14.3 32 32 32l96 0 7.2-14.3zM32 128l384 0 0 320c0 35.3-28.7 64-64 64L96 512c-35.3 0-64-28.7-64-64l0-320zm96 64c-8.8 0-16 7.2-16 16l0 224c0 8.8 7.2 16 16 16s16-7.2 16-16l0-224c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16l0 224c0 8.8 7.2 16 16 16s16-7.2 16-16l0-224c0-8.8-7.2-16-16-16zm96 0c-8.8 0-16 7.2-16 16l0 224c0 8.8 7.2 16 16 16s16-7.2 16-16l0-224c0-8.8-7.2-16-16-16z"/>
                                         </svg>
                                     </button>
+                                    @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -362,7 +377,7 @@
             {{-- Mobile cards --}}
             <div class="md:hidden space-y-3">
                 @foreach ($asignaciones as $asignacion)
-                    @php $esActivo = $asignacion->periodo?->carreras->where('pivot.is_current', true)->isNotEmpty(); @endphp
+                    @php $esActivo = (bool) $asignacion->es_vigente; @endphp
                     <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-white dark:bg-gray-900">
                         <div class="flex items-start justify-between gap-3 mb-2">
                             <div class="min-w-0">
@@ -388,17 +403,96 @@
                             <p><span class="font-medium">Período:</span> {{ $asignacion->periodo?->code ?? '—' }}</p>
                             <p><span class="font-medium">Paralelo:</span> {{ $asignacion->paralelo?->name ?? '—' }}</p>
                         </div>
-                        <button wire:click="$dispatch('confirmarEliminar', { id: {{ $asignacion->id }} })"
+                        @if ($asignacion->es_vigente)
+                            <button wire:click="abrirCambio({{ $asignacion->id }})"
+                                class="w-full mb-2 py-1.5 rounded-xl text-xs font-semibold
+                                    bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800
+                                    text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition">
+                                Cambiar docente
+                            </button>
+                        @endif
+                        @if ($asignacion->motivo_bloqueo)
+                            <p class="w-full py-1.5 px-2 rounded-xl text-[11px] text-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                {{ $asignacion->motivo_bloqueo }}
+                            </p>
+                        @else
+                        <button wire:click="$dispatch('confirmarEliminar', { id: {{ $asignacion->id }}, aviso: {{ Js::from($asignacion->aviso_eliminar) }} })"
                             class="w-full py-1.5 rounded-xl text-xs font-semibold
                                 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800
                                 text-red-600 dark:text-red-400 hover:bg-red-100 transition">
                             Eliminar asignación
                         </button>
+                        @endif
                     </div>
                 @endforeach
             </div>
         @endif
     </div>
+
+    {{-- ================================================================
+         MODAL — CAMBIAR DOCENTE (reemplazo a mitad de período)
+         ================================================================ --}}
+    @if ($cambio)
+        @php $ca = $cambio['asignacion']; $imp = $cambio['impacto']; @endphp
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div class="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">Cambiar docente</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {{ $ca->materia?->name }} · Paralelo {{ $ca->paralelo?->name }} · {{ $ca->periodo?->code }}
+                    </p>
+                </div>
+
+                <div class="px-6 py-5 space-y-4 text-sm">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">Nuevo docente</label>
+                        <select wire:model="cambioDocenteId"
+                            class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 py-2.5 px-3">
+                            <option value="">— Seleccionar docente —</option>
+                            @foreach ($cambio['docentes'] as $d)
+                                <option value="{{ $d->id }}">{{ $d->name }}{{ $d->cedula ? ' · ' . $d->cedula : '' }}</option>
+                            @endforeach
+                        </select>
+                        @error('cambioDocenteId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">Motivo</label>
+                        <textarea wire:model="cambioMotivo" rows="2" maxlength="500" placeholder="Ej.: renuncia del docente, reemplazo por licencia…"
+                            class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 py-2 px-3"></textarea>
+                        @error('cambioMotivo') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    <ul class="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-4 py-3 space-y-1 text-xs text-gray-600 dark:text-gray-300 list-disc pl-8">
+                        <li>Se conservan {{ $imp['horarios'] }} horario(s), {{ $imp['asistencias'] }} asistencia(s) y {{ $imp['avisos'] }} aviso(s).</li>
+                        <li>
+                            @if ($cambio['notas'])
+                                <strong>{{ $cambio['notas'] }} nota(s)</strong> pasan al nuevo docente para que pueda verlas y seguir calificando.
+                            @else
+                                Aún no hay notas registradas.
+                            @endif
+                        </li>
+                        @if ($imp['contrato'])
+                            <li>El contrato subido es del docente actual y queda en su expediente; el nuevo docente necesitará el suyo.</li>
+                        @endif
+                        <li>El cambio queda registrado en Auditoría con el docente anterior y el motivo.</li>
+                    </ul>
+                </div>
+
+                <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2">
+                    <button wire:click="cerrarCambio" wire:loading.attr="disabled" wire:target="confirmarCambio"
+                        class="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                        Cancelar
+                    </button>
+                    <button wire:click="confirmarCambio" wire:loading.attr="disabled" wire:target="confirmarCambio"
+                        class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 transition">
+                        <span wire:loading.remove wire:target="confirmarCambio">Cambiar docente</span>
+                        <span wire:loading wire:target="confirmarCambio">Guardando…</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
 </div>
 
@@ -410,7 +504,7 @@
             const d = Array.isArray(params) ? params[0] : params;
             Swal.fire({
                 title: '¿Eliminar asignación?',
-                text: 'Esta acción no se puede deshacer.',
+                text: (d.aviso ? d.aviso + ' ' : '') + 'Esta acción no se puede deshacer.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc2626',

@@ -33,6 +33,8 @@ use App\Jobs\EnviarEmailRetiro;
 use App\Jobs\EnviarWhatsappMatricula;
 use App\Services\BeneficiosService;
 use App\Services\CalculoMatriculaService;
+use App\Services\SaldoValidacionService;
+use App\Services\SecuenciaService;
 use App\Services\HabilitacionMatriculaService;
 use App\Services\SettingService;
 use App\Services\SemestreActualService;
@@ -54,7 +56,6 @@ class Matriculacion extends Component
     // -------------------------------------------------------------------------
     public $showModal    = false;
     public $estudiante   = null;
-    public $matriculaId  = null;
 
     // -------------------------------------------------------------------------
     // DATOS DE LA MATRÍCULA
@@ -62,7 +63,6 @@ class Matriculacion extends Component
     public $carrera_id    = '';
     public $periodo_id    = '';
     public $tipo          = 'Nueva';
-    public $descuento     = 0;
     public $observaciones = '';
 
     // -------------------------------------------------------------------------
@@ -111,6 +111,10 @@ class Matriculacion extends Component
     public int  $semestresYaCursados      = 0;
     public bool $pendienteConvalidacion   = false;
 
+    // Saldo de validación: ya no le quedan materias, pero sí la parte de la carrera exonerada
+    public ?array $saldoValidacion = null;
+    public string $motivoReversionSaldo = '';
+
     // -------------------------------------------------------------------------
     // PROPIEDADES DEL MODAL RETIRO
     // -------------------------------------------------------------------------
@@ -124,7 +128,6 @@ class Matriculacion extends Component
 
     protected $listeners = [
         'matricularEstudiante' => 'iniciarMatricula',
-        'editarMatricula'      => 'editarMatricula',
     ];
 
     // =========================================================================
@@ -240,15 +243,21 @@ class Matriculacion extends Component
             'matriculas.carrera',
         ])->find($estudianteId);
 
-        $this->periodo_id = Periodo::periodoActivoGlobal()?->id ?? '';
-
         // Pre-seleccionar carrera más reciente
         $ultimaMatricula = $this->estudiante->matriculas()->where('tipo', '!=', Matricula::TIPO_VALIDACION)->latest()->first();
-        if ($ultimaMatricula) {
+        if ($carreraAdmision = $this->carreraDeAdmision()) {
+            // Primera matrícula de un aspirante: la carrera es la elegida en admisión
+            $this->carrera_id = $carreraAdmision;
+        } elseif ($ultimaMatricula) {
             $this->carrera_id = $ultimaMatricula->carrera_id;
         } else {
             $this->carrera_id = $this->estudiante->matriculas()->latest()->value('carrera_id') ?? '';
         }
+
+        // Período vigente de SU carrera (las carreras pueden ir en períodos distintos)
+        $this->periodo_id = ($this->carrera_id ? Carrera::find($this->carrera_id)?->periodoActual()?->id : null)
+            ?? Periodo::periodoActivoGlobal()?->id
+            ?? '';
 
         // Cargar materias arrastradas pendientes
         $this->materiasArrastradas = $this->estudiante
@@ -307,6 +316,38 @@ class Matriculacion extends Component
         if ($aspirante->estado !== 'matriculado') {
             $aspirante->update(['estado' => 'matriculado']);
         }
+
+        // Sus documentos de admisión pasan a su expediente de estudiante (sin duplicar si se repite)
+        \App\Services\ExpedienteService::traspasarDesdeAdmision($aspirante);
+    }
+
+    /**
+     * Carrera fijada por admisión: en la primera matrícula de un aspirante (aún no matriculado y
+     * sin matrículas regulares) la carrera es la de su postulación y no se cambia aquí, porque el
+     * valor de matrícula, el pago de admisión y el convenio se calcularon con ella. Si hay que
+     * cambiarla, se hace antes en Aspirantes → Editar. null = la carrera se elige libremente.
+     */
+    public function carreraDeAdmision(): ?int
+    {
+        if (! $this->estudiante) return null;
+
+        $aspirante = $this->estudiante->aspirante()->first();
+        if (! $aspirante || $aspirante->estado === 'matriculado' || ! $aspirante->carrera_id) return null;
+
+        $yaTieneMatricula = $this->estudiante->matriculas()->where('tipo', '!=', Matricula::TIPO_VALIDACION)->exists();
+        return $yaTieneMatricula ? null : (int) $aspirante->carrera_id;
+    }
+
+    /** Verifica en el servidor que no se haya cambiado la carrera fijada por admisión. */
+    private function carreraRespetaAdmision(): bool
+    {
+        $fijada = $this->carreraDeAdmision();
+        if ($fijada && (int) $this->carrera_id !== $fijada) {
+            $this->carrera_id = $fijada;
+            $this->addError('carrera_id', 'La carrera es la elegida en admisión. Para cambiarla, edítala primero en Aspirantes.');
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -316,7 +357,7 @@ class Matriculacion extends Component
     #[Computed]
     public function deudaPendiente(): ?array
     {
-        if (! $this->estudiante || $this->matriculaId) return null;
+        if (! $this->estudiante) return null;
 
         $pendientes = ObligacionesFinanciera::where('user_id', $this->estudiante->id)
             ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
@@ -347,13 +388,13 @@ class Matriculacion extends Component
     #[Computed]
     public function infoAdmision(): ?array
     {
-        if (! $this->estudiante || $this->matriculaId) return null;
+        if (! $this->estudiante) return null;
 
         $aspirante = $this->estudiante->aspirante()->first();
         if (! $aspirante || $aspirante->estado === 'matriculado') return null;
 
-        // El pago de admisión cubre solo la obligación MATRICULA (el descuento manual se aplica primero a ella)
-        $totalMatricula = round(max(0, (float) $this->montoMatricula - min((float) $this->descuento, (float) $this->montoMatricula)), 2);
+        // El pago de admisión cubre solo la obligación MATRICULA (la matrícula se cobra siempre completa)
+        $totalMatricula = round(max(0, (float) $this->montoMatricula), 2);
         $aplicable      = $aspirante->tienePagoAdmisionPorAplicar() && $totalMatricula > 0;
         $monto          = (float) $aspirante->pago_monto;
         $aplicado       = $aplicable ? min($monto, $totalMatricula) : 0;
@@ -362,10 +403,12 @@ class Matriculacion extends Component
             'es_validacion' => $aspirante->esValidacionConocimientos(),
             'verificado'    => $aspirante->pago_estado === 'verificado',
             'aplicable'     => $aplicable,
-            'sin_monto'     => $aspirante->pago_estado === 'verificado' && ! $aplicable,
+            // Verificado antes de registrar monto y método: se completa en Aspirantes
+            'sin_monto'     => $aspirante->pagoVerificadoSinMonto(),
+            'cedula'        => $this->estudiante->cedula,
             'monto'         => $monto,
             'metodo'        => $aspirante->pago_metodo,
-            'fecha'         => $aspirante->pago_verificado_at?->format('d/m/Y'),
+            'fecha'         => ($aspirante->pago_fecha ?? $aspirante->pago_verificado_at)?->format('d/m/Y'),
             'aplicado'      => $aplicado,
             'faltante'      => $aplicable ? max(0, round($totalMatricula - $aplicado, 2)) : $totalMatricula,
             'excedente'     => $aplicable ? max(0, round($monto - $totalMatricula, 2)) : 0,
@@ -394,7 +437,7 @@ class Matriculacion extends Component
             'metodo_pago'        => $aspirante->pago_metodo ?: Pago::METODO_TRANSFERENCIA,
             'estado'             => Pago::ESTADO_APROBADO,
             'numero_cuota'       => 1,
-            'fecha_pago'         => $aspirante->pago_verificado_at,
+            'fecha_pago'         => $aspirante->pago_fecha ?? $aspirante->pago_verificado_at,
             'descripcion'        => 'Pago de matrícula realizado en admisión (verificado por secretaría)',
             'comprobante_path'   => $aspirante->pago_comprobante_path,
         ]);
@@ -405,11 +448,45 @@ class Matriculacion extends Component
 
         $aspirante->update(['pago_aplicado_id' => $pago->id]);
 
+        // Lo que sobre después de la matrícula se abona a la colegiatura, cuota por cuota
+        $excedente = round((float) $aspirante->pago_monto - $monto, 2);
+        $abonado   = 0;
+        if ($excedente > 0) {
+            $cuotas = ObligacionesFinanciera::where('matricula_id', $matricula->id)
+                ->where('tipo', 'COLEGIATURA')
+                ->whereIn('estado', ['Pendiente', 'Parcial'])
+                ->orderBy('fecha_vencimiento')
+                ->orderBy('id')
+                ->get();
+
+            foreach ($cuotas as $cuota) {
+                $abono = min(round($excedente - $abonado, 2), round((float) $cuota->saldo, 2));
+                if ($abono <= 0) break;
+
+                $pagoCuota = Pago::create([
+                    'numero_comprobante' => 'TEMP',
+                    'obligacion_id'      => $cuota->id,
+                    'monto'              => $abono,
+                    'metodo_pago'        => $aspirante->pago_metodo ?: Pago::METODO_TRANSFERENCIA,
+                    'estado'             => Pago::ESTADO_APROBADO,
+                    'numero_cuota'       => 1,
+                    'fecha_pago'         => $aspirante->pago_fecha ?? $aspirante->pago_verificado_at,
+                    'descripcion'        => 'Excedente del pago de admisión abonado a la colegiatura',
+                    'comprobante_path'   => $aspirante->pago_comprobante_path,
+                ]);
+                $pagoCuota->update([
+                    'numero_comprobante' => 'ISTC-CP-COLEGIATURA-' . now()->year . '-' . str_pad($pagoCuota->id, 5, '0', STR_PAD_LEFT),
+                ]);
+                $abonado = round($abonado + $abono, 2);
+            }
+        }
+
         $habilitada = HabilitacionMatriculaService::verificar($matricula);
 
         return [
             'estado'        => $habilitada ? 'Pagado' : 'Parcial',
             'aplicado'      => $monto,
+            'abonado'       => $abonado,
             'faltante'      => HabilitacionMatriculaService::saldoPendiente($matricula->id),
             'obligacion_id' => $obligacion->id,
         ];
@@ -423,46 +500,13 @@ class Matriculacion extends Component
             && ! Convalidacion::where('user_id', $this->estudiante->id)->where('estado', 'Confirmada')->exists();
     }
 
-    public function editarMatricula($matriculaId)
-    {
-        if ($this->sinPermiso('editar_matriculas')) return;
-
-        $this->resetFormulario();
-
-        $matricula = Matricula::with([
-            'estudiante',
-            'detalles.materia',
-            'detalles.paralelo',
-        ])->find($matriculaId);
-
-        if (! $matricula) return;
-
-        $this->matriculaId  = $matriculaId;
-        $this->estudiante   = $matricula->estudiante;
-        $this->carrera_id   = $matricula->carrera_id;
-        $this->periodo_id   = $matricula->periodo_id;
-        $this->tipo         = $matricula->tipo;
-        $this->descuento    = $matricula->descuento;
-        $this->observaciones = $matricula->observaciones;
-
-        $this->materiasSeleccionadas  = $matricula->detalles->pluck('materia_id')->toArray();
-        $this->paralelosSeleccionados = $matricula->detalles->pluck('paralelo_id', 'materia_id')->toArray();
-
-        $this->cargarMateriasDisponibles();
-        $this->calcularCostos();
-
-        $this->paso      = 2;
-        $this->showModal = true;
-        $this->dispatch('modal-opened');
-    }
-
     // =========================================================================
     // NAVEGACIÓN DE PASOS
     // =========================================================================
     public function siguientePaso()
     {
         if ($this->paso == 1) {
-            if (! $this->matriculaId && $this->convalidacionPendiente()) {
+            if ($this->convalidacionPendiente()) {
                 $this->pendienteConvalidacion = true;
                 $this->addError('convalidacion', 'No se puede matricular: primero registra su validación de conocimientos.');
                 return;
@@ -472,14 +516,19 @@ class Matriculacion extends Component
                 'carrera_id' => 'required|exists:carreras,id',
                 'periodo_id' => 'required|exists:periodos,id',
             ]);
+            if (! $this->carreraRespetaAdmision()) return;
 
-            // Validar que no exista ya una matrícula en el mismo periodo (solo en creación)
-            if (! $this->matriculaId) {
-                $existe = Matricula::where('user_id', $this->estudiante->id)
-                    ->where('periodo_id', $this->periodo_id)
-                    ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
-                    ->exists();
-                if ($existe) {
+            // Validar que no exista ya una matrícula en el mismo periodo
+            $existe = Matricula::where('user_id', $this->estudiante->id)
+                ->where('periodo_id', $this->periodo_id)
+                ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+                ->exists();
+            if ($existe) {
+                // El saldo de validación no es una matrícula nueva: puede generarse en el mismo período
+                $this->cargarMateriasDisponibles();
+                $this->calcularMontosPorCarrera();
+                $this->detectarSaldoValidacion();
+                if (! $this->saldoValidacion) {
                     $this->addError('periodo_id', 'Este estudiante ya tiene una matrícula registrada en el período seleccionado.');
                     return;
                 }
@@ -487,9 +536,13 @@ class Matriculacion extends Component
 
             $this->cargarMateriasDisponibles();
             $this->calcularMontosPorCarrera();
+            $this->detectarSaldoValidacion();
         }
 
         if ($this->paso == 2) {
+            // Saldo de validación: no hay materias que inscribir, se genera desde la tarjeta
+            if ($this->saldoValidacion) return;
+
             if (empty($this->materiasSeleccionadas) && empty(array_filter($this->materiasArrastradas, fn($m) => $m['incluir'] ?? false))) {
                 $this->addError('materias', 'Debe seleccionar al menos una materia.');
                 return;
@@ -548,16 +601,11 @@ class Matriculacion extends Component
                 ->all();
         }
 
-        // In creation mode only: restrict to the student's current semester.
+        // Restrict to the student's current semester.
         // null = no restriction (new student, válvula de escape, or all complete).
-        // Edit mode ($this->matriculaId set) is intentionally excluded so existing
-        // enrollments always show their original materias regardless of current progress.
-        $semestreActualId = null;
-        if (! $this->matriculaId) {
-            $semestreActualId = (new SemestreActualService())
-                ->obtenerSemestreActual($this->estudiante->id, (int) $this->carrera_id)
-                ?->id;
-        }
+        $semestreActualId = (new SemestreActualService())
+            ->obtenerSemestreActual($this->estudiante->id, (int) $this->carrera_id)
+            ?->id;
 
         $this->materiasDisponibles = [];
 
@@ -594,9 +642,9 @@ class Matriculacion extends Component
         }
 
         // Auto-sugerir el siguiente semestre: primer semestre con materias inscribibles.
-        // Solo aplica en creación (no en edición), y no sobreescribe selección previa.
+        // No sobreescribe una selección previa.
         $this->semestreSugerido = null;
-        if (! $this->matriculaId && empty($this->materiasSeleccionadas)) {
+        if (empty($this->materiasSeleccionadas)) {
             foreach ($carrera->semestres->sortBy('order') as $semestre) {
                 if (! isset($this->materiasDisponibles[$semestre->name])) continue;
 
@@ -849,7 +897,7 @@ class Matriculacion extends Component
 
             // Fallback para registros legacy sin costo guardado
             if ($costoAdicional <= 0) {
-                $porcentaje     = floatval($materiaArrastrada['porcentaje_penalizacion'] ?? SettingService::get('matricula.porcentaje_arrastre', 30)) / 100;
+                $porcentaje     = floatval($materiaArrastrada['porcentaje_penalizacion'] ?? SettingService::get('matricula.porcentaje_arrastre', 10)) / 100;
                 $creditosVivos  = ($materia->horas_teoricas + $materia->horas_practicas) / 48;
                 $costoAdicional = round($creditosVivos * $carrera->costo_credito * $porcentaje, 2);
                 $materiaArrastrada['costo_adicional'] = $costoAdicional;
@@ -862,14 +910,14 @@ class Matriculacion extends Component
         // División única al final: suma de horas brutas / 48
         $this->totalCreditos = $totalHoras / 48;
 
-        // Pago inmediato = matrícula + arrastres (con el descuento manual) + reintegro (sin descuento)
+        // Pago inmediato = matrícula + arrastres + reintegro (sin descuentos: becas y convenios solo van al arancel)
         $this->costoArrastres = $costoArrastres;
         $this->costoTotal     = $this->montoMatricula + $costoArrastres;
-        $this->totalPagar     = max(0, $this->costoTotal - $this->descuento) + $this->montoReintegro;
+        $this->totalPagar     = $this->costoTotal + $this->montoReintegro;
 
-        // Inscripción solo primera matrícula (Nueva, sin editar)
+        // Inscripción solo primera matrícula
         $this->valorInscripcion = 0;
-        if ($this->tipo === 'Nueva' && ! $this->matriculaId) {
+        if ($this->tipo === 'Nueva') {
             $this->valorInscripcion = (float) SettingService::get('matricula.valor_inscripcion', '10.00');
         }
     }
@@ -879,17 +927,16 @@ class Matriculacion extends Component
     // =========================================================================
     public function guardarMatricula()
     {
-        $permisoGuardar = $this->matriculaId ? 'editar_matriculas' : 'crear_matriculas';
-        if ($this->sinPermiso($permisoGuardar)) return;
+        if ($this->sinPermiso('crear_matriculas')) return;
 
         $this->validate([
             'carrera_id'  => 'required|exists:carreras,id',
             'periodo_id'  => 'required|exists:periodos,id',
-            'descuento'   => 'numeric|min:0|max:' . $this->costoTotal,
         ]);
+        if (! $this->carreraRespetaAdmision()) return;
 
         // Red de seguridad: el bloqueo del paso 1 también se verifica al guardar
-        if (! $this->matriculaId && $this->convalidacionPendiente()) {
+        if ($this->convalidacionPendiente()) {
             $this->paso = 1;
             $this->pendienteConvalidacion = true;
             $this->addError('convalidacion', 'No se puede matricular: primero registra su validación de conocimientos.');
@@ -897,79 +944,74 @@ class Matriculacion extends Component
         }
 
         // Cap de 8 materias: red de seguridad por si el guard del frontend fue eludido
-        if (! $this->matriculaId && $this->totalMateriasActual() > 8) {
+        if ($this->totalMateriasActual() > 8) {
             $this->addError('materiasSeleccionadas', 'No se pueden matricular más de 8 materias en total (regulares + arrastres).');
             return;
         }
 
         // Red de seguridad: evitar duplicado si el wizard se envía sin pasar por el paso 1
-        if (! $this->matriculaId) {
-            $existe = Matricula::where('user_id', $this->estudiante->id)
-                ->where('periodo_id', $this->periodo_id)
-                ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
-                ->exists();
-            if ($existe) {
-                $this->addError('periodo_id', 'Este estudiante ya tiene una matrícula en el período seleccionado.');
-                return;
-            }
+        $existe = Matricula::where('user_id', $this->estudiante->id)
+            ->where('periodo_id', $this->periodo_id)
+            ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
+            ->exists();
+        if ($existe) {
+            $this->addError('periodo_id', 'Este estudiante ya tiene una matrícula en el período seleccionado.');
+            return;
         }
 
-        // Verificar cupo disponible al momento de guardar (solo en creación)
+        // Verificar cupo disponible al momento de guardar.
         // Esto protege contra el caso en que el cupo se llenó mientras el admin
         // avanzaba los pasos del wizard.
-        if (! $this->matriculaId) {
-            $materiasParaVerificar = collect($this->materiasSeleccionadas)
-                ->map(fn($mid) => [
-                    'materia_id'  => $mid,
-                    'paralelo_id' => $this->paralelosSeleccionados[$mid] ?? null,
-                ])
-                ->merge(
-                    collect($this->materiasArrastradas)
-                        ->filter(fn($m) => $m['incluir'] ?? false)
-                        ->map(fn($m) => [
-                            'materia_id'  => $m['materia_id'],
-                            'paralelo_id' => $this->paralelosSeleccionados[$m['materia_id']] ?? null,
-                        ])
-                )
-                ->filter(fn($item) => ! is_null($item['paralelo_id']));
+        $materiasParaVerificar = collect($this->materiasSeleccionadas)
+            ->map(fn($mid) => [
+                'materia_id'  => $mid,
+                'paralelo_id' => $this->paralelosSeleccionados[$mid] ?? null,
+            ])
+            ->merge(
+                collect($this->materiasArrastradas)
+                    ->filter(fn($m) => $m['incluir'] ?? false)
+                    ->map(fn($m) => [
+                        'materia_id'  => $m['materia_id'],
+                        'paralelo_id' => $this->paralelosSeleccionados[$m['materia_id']] ?? null,
+                    ])
+            )
+            ->filter(fn($item) => ! is_null($item['paralelo_id']));
 
-            foreach ($materiasParaVerificar as $item) {
-                $mpp = MateriaPeriodoParalelo::where('materia_id',  $item['materia_id'])
-                    ->where('periodo_id',  $this->periodo_id)
-                    ->where('paralelo_id', $item['paralelo_id'])
-                    ->where('is_active',   true)
-                    ->first();
+        foreach ($materiasParaVerificar as $item) {
+            $mpp = MateriaPeriodoParalelo::where('materia_id',  $item['materia_id'])
+                ->where('periodo_id',  $this->periodo_id)
+                ->where('paralelo_id', $item['paralelo_id'])
+                ->where('is_active',   true)
+                ->first();
 
-                if (! $mpp) continue;
+            if (! $mpp) continue;
 
-                $usado = DB::table('detalle_matriculas as dm')
-                    ->join('matriculas as m', 'dm.matricula_id', '=', 'm.id')
-                    ->where('m.periodo_id',   $this->periodo_id)
-                    ->where('m.estado',       '!=', 'Cancelada')
-                    ->where('dm.estado',      '!=', 'Retirado')
-                    ->whereNull('dm.deleted_at')
-                    ->where('dm.materia_id',  $item['materia_id'])
-                    ->where('dm.paralelo_id', $item['paralelo_id'])
-                    ->count();
+            $usado = DB::table('detalle_matriculas as dm')
+                ->join('matriculas as m', 'dm.matricula_id', '=', 'm.id')
+                ->where('m.periodo_id',   $this->periodo_id)
+                ->where('m.estado',       '!=', 'Cancelada')
+                ->where('dm.estado',      '!=', 'Retirado')
+                ->whereNull('dm.deleted_at')
+                ->where('dm.materia_id',  $item['materia_id'])
+                ->where('dm.paralelo_id', $item['paralelo_id'])
+                ->count();
 
-                if ($usado >= $mpp->cupo_maximo) {
-                    $nombreMateria = Materia::find($item['materia_id'])?->name ?? 'materia';
-                    $this->addError('paralelos', "El paralelo seleccionado para \"{$nombreMateria}\" ya no tiene cupo disponible. Regresa al paso anterior y elige otro.");
-                    $this->paso = 3;
-                    return;
-                }
+            if ($usado >= $mpp->cupo_maximo) {
+                $nombreMateria = Materia::find($item['materia_id'])?->name ?? 'materia';
+                $this->addError('paralelos', "El paralelo seleccionado para \"{$nombreMateria}\" ya no tiene cupo disponible. Regresa al paso anterior y elige otro.");
+                $this->paso = 3;
+                return;
             }
         }
 
         try {
             DB::beginTransaction();
 
-            $esEdicion         = (bool) $this->matriculaId;
             $resultadoAdmision = null;
 
             // La matrícula interna de Validación no cuenta: el estudiante sigue siendo nuevo
             // (credenciales, Moodle e inscripción dependen de este valor).
-            $esPrimeraMatricula = ! $esEdicion && Matricula::where('user_id', $this->estudiante->id)
+            $esPrimeraMatricula = Matricula::where('user_id', $this->estudiante->id)
                 ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
                 ->count() === 0;
 
@@ -1034,189 +1076,136 @@ class Matriculacion extends Component
                 }
             }
 
-            // Descuento manual del wizard: primero a la matrícula, el resto a los arrastres
-            $descuentoManual     = (float) $this->descuento;
-            $descuentoMatricula  = min($descuentoManual, $montoMatricula);
-            $descuentoArrastre   = min(max(0, $descuentoManual - $descuentoMatricula), $costoArrastres);
-            $montoFinalMatricula = max(0, $montoMatricula - $descuentoMatricula);
-            $montoFinalArrastre  = max(0, $costoArrastres - $descuentoArrastre);
+            // La matrícula y los arrastres se cobran completos (no hay descuento manual en el asistente)
+            $montoFinalMatricula = $montoMatricula;
+            $montoFinalArrastre  = $costoArrastres;
 
             // ------------------------------------------------------------------
-            // CREAR / ACTUALIZAR MATRÍCULA
+            // CREAR MATRÍCULA
+            // Una matrícula ya creada no se rehace: se corrige desde "Ver matrícula" (VerMatricula)
             // ------------------------------------------------------------------
-            if ($this->matriculaId) {
-                $matricula = Matricula::find($this->matriculaId);
-                $matricula->update([
-                    'tipo'           => $this->tipo,
-                    /* 'total_creditos' => $this->totalCreditos,
-                    'costo_total'    => $this->costoTotal,
-                    'descuento'      => $this->descuento,
-                    'total_pagar'    => $this->totalPagar, */
-                    'observaciones'  => $this->observaciones,
-                ]);
-                $matricula->detalles()->delete();
-            } else {
-                $matricula = Matricula::create([
-                    'fecha_matricula'   => now(),
-                    'code'              => $this->generarCodigoMatricula(),
-                    'tipo'              => $this->tipo,
-                    'estado'            => 'Pendiente_Pago',
-                    'observaciones'     => $this->observaciones,
-                    'periodo_id'        => $this->periodo_id,
-                    'carrera_id'        => $this->carrera_id,
+            $matricula = Matricula::create([
+                'fecha_matricula'   => now(),
+                'code'              => $this->generarCodigoMatricula(),
+                'tipo'              => $this->tipo,
+                'estado'            => 'Pendiente_Pago',
+                'observaciones'     => $this->observaciones,
+                'periodo_id'        => $this->periodo_id,
+                'carrera_id'        => $this->carrera_id,
+                'user_id'           => $this->estudiante->id,
+                'num_cuotas_arancel' => 5,
+            ]);
+
+            // ← AQUÍ: asignar matricula_numero si el estudiante no tiene uno aún
+            if (! $this->estudiante->matricula_numero) {
+                $ultimo = User::whereNotNull('matricula_numero')->max('matricula_numero');
+                $siguiente = str_pad(($ultimo ? (int) substr($ultimo, 5) : 0) + 1, 5, '0', STR_PAD_LEFT);
+                $this->estudiante->update(['matricula_numero' => 'ISTC-' . $siguiente]);
+            }
+
+            $this->convertirAspiranteEnEstudiante();
+
+            // --------------------------------------------------------------
+            // OBLIGACIÓN FINANCIERA: MATRÍCULA (pago inmediato)
+            // Se genera aquí; el pago se registra desde la vista de obligaciones
+            // --------------------------------------------------------------
+            $obligMatricula = ObligacionesFinanciera::create([
+                'user_id'          => $this->estudiante->id,
+                'periodo_id'       => $this->periodo_id,
+                'matricula_id'     => $matricula->id,
+                'tipo'             => 'MATRICULA',
+                'monto_original'   => $montoMatricula,
+                'descuento'        => 0,
+                'monto_final'      => $montoFinalMatricula,
+                'estado'           => 'Pendiente',
+                'fecha_vencimiento' => now()->addDays(5),
+                'descripcion'      => 'Pago de matrícula - Período ' . $matricula->periodo_id,
+            ]);
+
+            // --------------------------------------------------------------
+            // OBLIGACIÓN FINANCIERA: ARRASTRES (pago inmediato, requerido para habilitar)
+            // Una sola obligación con el detalle de materias en la descripción
+            // --------------------------------------------------------------
+            if ($costoArrastres > 0) {
+                ObligacionesFinanciera::create([
                     'user_id'           => $this->estudiante->id,
-                    'num_cuotas_arancel' => 5,
-                ]);
-
-                // ← AQUÍ: asignar matricula_numero si el estudiante no tiene uno aún
-                if (! $this->estudiante->matricula_numero) {
-                    $ultimo = User::whereNotNull('matricula_numero')->max('matricula_numero');
-                    $siguiente = str_pad(($ultimo ? (int) substr($ultimo, 5) : 0) + 1, 5, '0', STR_PAD_LEFT);
-                    $this->estudiante->update(['matricula_numero' => 'ISTC-' . $siguiente]);
-                }
-
-                $this->convertirAspiranteEnEstudiante();
-
-                // --------------------------------------------------------------
-                // OBLIGACIÓN FINANCIERA: MATRÍCULA (pago inmediato)
-                // Se genera aquí; el pago se registra desde la vista de obligaciones
-                // --------------------------------------------------------------
-                $obligMatricula = ObligacionesFinanciera::create([
-                    'user_id'          => $this->estudiante->id,
-                    'periodo_id'       => $this->periodo_id,
-                    'matricula_id'     => $matricula->id,
-                    'tipo'             => 'MATRICULA',
-                    'monto_original'   => $montoMatricula,
-                    'descuento'        => $descuentoMatricula,
-                    'monto_final'      => $montoFinalMatricula,
-                    'estado'           => 'Pendiente',
+                    'periodo_id'        => $this->periodo_id,
+                    'matricula_id'      => $matricula->id,
+                    'tipo'              => 'ARRASTRE',
+                    'monto_original'    => $costoArrastres,
+                    'descuento'         => 0,
+                    'monto_final'       => $montoFinalArrastre,
+                    'estado'            => $montoFinalArrastre <= 0 ? 'Pagado' : 'Pendiente',
                     'fecha_vencimiento' => now()->addDays(5),
-                    'descripcion'      => 'Pago de matrícula - Período ' . $matricula->periodo_id,
+                    'descripcion'       => 'Arrastres - Período ' . $matricula->periodo_id . ': ' . implode(', ', $detalleArrastres),
                 ]);
+            }
 
-                // --------------------------------------------------------------
-                // OBLIGACIÓN FINANCIERA: ARRASTRES (pago inmediato, requerido para habilitar)
-                // Una sola obligación con el detalle de materias en la descripción
-                // --------------------------------------------------------------
-                if ($costoArrastres > 0) {
+            // --------------------------------------------------------------
+            // OBLIGACIÓN FINANCIERA: REINTEGRO por retiro anterior
+            // (pago inmediato, sin descuentos, requerido para habilitar)
+            // --------------------------------------------------------------
+            if ($retiroPendiente && $montoRecargo > 0) {
+                ObligacionesFinanciera::create([
+                    'user_id'           => $this->estudiante->id,
+                    'periodo_id'        => $this->periodo_id,
+                    'matricula_id'      => $matricula->id,
+                    'retiro_id'         => $retiroPendiente->id,
+                    'tipo'              => 'REINTEGRO',
+                    'monto_original'    => $montoRecargo,
+                    'descuento'         => 0,
+                    'monto_final'       => $montoRecargo,
+                    'estado'            => 'Pendiente',
+                    'fecha_vencimiento' => now()->addDays(5),
+                    'descripcion'       => 'Reintegro por retiro (10% del costo de la carrera) - Período ' . $matricula->periodo_id,
+                ]);
+            }
+            $retiroPendiente?->update(['recargo_cobrado' => true]);
+
+            // --------------------------------------------------------------
+            // OBLIGACIÓN FINANCIERA: ARANCEL/COLEGIATURA del semestre
+            // 5 cuotas con el descuento de beca/convenio.
+            // --------------------------------------------------------------
+            $this->crearCuotasColegiatura(
+                $matricula,
+                (int) $this->periodo_id,
+                $montoArancelBase,
+                $descuentoBecaGuardar,
+                $montoArancel,
+                $becaActiva,
+                $pctConvenioGuardar > 0 ? $convenioActivo : null,
+                $fechaFinPeriodo
+            );
+
+            // Un convenio semestral queda marcado con el período en que se usó:
+            // vence al cerrar ese período y no vuelve a aplicarse en otro.
+            if ($convenioActivo && $pctConvenioGuardar > 0 && $convenioActivo->esSemestral() && ! $convenioActivo->periodo_id) {
+                $convenioActivo->update(['periodo_id' => $this->periodo_id]);
+            }
+
+            // --------------------------------------------------------------
+            // OBLIGACIÓN FINANCIERA: INSCRIPCIÓN (solo primera matrícula)
+            // Se liquida automáticamente al registrar el pago de matrícula
+            // --------------------------------------------------------------
+            if ($esPrimeraMatricula) {
+                $montoInscripcion = (float) SettingService::get('matricula.valor_inscripcion', '10.00');
+                if ($montoInscripcion > 0) {
                     ObligacionesFinanciera::create([
                         'user_id'           => $this->estudiante->id,
                         'periodo_id'        => $this->periodo_id,
                         'matricula_id'      => $matricula->id,
-                        'tipo'              => 'ARRASTRE',
-                        'monto_original'    => $costoArrastres,
-                        'descuento'         => $descuentoArrastre,
-                        'monto_final'       => $montoFinalArrastre,
-                        'estado'            => $montoFinalArrastre <= 0 ? 'Pagado' : 'Pendiente',
-                        'fecha_vencimiento' => now()->addDays(5),
-                        'descripcion'       => 'Arrastres - Período ' . $matricula->periodo_id . ': ' . implode(', ', $detalleArrastres),
-                    ]);
-                }
-
-                // --------------------------------------------------------------
-                // OBLIGACIÓN FINANCIERA: REINTEGRO por retiro anterior
-                // (pago inmediato, sin descuentos, requerido para habilitar)
-                // --------------------------------------------------------------
-                if ($retiroPendiente && $montoRecargo > 0) {
-                    ObligacionesFinanciera::create([
-                        'user_id'           => $this->estudiante->id,
-                        'periodo_id'        => $this->periodo_id,
-                        'matricula_id'      => $matricula->id,
-                        'retiro_id'         => $retiroPendiente->id,
-                        'tipo'              => 'REINTEGRO',
-                        'monto_original'    => $montoRecargo,
+                        'tipo'              => 'INSCRIPCION',
+                        'monto_original'    => $montoInscripcion,
                         'descuento'         => 0,
-                        'monto_final'       => $montoRecargo,
+                        'monto_final'       => $montoInscripcion,
                         'estado'            => 'Pendiente',
                         'fecha_vencimiento' => now()->addDays(5),
-                        'descripcion'       => 'Reintegro por retiro (10% del costo de la carrera) - Período ' . $matricula->periodo_id,
+                        'descripcion'       => 'Valor de inscripción — Primera matrícula',
                     ]);
                 }
-                $retiroPendiente?->update(['recargo_cobrado' => true]);
-
-                // --------------------------------------------------------------
-                // OBLIGACIÓN FINANCIERA: ARANCEL/COLEGIATURA del semestre
-                // 5 cuotas con el descuento de beca/convenio.
-                // --------------------------------------------------------------
-                $numCuotas       = 5;
-                $originalTotal   = $montoArancelBase;
-                $arancelRestante = $montoArancel;
-
-                $fechaCuota1 = now()->addDays(5);
-                if ($fechaFinPeriodo->lte($fechaCuota1)) {
-                    $fechaFinPeriodo = $fechaCuota1->copy()->addMonths(4);
-                }
-                $totalDias = (int) $fechaCuota1->diffInDays($fechaFinPeriodo);
-
-                $descPartes    = array_filter([
-                    $pctBecaGuardar > 0     ? 'beca'     : null,
-                    $pctConvenioGuardar > 0 ? 'convenio' : null,
-                ]);
-                $descSufijo    = count($descPartes) ? ' con ' . implode(' y ', $descPartes) : '';
-
-                for ($cuota = 1; $cuota <= $numCuotas; $cuota++) {
-                    $esUltima = ($cuota === $numCuotas);
-
-                    $montoEsta = $esUltima
-                        ? round($arancelRestante, 2)
-                        : round($montoArancel / $numCuotas, 2);
-                    $arancelRestante -= round($montoArancel / $numCuotas, 2);
-
-                    if ($cuota === 1) {
-                        $fechaVenc = $fechaCuota1->copy();
-                    } elseif ($esUltima) {
-                        $fechaVenc = $fechaFinPeriodo->copy();
-                    } else {
-                        $diasAdicionales = (int) round($totalDias * ($cuota - 1) / 4);
-                        $fechaVenc = $fechaCuota1->copy()->addDays($diasAdicionales);
-                    }
-
-                    ObligacionesFinanciera::create([
-                        'user_id'           => $this->estudiante->id,
-                        'periodo_id'        => $this->periodo_id,
-                        'matricula_id'      => $matricula->id,
-                        'tipo'              => 'COLEGIATURA',
-                        'monto_original'    => round($originalTotal / $numCuotas, 2),
-                        'descuento'         => round($descuentoBecaGuardar / $numCuotas, 2),
-                        'monto_final'       => $montoEsta,
-                        'estado'            => $montoEsta <= 0 ? 'Pagado' : 'Pendiente',
-                        'fecha_vencimiento' => $fechaVenc->toDateString(),
-                        'descripcion'       => "Arancel semestral{$descSufijo} - Período {$matricula->periodo_id} (Cuota {$cuota}/5)",
-                        'beca_aplicada_id'  => $becaActiva?->id,
-                        'convenio_aplicado_id' => $pctConvenioGuardar > 0 ? $convenioActivo?->id : null,
-                    ]);
-                }
-
-                // Un convenio semestral queda marcado con el período en que se usó:
-                // vence al cerrar ese período y no vuelve a aplicarse en otro.
-                if ($convenioActivo && $pctConvenioGuardar > 0 && $convenioActivo->esSemestral() && ! $convenioActivo->periodo_id) {
-                    $convenioActivo->update(['periodo_id' => $this->periodo_id]);
-                }
-
-                // --------------------------------------------------------------
-                // OBLIGACIÓN FINANCIERA: INSCRIPCIÓN (solo primera matrícula)
-                // Se liquida automáticamente al registrar el pago de matrícula
-                // --------------------------------------------------------------
-                if ($esPrimeraMatricula) {
-                    $montoInscripcion = (float) SettingService::get('matricula.valor_inscripcion', '10.00');
-                    if ($montoInscripcion > 0) {
-                        ObligacionesFinanciera::create([
-                            'user_id'           => $this->estudiante->id,
-                            'periodo_id'        => $this->periodo_id,
-                            'matricula_id'      => $matricula->id,
-                            'tipo'              => 'INSCRIPCION',
-                            'monto_original'    => $montoInscripcion,
-                            'descuento'         => 0,
-                            'monto_final'       => $montoInscripcion,
-                            'estado'            => 'Pendiente',
-                            'fecha_vencimiento' => now()->addDays(5),
-                            'descripcion'       => 'Valor de inscripción — Primera matrícula',
-                        ]);
-                    }
-                }
-
-                $resultadoAdmision = $this->aplicarPagoAdmision($matricula, $obligMatricula);
             }
+
+            $resultadoAdmision = $this->aplicarPagoAdmision($matricula, $obligMatricula);
 
             // ------------------------------------------------------------------
             // DETALLES: MATERIAS NORMALES
@@ -1271,33 +1260,31 @@ class Matriculacion extends Component
             DB::commit();
 
             // ------------------------------------------------------------------
-            // WHATSAPP — solo en matrículas nuevas, no en ediciones
+            // WHATSAPP
             // El try independiente evita que un fallo del job (sync) rompa la UI
             // ------------------------------------------------------------------
-            if (! $this->matriculaId) {
-                try {
-                    $whatsappActivo = SettingService::get('whatsapp.activo', '0') === '1';
-                    $notifWA        = SettingService::get('notificaciones.matricula_whatsapp', '0') === '1';
+            try {
+                $whatsappActivo = SettingService::get('whatsapp.activo', '0') === '1';
+                $notifWA        = SettingService::get('notificaciones.matricula_whatsapp', '0') === '1';
 
-                    if ($whatsappActivo && $notifWA) {
-                        EnviarWhatsappMatricula::dispatch(
-                            $matricula->id,
-                            $esPrimeraMatricula
-                        );
-                    }
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('WhatsApp dispatch falló (no crítico)', [
-                        'matricula_id' => $matricula->id,
-                        'error'        => $e->getMessage(),
-                    ]);
+                if ($whatsappActivo && $notifWA) {
+                    EnviarWhatsappMatricula::dispatch(
+                        $matricula->id,
+                        $esPrimeraMatricula
+                    );
                 }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('WhatsApp dispatch falló (no crítico)', [
+                    'matricula_id' => $matricula->id,
+                    'error'        => $e->getMessage(),
+                ]);
             }
 
             // ------------------------------------------------------------------
-            // EMAIL — nuevas Y ediciones (el Job verifica internamente los settings)
+            // EMAIL (el Job verifica internamente los settings)
             // ------------------------------------------------------------------
             try {
-                EnviarEmailMatricula::dispatch($matricula->id, $esPrimeraMatricula, $esEdicion);
+                EnviarEmailMatricula::dispatch($matricula->id, $esPrimeraMatricula);
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('Email dispatch falló (no crítico)', [
                     'matricula_id' => $matricula->id,
@@ -1308,18 +1295,16 @@ class Matriculacion extends Component
             $this->cerrarModal();
 
             // Redirigir a la vista de obligaciones filtrando por la matrícula recién creada
-            /* $this->dispatch('matricula-guardada', [
-                'mensaje'      => $this->matriculaId ? 'Matrícula actualizada exitosamente' : 'Matrícula creada. Proceda a registrar el pago.',
-                'matricula_id' => $matricula->id,
-                'redirigir'    => ! $this->matriculaId,
-            ]); */
             $estudianteId = $matricula->user_id;
             $caso         = null;
-            $mensaje      = $esEdicion ? 'Matrícula actualizada exitosamente' : 'Matrícula creada. Proceda a registrar el pago.';
+            $mensaje      = 'Matrícula creada. Proceda a registrar el pago.';
 
             if ($resultadoAdmision && $resultadoAdmision['estado'] === 'Pagado') {
                 $caso    = 'admision_pagada';
-                $mensaje = 'Se aplicó el pago de admisión ($' . number_format($resultadoAdmision['aplicado'], 2) . ') y la matrícula quedó habilitada.';
+                $mensaje = 'Se aplicó el pago de admisión ($' . number_format($resultadoAdmision['aplicado'], 2) . ') y la matrícula quedó habilitada.'
+                    . ($resultadoAdmision['abonado'] > 0
+                        ? ' El excedente ($' . number_format($resultadoAdmision['abonado'], 2) . ') se abonó a la colegiatura.'
+                        : '');
             } elseif ($resultadoAdmision) {
                 $caso    = 'admision_parcial';
                 $mensaje = 'Se aplicó el pago de admisión ($' . number_format($resultadoAdmision['aplicado'], 2) . '). '
@@ -1330,7 +1315,7 @@ class Matriculacion extends Component
             $this->dispatch('matricula-guardada', [
                 'mensaje'          => $mensaje,
                 'matricula_id'     => $matricula->id,
-                'redirigir'        => ! $esEdicion,
+                'redirigir'        => true,
                 'caso'             => $caso,
                 'url_pago'         => route('administracion.administrativa.matriculas.pago', $matricula->id),
                 'url_obligaciones' => route('administracion.administrativa.obligaciones.index', ['estudiante' => $estudianteId]),
@@ -1339,7 +1324,7 @@ class Matriculacion extends Component
                     'cobrar'     => $resultadoAdmision['obligacion_id'] ?? null,
                 ]),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             $this->dispatch('error', ['mensaje' => 'Error al guardar la matrícula: ' . $e->getMessage()]);
         }
@@ -1348,15 +1333,424 @@ class Matriculacion extends Component
     // =========================================================================
     // HELPERS
     // =========================================================================
+    /**
+     * Código correlativo desde el contador 'matricula' (ver SecuenciaService). Se llama dentro
+     * de la transacción de guardarMatricula, así que el número queda reservado hasta el commit.
+     */
     private function generarCodigoMatricula(): string
     {
-        $ultimo = Matricula::count();
-        return sprintf('ISTC-MATRICULA-%04d', $ultimo + 1);
+        $ultimoUsado = fn() => Matricula::withTrashed()->where('code', 'like', 'ISTC-MATRICULA-%')->pluck('code')
+            ->map(fn($code) => preg_match('/^ISTC-MATRICULA-(\d+)$/', $code, $m) ? (int) $m[1] : 0)
+            ->max() ?? 0;
+
+        // Red de seguridad: si un código ya existe (cargado a mano), se salta al siguiente
+        do {
+            $code = sprintf('ISTC-MATRICULA-%04d', SecuenciaService::siguiente('matricula', $ultimoUsado));
+        } while (Matricula::withTrashed()->where('code', $code)->exists());
+
+        return $code;
     }
 
     private function generarCodigoDetalle(string $codigoMatricula, string $codigoMateria): string
     {
         return $codigoMatricula . '-' . $codigoMateria;
+    }
+
+    /**
+     * Colegiatura en 5 cuotas: la primera vence en 5 días, la última al fin del período y las
+     * intermedias se reparten entre ambas. La última absorbe el redondeo. Cada cuota guarda la
+     * beca/convenio que la descontó (solo se pasa el convenio si realmente aplicó %).
+     */
+    private function crearCuotasColegiatura(
+        Matricula $matricula,
+        int $periodoId,
+        float $montoBase,
+        float $descuento,
+        float $montoNeto,
+        ?BecaAplicada $beca,
+        ?ConvenioAplicado $convenio,
+        Carbon $fechaFinPeriodo,
+        string $concepto = 'Arancel semestral',
+        ?string $periodoEtiqueta = null
+    ): void {
+        $periodoEtiqueta ??= (string) $periodoId;
+        $numCuotas       = 5;
+        $arancelRestante = $montoNeto;
+        $baseRestante    = $montoBase;
+        $descRestante    = $descuento;
+
+        $fechaCuota1 = now()->addDays(5);
+        if ($fechaFinPeriodo->lte($fechaCuota1)) {
+            $fechaFinPeriodo = $fechaCuota1->copy()->addMonths(4);
+        }
+        $totalDias = (int) $fechaCuota1->diffInDays($fechaFinPeriodo);
+
+        $descPartes = array_filter([
+            $beca && (float) $beca->porcentaje_aplicado > 0 ? 'beca' : null,
+            $convenio ? 'convenio' : null,
+        ]);
+        $descSufijo = count($descPartes) ? ' con ' . implode(' y ', $descPartes) : '';
+
+        for ($cuota = 1; $cuota <= $numCuotas; $cuota++) {
+            $esUltima = ($cuota === $numCuotas);
+
+            // La última cuota absorbe el redondeo en los tres valores: original − descuento = final
+            $montoEsta = $esUltima ? round($arancelRestante, 2) : round($montoNeto / $numCuotas, 2);
+            $baseEsta  = $esUltima ? round($baseRestante, 2)    : round($montoBase / $numCuotas, 2);
+            $descEsta  = $esUltima ? round($descRestante, 2)    : round($descuento / $numCuotas, 2);
+            $arancelRestante -= $montoEsta;
+            $baseRestante    -= $baseEsta;
+            $descRestante    -= $descEsta;
+
+            if ($cuota === 1) {
+                $fechaVenc = $fechaCuota1->copy();
+            } elseif ($esUltima) {
+                $fechaVenc = $fechaFinPeriodo->copy();
+            } else {
+                $diasAdicionales = (int) round($totalDias * ($cuota - 1) / 4);
+                $fechaVenc = $fechaCuota1->copy()->addDays($diasAdicionales);
+            }
+
+            ObligacionesFinanciera::create([
+                'user_id'              => $matricula->user_id,
+                'periodo_id'           => $periodoId,
+                'matricula_id'         => $matricula->id,
+                'tipo'                 => 'COLEGIATURA',
+                'monto_original'       => $baseEsta,
+                'descuento'            => $descEsta,
+                'monto_final'          => $montoEsta,
+                'estado'               => $montoEsta <= 0 ? 'Pagado' : 'Pendiente',
+                'fecha_vencimiento'    => $fechaVenc->toDateString(),
+                'descripcion'          => "{$concepto}{$descSufijo} - Período {$periodoEtiqueta} (Cuota {$cuota}/5)",
+                'beca_aplicada_id'     => $beca?->id,
+                'convenio_aplicado_id' => $convenio?->id,
+            ]);
+        }
+    }
+
+    // =========================================================================
+    // SALDO DE VALIDACIÓN DE CONOCIMIENTOS
+    // =========================================================================
+
+    /**
+     * Caso especial del saldo de validación (regla en SaldoValidacionService::detectar). El saldo
+     * se asienta sobre la matrícula interna de validación: no se crea una matrícula vacía. Si ya
+     * se generó, la tarjeta se sigue mostrando —con lo realmente generado— aunque la detección
+     * haya dejado de aplicar, para poder revertirlo. Nunca reemplaza materias por inscribir.
+     */
+    private function detectarSaldoValidacion(): void
+    {
+        $this->saldoValidacion = null;
+        if (! $this->estudiante || ! $this->carrera_id) return;
+        if (! empty($this->materiasDisponibles)) return;
+
+        $saldo = SaldoValidacionService::detectar($this->estudiante->id, (int) $this->carrera_id);
+
+        if (! $saldo) {
+            $matriculaValidacion = SaldoValidacionService::matriculaValidacion($this->estudiante->id, (int) $this->carrera_id);
+            if (! $matriculaValidacion || ! SaldoValidacionService::yaGenerado($matriculaValidacion->id)) return;
+
+            $saldo = [
+                'matricula_id' => $matriculaValidacion->id,
+                'codigo'       => $matriculaValidacion->code,
+                'total'        => CalculoMatriculaService::semestresCarrera(Carrera::find($this->carrera_id)),
+                'cursados'     => $this->semestresYaCursados,
+                'exonerados'   => $this->semestresExonerados,
+                'generado'     => true,
+            ];
+        }
+
+        // Ya generado: mostrar lo que realmente se registró, no un recálculo
+        if ($saldo['generado']) {
+            $vigentes = SaldoValidacionService::obligacionesVigentes($saldo['matricula_id']);
+            $saldo['generados'] = [
+                'matricula'   => (float) $vigentes->where('tipo', 'MATRICULA')->sum('monto_final'),
+                'colegiatura' => (float) $vigentes->where('tipo', 'COLEGIATURA')->sum('monto_final'),
+                'descuento'   => (float) $vigentes->where('tipo', 'COLEGIATURA')->sum('descuento'),
+                'reintegro'   => (float) $vigentes->where('tipo', 'REINTEGRO')->sum('monto_final'),
+                'periodo'     => Periodo::find($vigentes->first()?->periodo_id)?->code,
+            ];
+        }
+
+        $this->saldoValidacion = $saldo;
+    }
+
+    /**
+     * Genera la matrícula (pago inmediato), el reintegro pendiente si lo hay y la colegiatura en
+     * 5 cuotas del saldo, en el período seleccionado, con beca/convenio como cualquier
+     * colegiatura. Todo se recalcula aquí: no se confía en lo mostrado en pantalla.
+     */
+    public function generarSaldoValidacion(): void
+    {
+        if ($this->sinPermiso('crear_matriculas')) return;
+        if (! $this->estudiante || ! $this->carrera_id || ! $this->periodo_id) return;
+
+        $this->detectarConvalidacion();
+        $this->cargarMateriasDisponibles();
+        $this->detectarSaldoValidacion();
+
+        if (! $this->saldoValidacion) {
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'No aplica', 'text' => 'Este estudiante no tiene un saldo de validación por generar.']);
+            return;
+        }
+        if ($this->saldoValidacion['generado']) {
+            $this->dispatch('swal', ['icon' => 'info', 'title' => 'Saldo ya generado', 'text' => 'Las obligaciones de este saldo ya existen.']);
+            return;
+        }
+
+        $carrera        = Carrera::find($this->carrera_id);
+        $periodoActual  = Periodo::find($this->periodo_id);
+        $carreraPeriodo = DB::table('carrera_periodo')
+            ->where('carrera_id', $this->carrera_id)
+            ->where('periodo_id', $this->periodo_id)
+            ->first();
+
+        // El saldo debe quedar en un período de la carrera: si no, su cierre nunca lo procesaría
+        if (! $carreraPeriodo) {
+            $this->dispatch('swal', [
+                'icon'  => 'warning',
+                'title' => 'Período no válido para la carrera',
+                'text'  => 'El período seleccionado no pertenece a ' . $carrera->name . '. Vuelve al paso 1 y elige el período vigente de la carrera.',
+            ]);
+            return;
+        }
+
+        $fechaFinPeriodo = Carbon::parse(
+            $carreraPeriodo->fecha_fin ?? $periodoActual?->fecha_fin ?? now()->addMonths(5)->toDateString()
+        );
+
+        $semestresTotal   = CalculoMatriculaService::semestresCarrera($carrera);
+        $fraccionRestante = ($semestresTotal - $this->semestresYaCursados) / $semestresTotal;
+        $semestres        = max(1, $semestresTotal - $this->semestresExonerados - $this->semestresYaCursados);
+
+        $montoMatricula = CalculoMatriculaService::matriculaPorSemestre($carrera, $semestres, $fraccionRestante);
+        $montoBase      = round($carrera->costo_carrera * $fraccionRestante / $semestres, 2);
+
+        // Reintegro por un retiro aún sin cobrar: igual que en la matrícula normal (sin descuentos)
+        $retiroPendiente = Retiro::where('user_id', $this->estudiante->id)->where('recargo_cobrado', false)->first();
+        $montoRecargo    = $retiroPendiente ? round($carrera->costo_carrera * 0.10, 2) : 0;
+
+        $beca     = BecaAplicada::where('user_id', $this->estudiante->id)->where('is_active', true)->first();
+        $convenio = ConvenioAplicado::aplicablesEnPeriodo($this->estudiante->id, (int) $this->periodo_id)
+            ->with('tipoConvenio')
+            ->first();
+        $pctBeca     = $beca ? (float) $beca->porcentaje_aplicado : 0;
+        $pctConvenio = $convenio ? (float) $convenio->porcentaje_aplicado : 0;
+        $descuento   = round($montoBase * (min(100, $pctBeca + $pctConvenio) / 100), 2);
+        $montoNeto   = max(0, $montoBase - $descuento);
+
+        $periodoCode = $periodoActual?->code ?? $this->periodo_id;
+
+        try {
+            // Todo o nada: si algo falla, no queda ninguna obligación a medias
+            $resultado = DB::transaction(function () use ($montoMatricula, $montoBase, $descuento, $montoNeto, $beca, $convenio, $pctConvenio, $fechaFinPeriodo, $periodoCode, $retiroPendiente, $montoRecargo) {
+                // Bloqueo de la fila: dos clics seguidos no deben generar el saldo dos veces
+                $matriculaValidacion = Matricula::whereKey($this->saldoValidacion['matricula_id'])->lockForUpdate()->first();
+                if (! $matriculaValidacion || SaldoValidacionService::yaGenerado($matriculaValidacion->id)) {
+                    return 'ya_generado';
+                }
+
+                if ($montoMatricula > 0) {
+                    ObligacionesFinanciera::create([
+                        'user_id'           => $this->estudiante->id,
+                        'periodo_id'        => $this->periodo_id,
+                        'matricula_id'      => $matriculaValidacion->id,
+                        'tipo'              => 'MATRICULA',
+                        'monto_original'    => $montoMatricula,
+                        'descuento'         => 0,
+                        'monto_final'       => $montoMatricula,
+                        'estado'            => 'Pendiente',
+                        'fecha_vencimiento' => now()->addDays(5),
+                        'descripcion'       => "Saldo de matrícula por validación de conocimientos - Período {$periodoCode}",
+                    ]);
+                }
+
+                if ($retiroPendiente && $montoRecargo > 0) {
+                    ObligacionesFinanciera::create([
+                        'user_id'           => $this->estudiante->id,
+                        'periodo_id'        => $this->periodo_id,
+                        'matricula_id'      => $matriculaValidacion->id,
+                        'retiro_id'         => $retiroPendiente->id,
+                        'tipo'              => 'REINTEGRO',
+                        'monto_original'    => $montoRecargo,
+                        'descuento'         => 0,
+                        'monto_final'       => $montoRecargo,
+                        'estado'            => 'Pendiente',
+                        'fecha_vencimiento' => now()->addDays(5),
+                        'descripcion'       => "Reintegro por retiro (10% del costo de la carrera) - Período {$periodoCode}",
+                    ]);
+                    $retiroPendiente->update(['recargo_cobrado' => true]);
+                }
+
+                $this->crearCuotasColegiatura(
+                    $matriculaValidacion,
+                    (int) $this->periodo_id,
+                    $montoBase,
+                    $descuento,
+                    $montoNeto,
+                    $beca,
+                    $pctConvenio > 0 ? $convenio : null,
+                    $fechaFinPeriodo,
+                    'Saldo por validación de conocimientos',
+                    (string) $periodoCode
+                );
+
+                // Igual que en una matrícula: el convenio semestral queda usado en este período
+                if ($convenio && $pctConvenio > 0 && $convenio->esSemestral() && ! $convenio->periodo_id) {
+                    $convenio->update(['periodo_id' => $this->periodo_id]);
+                }
+
+                return 'ok';
+            });
+        } catch (\Throwable $e) {
+            $this->reportarErrorSaldo('generar', $e);
+            return;
+        }
+
+        $this->detectarSaldoValidacion();
+
+        if ($resultado === 'ya_generado') {
+            $this->dispatch('swal', ['icon' => 'info', 'title' => 'Saldo ya generado', 'text' => 'Las obligaciones de este saldo ya existen.']);
+            return;
+        }
+
+        $textoReintegro = $montoRecargo > 0 ? ', el reintegro ($' . number_format($montoRecargo, 2) . ')' : '';
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => 'Saldo generado',
+            'text'  => 'Se generaron la matrícula ($' . number_format($montoMatricula, 2) . ')' . $textoReintegro . ' y la colegiatura ($'
+                . number_format($montoNeto, 2) . ' en 5 cuotas). El estudiante ya puede verlas y pagarlas desde su portal.',
+        ]);
+    }
+
+    /**
+     * Deshace un saldo generado por error (período equivocado, beca que faltaba asignar…).
+     * Se basa solo en que existan obligaciones del saldo, no en volver a detectar el caso.
+     * Solo si no tiene pagos aprobados ni en revisión. Las obligaciones no se borran: quedan
+     * Invalidadas con el motivo (y en la auditoría), y el saldo puede volver a generarse.
+     */
+    public function revertirSaldoValidacion(): void
+    {
+        if ($this->sinPermiso('cancelar_matriculas')) return;
+        if (! $this->estudiante || ! $this->carrera_id) return;
+
+        $motivo = trim($this->motivoReversionSaldo);
+        if (mb_strlen($motivo) < 5) {
+            $this->addError('motivoReversionSaldo', 'Indica el motivo de la reversión (mínimo 5 caracteres).');
+            return;
+        }
+
+        $matriculaValidacion = SaldoValidacionService::matriculaValidacion($this->estudiante->id, (int) $this->carrera_id);
+        if (! $matriculaValidacion || ! SaldoValidacionService::yaGenerado($matriculaValidacion->id)) {
+            $this->detectarSaldoValidacion();
+            $this->dispatch('swal', ['icon' => 'info', 'title' => 'Nada que revertir', 'text' => 'Este estudiante no tiene un saldo de validación generado.']);
+            return;
+        }
+
+        try {
+            // Todo o nada: o se invalidan todas las obligaciones del saldo o ninguna
+            $resultado = DB::transaction(function () use ($motivo, $matriculaValidacion) {
+                Matricula::whereKey($matriculaValidacion->id)->lockForUpdate()->first();
+
+                $obligaciones = SaldoValidacionService::obligacionesVigentes($matriculaValidacion->id);
+                if ($obligaciones->isEmpty()) return 'sin_saldo';
+
+                $conPagos = Pago::whereIn('obligacion_id', $obligaciones->pluck('id'))
+                    ->whereIn('estado', [Pago::ESTADO_APROBADO, Pago::ESTADO_PENDIENTE, Pago::ESTADO_PROCESANDO])
+                    ->exists();
+                if ($conPagos) return 'con_pagos';
+
+                // Uno por uno para que cada cambio quede en la auditoría
+                foreach ($obligaciones as $obligacion) {
+                    $obligacion->update([
+                        'estado'      => 'Invalidado',
+                        'descripcion' => $obligacion->descripcion . ' · Revertido: ' . $motivo,
+                    ]);
+                }
+
+                // El reintegro vuelve a quedar pendiente de cobro
+                foreach ($obligaciones->where('tipo', 'REINTEGRO')->pluck('retiro_id')->filter()->unique() as $retiroId) {
+                    Retiro::find($retiroId)?->update(['recargo_cobrado' => false]);
+                }
+
+                // El convenio semestral que este saldo marcó como usado vuelve a quedar disponible,
+                // salvo que otra obligación vigente de ese período también lo use
+                foreach ($obligaciones->pluck('convenio_aplicado_id')->filter()->unique() as $convenioId) {
+                    $convenio = ConvenioAplicado::with('tipoConvenio')->find($convenioId);
+                    if (! $convenio || ! $convenio->esSemestral()) continue;
+
+                    $periodosSaldo = $obligaciones->where('convenio_aplicado_id', $convenioId)->pluck('periodo_id')->unique();
+                    if (! $periodosSaldo->contains($convenio->periodo_id)) continue;
+
+                    $sigueUsado = ObligacionesFinanciera::where('convenio_aplicado_id', $convenioId)
+                        ->where('periodo_id', $convenio->periodo_id)
+                        ->where('estado', '!=', 'Invalidado')
+                        ->exists();
+                    if (! $sigueUsado) {
+                        $convenio->update(['periodo_id' => null]);
+                    }
+                }
+
+                return 'ok';
+            });
+        } catch (\Throwable $e) {
+            $this->reportarErrorSaldo('revertir', $e);
+            return;
+        }
+
+        if ($resultado === 'con_pagos') {
+            $this->dispatch('swal', [
+                'icon'  => 'warning',
+                'title' => 'No se puede revertir',
+                'text'  => 'El saldo ya tiene pagos registrados (aprobados o en revisión). Resuelve esos pagos antes de revertirlo.',
+            ]);
+            return;
+        }
+
+        $this->detectarSaldoValidacion();
+
+        if ($resultado === 'sin_saldo') {
+            $this->dispatch('swal', ['icon' => 'info', 'title' => 'Nada que revertir', 'text' => 'Las obligaciones de este saldo ya no están vigentes.']);
+            return;
+        }
+
+        \Illuminate\Support\Facades\Log::info('Saldo de validación revertido', [
+            'estudiante_id' => $this->estudiante->id,
+            'matricula_id'  => $matriculaValidacion->id,
+            'motivo'        => $motivo,
+            'usuario_id'    => auth()->id(),
+        ]);
+
+        $this->motivoReversionSaldo = '';
+        $this->dispatch('swal', [
+            'icon'  => 'success',
+            'title' => 'Saldo revertido',
+            'text'  => 'Las obligaciones quedaron invalidadas. Puedes volver a generar el saldo cuando lo necesites.',
+        ]);
+    }
+
+    /**
+     * Error inesperado al generar o revertir el saldo: la transacción ya deshizo todo. Se
+     * registra el detalle técnico en el log y al usuario se le muestra un mensaje claro.
+     */
+    private function reportarErrorSaldo(string $accion, \Throwable $e): void
+    {
+        \Illuminate\Support\Facades\Log::error("Saldo de validación: error al {$accion}", [
+            'estudiante_id' => $this->estudiante?->id,
+            'carrera_id'    => $this->carrera_id,
+            'periodo_id'    => $this->periodo_id,
+            'error'         => $e->getMessage(),
+            'archivo'       => $e->getFile() . ':' . $e->getLine(),
+        ]);
+
+        $this->dispatch('swal', [
+            'icon'  => 'error',
+            'title' => $accion === 'generar' ? 'No se pudo generar el saldo' : 'No se pudo revertir el saldo',
+            'text'  => app()->isLocal()
+                ? $e->getMessage()
+                : 'No se realizó ningún cambio. Inténtalo nuevamente y, si el problema continúa, contacta al administrador del sistema.',
+            'timer' => 6000,
+        ]);
     }
 
     public function cerrarModal()
@@ -1370,11 +1764,9 @@ class Matriculacion extends Component
     {
         $this->reset([
             'estudiante',
-            'matriculaId',
             'carrera_id',
             'periodo_id',
             'tipo',
-            'descuento',
             'observaciones',
             'materiasSeleccionadas',
             'materiasArrastradas',
@@ -1403,6 +1795,8 @@ class Matriculacion extends Component
             'semestresExonerados',
             'semestresYaCursados',
             'pendienteConvalidacion',
+            'saldoValidacion',
+            'motivoReversionSaldo',
         ]);
     }
 
@@ -1414,66 +1808,14 @@ class Matriculacion extends Component
 
     private function detectarConvalidacion(): void
     {
-        if (! $this->estudiante || ! $this->carrera_id) {
-            $this->esConvalidacion         = false;
-            $this->semestresExonerados     = 0;
-            $this->semestresYaCursados     = 0;
-            return;
-        }
+        $estado = ($this->estudiante && $this->carrera_id)
+            ? SaldoValidacionService::estadoConvalidacion($this->estudiante->id, (int) $this->carrera_id)
+            : ['es_convalidacion' => false, 'exonerados' => 0, 'cursados' => 0];
 
-        $convalidacion = Convalidacion::where('user_id', $this->estudiante->id)
-            ->where('carrera_id', $this->carrera_id)
-            ->where('estado', 'Confirmada')
-            ->with(['detalles' => fn($q) => $q->where('estado', 'Aprobado')])
-            ->first();
-
-        if (! $convalidacion) {
-            $this->esConvalidacion        = false;
-            $this->semestresExonerados    = 0;
-            $this->semestresYaCursados    = 0;
-            return;
-        }
-
-        $this->esConvalidacion        = true;
-        $this->semestresYaCursados    = 0; // se sobreescribe abajo solo para Casos 2/3
-        $this->semestresExonerados    = CalculoMatriculaService::semestresExonerados(
-            (int) $this->carrera_id,
-            $convalidacion->detalles->pluck('materia_id')->toArray()
-        );
-
-        // Regla de negocio — tres casos de validación de conocimientos:
-        //
-        // Caso 1: el estudiante entra DIRECTO por validación (nunca tuvo matrícula regular
-        //         en esta carrera). Aplica pricing de convalidación: costo_convalidacion
-        //         dividido entre los semestres restantes (total − exonerados).
-        //
-        // Caso 2: completó algún semestre con matrícula normal y luego validó semestres
-        //         subsiguientes. Ya entró al track de $280/semestre; el costo_convalidacion
-        //         ($2200) no le aplica.
-        //
-        // Caso 3: igual que Caso 2 — completó S1 normal, validó semestres no consecutivos
-        //         y materias parciales. Sigue en el track de $280/semestre.
-        //
-        // Diferenciador: matrícula regular (tipo ≠ Validacion) ANTERIOR a la convalidación.
-        // Si existe → Casos 2/3: pricing normal con saldo restante; esConvalidacion se
-        // resetea a false para que aplicarCalculoArancel() use la rama costo_carrera.
-        // Las matrículas regulares posteriores son los semestres del Caso 1: mantienen el
-        // mismo valor por semestre (total ÷ semestres a cursar) durante toda la carrera.
-        $tieneMatriculaRegular = Matricula::where('user_id', $this->estudiante->id)
-            ->where('carrera_id', $this->carrera_id)
-            ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
-            ->where('created_at', '<', $convalidacion->created_at)
-            ->exists();
-
-        if ($tieneMatriculaRegular) {
-            $this->esConvalidacion = false;
-            // semestresExonerados kept — needed for remaining-balance formula
-            $this->semestresYaCursados = Matricula::where('user_id', $this->estudiante->id)
-                ->where('carrera_id', $this->carrera_id)
-                ->where('tipo', '!=', Matricula::TIPO_VALIDACION)
-                ->where('estado', 'Habilitada')
-                ->count();
-        }
+        // Casos 1/2/3 de validación de conocimientos: ver SaldoValidacionService::estadoConvalidacion
+        $this->esConvalidacion     = $estado['es_convalidacion'];
+        $this->semestresExonerados = $estado['exonerados'];
+        $this->semestresYaCursados = $estado['cursados'];
     }
     /* =========================
         RETIRO DE MATRÍCULA
@@ -1530,6 +1872,19 @@ class Matriculacion extends Component
             return;
         }
 
+        // Un pago en revisión sobre una obligación invalidada quedaría sin a dónde aplicarse
+        $pagosEnRevision = Pago::whereHas('obligacion', fn($q) => $q->where('matricula_id', $matricula->id))
+            ->whereIn('estado', [Pago::ESTADO_PENDIENTE, Pago::ESTADO_PROCESANDO])
+            ->exists();
+        if ($pagosEnRevision) {
+            $this->dispatch('swal', [
+                'icon'  => 'warning',
+                'title' => 'Hay pagos en revisión',
+                'text'  => 'Esta matrícula tiene pagos subidos por el estudiante que aún no se revisan. Apruébalos o recházalos antes de registrar el retiro.',
+            ]);
+            return;
+        }
+
         try {
             DB::transaction(function () use ($matricula) {
                 $documentoPath = $this->retiroDocumento->store(
@@ -1552,9 +1907,21 @@ class Matriculacion extends Component
 
                 $matricula->detalles()->update(['estado' => 'Retirado']);
 
+                // Los arrastres que cursaba en esta matrícula vuelven a quedar pendientes:
+                // sin nota nunca saldrían de 'Inscrita' y no se le volverían a ofrecer
+                $arrastres = $matricula->detalles->where('tipo', 'Arrastre')->pluck('materia_id');
+                if ($arrastres->isNotEmpty()) {
+                    MateriasArrastrada::where('user_id', $matricula->user_id)
+                        ->whereIn('materia_id', $arrastres)
+                        ->where('estado', 'Inscrita')
+                        ->update(['estado' => 'Arrastrada']);
+                }
+
+                // Uno por uno para que cada cambio quede en la auditoría
                 ObligacionesFinanciera::where('matricula_id', $matricula->id)
                     ->whereIn('estado', ['Pendiente', 'Parcial', 'Vencido'])
-                    ->update(['estado' => 'Invalidado']);
+                    ->get()
+                    ->each(fn($obligacion) => $obligacion->update(['estado' => 'Invalidado']));
 
                 // Al retirarse pierde becas y convenios (de cualquier tipo); si se reintegra,
                 // se le vuelven a asignar manualmente. Quedan en su historial.
@@ -1591,6 +1958,7 @@ class Matriculacion extends Component
     }
 
     #[On('matricula-anulada')]
+    #[On('matricula-modificada')]
     public function refrescarLista(): void
     {
         unset($this->estudiantes);

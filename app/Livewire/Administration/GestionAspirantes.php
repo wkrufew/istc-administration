@@ -11,18 +11,22 @@ use App\Models\Cohorte;
 use App\Models\ConvenioAplicado;
 use App\Models\TipoConvenio;
 use App\Services\BeneficiosService;
+use App\Services\CredencialesService;
+use App\Services\PagoAdmisionService;
 use App\Traits\WithAuthorization;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class GestionAspirantes extends Component
 {
-    use WithAuthorization, WithPagination;
+    use WithAuthorization, WithPagination, WithFileUploads;
 
     // ── Filtros (sincronizados con la URL) ────────────────────────────────
     #[Url(as: 'q')]
@@ -54,6 +58,13 @@ class GestionAspirantes extends Component
     // ── Indicadores ──────────────────────────────────────────────────────
     public bool   $showIndicadores   = false;
 
+    // ── Reenviar credenciales ─────────────────────────────────────────────
+    public bool    $showReenvio        = false;
+    public ?int    $reenvioAspiranteId = null;
+    public ?string $reenvioResultado   = null; // null (sin enviar) | 'ok' | 'error'
+    public string  $reenvioMensaje     = '';
+    public string  $reenvioAviso       = ''; // por qué se abrió solo (se editaron cédula o correo)
+
     // ── Editar datos básicos del aspirante ────────────────────────────────
     public bool   $showEditar        = false;
     public string $editFirstName     = '';
@@ -64,6 +75,14 @@ class GestionAspirantes extends Component
     public string $editCohorteId     = '';
     public string $editTipoConvenioId     = '';
     public string $editPorcentajeConvenio = '';
+
+    // ── Registrar / corregir el pago de admisión ──────────────────────────
+    public bool   $showPago    = false;
+    public string $pagoMonto   = '';
+    public string $pagoMetodo  = '';
+    public string $pagoFecha   = '';
+    public string $pagoMotivo  = '';
+    public $pagoComprobante    = null;
 
     public function mount(): void
     {
@@ -140,7 +159,7 @@ class GestionAspirantes extends Component
         return ConvenioAplicado::where('user_id', $userId)
             ->where('is_active', true)
             ->where(fn($q) => $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', now()->toDateString()))
-            ->with('tipoConvenio:id,nombre')
+            ->with(['tipoConvenio:id,nombre,tipo_alcance', 'periodo:id,code'])
             ->latest('id')
             ->first();
     }
@@ -273,6 +292,7 @@ class GestionAspirantes extends Component
         $this->showDetalle   = true;
         $this->showRechazar  = false;
         $this->showCambiarEstado = false;
+        $this->cerrarPago();
         unset($this->aspiranteSeleccionado);
     }
 
@@ -285,6 +305,7 @@ class GestionAspirantes extends Component
         $this->motivoRechazo = '';
         $this->observacion   = '';
         $this->nuevoEstado   = '';
+        $this->cerrarPago();
         unset($this->aspiranteSeleccionado);
     }
 
@@ -311,6 +332,22 @@ class GestionAspirantes extends Component
         $aspirante = Aspirante::with('user')->findOrFail($this->aspiranteId);
         $estadoActual = $aspirante->estado;
 
+        // Las mismas reglas que muestra la pantalla, verificadas aquí: un aprobado o matriculado
+        // no vuelve atrás (pasar a 'proceso' le cambiaría la contraseña) y aprobar exige requisitos
+        $rechazo = match (true) {
+            ! $aspirante->puedeCambiarA($this->nuevoEstado) =>
+                'No se puede pasar de ' . $aspirante->estadoLabel() . ' a ' . (Aspirante::ESTADOS[$this->nuevoEstado] ?? $this->nuevoEstado) . '.',
+            $this->nuevoEstado === 'aprobado' && $aspirante->razonesNoPuedeAprobar() =>
+                'Aún no se puede aprobar: ' . implode(' · ', $aspirante->razonesNoPuedeAprobar()) . '.',
+            default => null,
+        };
+        if ($rechazo) {
+            $this->showCambiarEstado = false;
+            $this->showRechazar      = false;
+            $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Cambio no permitido', 'text' => $rechazo]);
+            return;
+        }
+
         if ($this->nuevoEstado === 'rechazado') {
             $this->validate(['motivoRechazo' => 'required|string|max:500'],
                 ['motivoRechazo.required' => 'Indica el motivo del rechazo.']);
@@ -329,9 +366,11 @@ class GestionAspirantes extends Component
         }
 
         if ($this->nuevoEstado === 'proceso') {
-            $password = Str::random(10);
-            $aspirante->user->update(['password' => $password]);
-            EnviarEmailBienvenidaAspirante::dispatch($aspirante->user_id, $password);
+            // Misma regla en todo el sistema: la contraseña inicial es la cédula
+            $password = $aspirante->user->cedula ?: Str::random(10);
+            $aspirante->user->update(['password' => Hash::make($password)]);
+            // El "último envío" lo marca el propio trabajo cuando el correo sale de verdad
+            EnviarEmailBienvenidaAspirante::dispatch($aspirante->user_id, $password, auth()->id());
         } elseif (in_array($this->nuevoEstado, ['aprobado', 'rechazado', 'matriculado'])) {
             NotificarEstadoAspirante::dispatch($aspirante->id, $this->nuevoEstado);
         }
@@ -353,6 +392,62 @@ class GestionAspirantes extends Component
         // Refrescar detalle
         $this->aspiranteId = $aspirante->id;
         unset($this->aspiranteSeleccionado);
+    }
+
+    // ── Reenviar credenciales ─────────────────────────────────────────────
+
+    #[Computed]
+    public function aspiranteReenvio(): ?Aspirante
+    {
+        return $this->reenvioAspiranteId
+            ? Aspirante::with(['user', 'carrera', 'credencialesEnviadasPor'])->find($this->reenvioAspiranteId)
+            : null;
+    }
+
+    public function abrirReenvio(int $id): void
+    {
+        if ($this->sinPermiso('gestionar_aspirantes')) return;
+
+        $this->reenvioAspiranteId = $id;
+        $this->reenvioResultado   = null;
+        $this->reenvioMensaje     = '';
+        $this->reenvioAviso       = '';
+        $this->showReenvio        = true;
+        unset($this->aspiranteReenvio);
+    }
+
+    public function cerrarReenvio(): void
+    {
+        $this->reset(['showReenvio', 'reenvioAspiranteId', 'reenvioResultado', 'reenvioMensaje', 'reenvioAviso']);
+        unset($this->aspiranteReenvio, $this->aspirantes, $this->aspiranteSeleccionado);
+    }
+
+    /** Restablece la contraseña a la cédula y envía las credenciales en el momento (ver CredencialesService). */
+    public function reenviarCredenciales(): void
+    {
+        if ($this->sinPermiso('gestionar_aspirantes')) return;
+
+        $aspirante = Aspirante::with('user')->find($this->reenvioAspiranteId);
+        if (! $aspirante) {
+            $this->cerrarReenvio();
+            return;
+        }
+
+        $user = $aspirante->user;
+
+        try {
+            CredencialesService::reenviarAspirante($aspirante);
+        } catch (\DomainException | \RuntimeException $e) {
+            $this->reenvioResultado = 'error';
+            $this->reenvioMensaje   = $e->getMessage();
+            unset($this->aspiranteReenvio);
+            return;
+        }
+
+        $this->reenvioAviso     = '';
+        $this->reenvioResultado = 'ok';
+        $this->reenvioMensaje   = 'Credenciales enviadas a ' . $user->email . '. Su contraseña ahora es su número de cédula.';
+        unset($this->aspiranteReenvio);
     }
 
     // ── Eliminar aspirante (soft delete) ─────────────────────────────────
@@ -433,6 +528,9 @@ class GestionAspirantes extends Component
             'editCarreraId.required' => 'Selecciona una carrera.',
         ]);
 
+        $cambioCedula = $this->editCedula !== (string) $asp->user->cedula;
+        $cambioEmail  = $this->editEmail  !== (string) $asp->user->email;
+
         $asp->user->update([
             'first_name' => $this->editFirstName,
             'last_name'  => $this->editLastName,
@@ -451,6 +549,17 @@ class GestionAspirantes extends Component
         unset($this->aspiranteSeleccionado, $this->aspirantes, $this->convenioAspirante);
         $this->showEditar = false;
 
+        // Si cambió su cédula o su correo y ya tiene acceso al portal, sus credenciales quedaron
+        // desactualizadas: se ofrece reenviarlas en el momento
+        if (($cambioCedula || $cambioEmail) && in_array($asp->estado, Aspirante::ESTADOS_CON_ACCESO, true)) {
+            $this->abrirReenvio($asp->id);
+            $this->reenvioAviso = collect([
+                $cambioCedula ? 'Cambiaste su cédula: si aún usa la contraseña inicial, esa sigue siendo la cédula anterior.' : null,
+                $cambioEmail  ? 'Cambiaste su correo: ahora ingresa al portal con ' . $this->editEmail . ' y todavía no lo sabe.' : null,
+            ])->filter()->implode(' ') . ' ¿Le reenvías las credenciales ahora?';
+            return;
+        }
+
         $this->dispatch('swal', [
             'icon'  => 'success',
             'title' => 'Datos actualizados',
@@ -458,55 +567,91 @@ class GestionAspirantes extends Component
         ]);
     }
 
-    // ── Verificar pago de matrícula (admisión) ────────────────────────────
+    // ── Pago de matrícula (admisión): verificar, registrar o corregir ─────
 
     /**
-     * El monto y método confirmados aquí son los que se aplican a la obligación
-     * de matrícula cuando el aspirante se matricula.
+     * Abre el formulario del pago. El monto viene sugerido (lo que declaró el aspirante o el valor
+     * de la matrícula); método y fecha van vacíos para que se tomen del comprobante. Al corregir
+     * un pago ya confirmado se cargan los datos guardados.
      */
-    public function verificarPagoAdmision($monto, $metodo): void
+    public function abrirPago(): void
     {
         if ($this->sinPermiso('gestionar_aspirantes')) return;
 
-        $aspirante = Aspirante::findOrFail($this->aspiranteId);
-        if ($aspirante->estado !== 'verificacion' || ! $aspirante->pago_comprobante_path) return;
+        $aspirante = $this->aspiranteSeleccionado;
+        if (! $aspirante) return;
 
-        $validator = validator(
-            ['monto' => $monto, 'metodo' => $metodo],
-            [
-                'monto'  => 'required|numeric|min:0.01|max:99999',
-                'metodo' => 'required|in:Efectivo,Tarjeta,Transferencia,Deposito,Payphone',
-            ],
-            [
-                'monto.required'  => 'Indica el monto verificado.',
-                'monto.min'       => 'El monto debe ser mayor a cero.',
-                'metodo.required' => 'Selecciona el método de pago.',
-            ]
-        );
-
-        if ($validator->fails()) {
-            $this->dispatch('swal', [
-                'icon'  => 'warning',
-                'title' => 'Revisa los datos del pago',
-                'text'  => $validator->errors()->first(),
-            ]);
+        if ($motivo = PagoAdmisionService::motivoNoEditable($aspirante)) {
+            $this->dispatch('swal', ['icon' => 'info', 'title' => 'No se puede editar el pago', 'text' => $motivo]);
             return;
         }
 
-        $aspirante->update([
-            'pago_estado'        => 'verificado',
-            'pago_monto'         => round((float) $monto, 2),
-            'pago_metodo'        => $metodo,
-            'pago_verificado_at' => now(),
-            'pago_observacion'   => null,
+        $monto = (float) $aspirante->pago_monto ?: $aspirante->valorMatriculaAdmision();
+        $this->pagoMonto = $monto > 0 ? number_format($monto, 2, '.', '') : '';
+        if ($aspirante->pagoConfirmado()) {
+            $this->pagoMetodo = (string) $aspirante->pago_metodo;
+            $this->pagoFecha  = ($aspirante->pago_fecha ?? $aspirante->pago_verificado_at)->format('Y-m-d');
+        } else {
+            $this->pagoMetodo = '';
+            $this->pagoFecha  = '';
+        }
+        $this->pagoMotivo = '';
+        $this->pagoComprobante = null;
+        $this->resetErrorBag();
+        $this->showPago = true;
+    }
+
+    public function cerrarPago(): void
+    {
+        $this->showPago = false;
+        $this->reset(['pagoMonto', 'pagoMetodo', 'pagoFecha', 'pagoMotivo', 'pagoComprobante']);
+        $this->resetErrorBag(['pagoMonto', 'pagoMetodo', 'pagoFecha', 'pagoMotivo', 'pagoComprobante']);
+    }
+
+    public function guardarPago(): void
+    {
+        if ($this->sinPermiso('gestionar_aspirantes')) return;
+
+        $aspirante = $this->aspiranteSeleccionado;
+        if (! $aspirante) return;
+
+        $esCorreccion = $aspirante->pagoConfirmado();
+        $this->validate([
+            'pagoMonto'       => 'required|numeric|min:0.01|max:99999',
+            'pagoMetodo'      => 'required|in:' . implode(',', array_keys(PagoAdmisionService::METODOS)),
+            'pagoFecha'       => 'required|date|before_or_equal:today|after_or_equal:' . PagoAdmisionService::fechaMinima($aspirante),
+            'pagoComprobante' => ($aspirante->pago_comprobante_path ? 'nullable' : 'required') . '|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'pagoMotivo'      => $esCorreccion ? 'required|string|min:5|max:500' : 'nullable|string|max:500',
+        ], [
+            'pagoMonto.required'       => 'Indica el monto que consta en el comprobante.',
+            'pagoMonto.min'            => 'El monto debe ser mayor a cero.',
+            'pagoMetodo.*'             => 'Selecciona el método de pago.',
+            'pagoFecha.required'       => 'Indica la fecha del pago.',
+            'pagoFecha.before_or_equal'=> 'La fecha del pago no puede ser futura.',
+            'pagoFecha.after_or_equal' => 'Revisa la fecha del pago: no puede ser anterior al ' . \Illuminate\Support\Carbon::parse(PagoAdmisionService::fechaMinima($aspirante))->format('d/m/Y') . '.',
+            'pagoComprobante.required' => 'Sube el comprobante del pago.',
+            'pagoComprobante.mimes'    => 'Solo PDF, JPG o PNG.',
+            'pagoComprobante.max'      => 'Máx. 5 MB.',
+            'pagoMotivo.required'      => 'Indica el motivo de la corrección.',
+            'pagoMotivo.min'           => 'Describe el motivo (mínimo 5 caracteres).',
         ]);
 
+        try {
+            PagoAdmisionService::registrar($aspirante, (float) $this->pagoMonto, $this->pagoMetodo, $this->pagoFecha,
+                $this->pagoComprobante, $this->pagoMotivo);
+        } catch (\DomainException $e) {
+            $this->addError('pagoMonto', $e->getMessage());
+            return;
+        }
+
+        $texto = '$' . number_format((float) $this->pagoMonto, 2) . ' · ' . (PagoAdmisionService::METODOS[$this->pagoMetodo] ?? $this->pagoMetodo);
+        $this->cerrarPago();
         unset($this->aspiranteSeleccionado);
 
         $this->dispatch('swal', [
             'icon'  => 'success',
-            'title' => 'Pago verificado',
-            'text'  => '$' . number_format((float) $monto, 2) . ' · ' . $metodo . '. Se aplicará automáticamente al matricularlo.',
+            'title' => $esCorreccion ? 'Pago corregido' : 'Pago verificado',
+            'text'  => $texto . '. Se aplicará automáticamente al matricularlo.',
             'timer' => 3500,
         ]);
     }
@@ -523,19 +668,42 @@ class GestionAspirantes extends Component
         $estadosPermitidos = $campo === 'pago' ? Aspirante::PAGO_ESTADOS : Aspirante::DOC_ESTADOS;
         if (! in_array($nuevoEstado, $estadosPermitidos, true)) return;
 
-        // El pago se verifica con monto y método: verificarPagoAdmision()
+        // El pago se verifica con monto, método y fecha: abrirPago() / guardarPago()
         if ($campo === 'pago' && $nuevoEstado === 'verificado') return;
 
         $aspirante = Aspirante::findOrFail($this->aspiranteId);
 
-        $data = ["{$campo}_estado" => $nuevoEstado];
-        if ($observacion !== '') {
-            $data["{$campo}_observacion"] = $observacion;
-        } elseif ($nuevoEstado !== 'rechazado') {
-            // Limpiar la observación previa si se aprueba/verifica
-            $data["{$campo}_observacion"] = null;
+        // Los documentos se revisan solo con el aspirante en Verificación (la pantalla ya lo limita; aquí lo exige el servidor)
+        if ($aspirante->estado !== 'verificacion') {
+            $this->dispatch('swal', ['icon' => 'info', 'title' => 'No se puede cambiar el documento',
+                'text' => 'Los documentos se revisan cuando el aspirante está en Verificación.']);
+            return;
         }
-        $aspirante->update($data);
+        // Rechazar exige motivo (se le envía al aspirante por correo)
+        if ($nuevoEstado === 'rechazado' && trim($observacion) === '') {
+            $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Falta el motivo', 'text' => 'Indica el motivo del rechazo.']);
+            return;
+        }
+
+        if ($campo === 'pago') {
+            // El pago solo se rechaza aquí (verificar/corregir va por guardarPago); queda en auditoría
+            if ($nuevoEstado !== 'rechazado') return;
+            try {
+                PagoAdmisionService::rechazar($aspirante, $observacion);
+            } catch (\DomainException $e) {
+                $this->dispatch('swal', ['icon' => 'info', 'title' => 'No se puede rechazar el pago', 'text' => $e->getMessage()]);
+                return;
+            }
+        } else {
+            $data = ["{$campo}_estado" => $nuevoEstado];
+            if ($observacion !== '') {
+                $data["{$campo}_observacion"] = trim($observacion);
+            } elseif ($nuevoEstado !== 'rechazado') {
+                // Limpiar la observación previa si se aprueba
+                $data["{$campo}_observacion"] = null;
+            }
+            $aspirante->update($data);
+        }
 
         // Enviar correo al estudiante cuando se rechaza con observación
         if ($nuevoEstado === 'rechazado' && trim($observacion) !== '') {

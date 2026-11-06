@@ -6,12 +6,30 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\AsignacionDocente;
+use App\Support\PerfilUsuario;
 
+/** Sección Docentes. El permiso 'gestionar_docentes' lo exige la ruta. */
 class DocenteController extends Controller
 {
     public function index()
     {
         return view('administracion.docentes.index');
+    }
+
+    public function create()
+    {
+        return view('administracion.personas.crear', ['perfil' => PerfilUsuario::DOCENTE]);
+    }
+
+    /** Si no es docente, lo lleva a donde sí se editan sus datos (estudiante o cuenta). */
+    public function edit(User $docente)
+    {
+        if (! PerfilUsuario::esDocente($docente)) {
+            return redirect()->to(PerfilUsuario::rutaFicha($docente)
+                ?? route('administracion.administrativa.users.edit', $docente));
+        }
+
+        return view('administracion.docentes.edit', compact('docente'));
     }
 
     public function showAsignar(User $docente)
@@ -52,11 +70,6 @@ class DocenteController extends Controller
         //return redirect()->route('administracion.administrativa.docentes.index')->with('success', 'Asignación realizada con éxito.');
     }
 
-    public function destroy($id)
-    {
-        $asignacion = AsignacionDocente::findOrFail($id);
-        $asignacion->delete();
-
-        return back()->with('success', 'Asignación eliminada correctamente.');
-    }
+    // Las asignaciones se eliminan solo desde la pantalla de asignación (AsignacionDocenteService),
+    // que impide borrar las de períodos terminados o con asistencias o notas registradas.
 }

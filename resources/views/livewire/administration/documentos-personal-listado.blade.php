@@ -109,7 +109,7 @@
                                         <div class="flex flex-wrap justify-center gap-1">
                                             @foreach ($files as $field => $meta)
                                                 @if ($doc->$field)
-                                                    <a href="{{ asset('storage/' . $doc->$field) }}" target="_blank"
+                                                    <a href="{{ $doc->$field }}" target="_blank"
                                                         title="{{ $meta['full'] }}"
                                                         class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold
                                                                bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300
@@ -149,13 +149,13 @@
                                         <button
                                             x-data
                                             @click="Swal.fire({
-                                                title: '¿Eliminar documentos?',
-                                                html: 'Se eliminarán todos los archivos de <strong>{{ addslashes($doc->user->name ?? 'este docente') }}</strong>. Esta acción no se puede deshacer.',
+                                                title: '¿Quitar documentos?',
+                                                html: 'Se quitarán la hoja de vida, el SENESCYT y la cédula de <strong>{{ addslashes($doc->user->name ?? 'este docente') }}</strong>. Quedan en el historial de su expediente.',
                                                 icon: 'warning',
                                                 showCancelButton: true,
                                                 confirmButtonColor: '#dc2626',
                                                 cancelButtonColor: '#64748b',
-                                                confirmButtonText: 'Sí, eliminar',
+                                                confirmButtonText: 'Sí, quitar',
                                                 cancelButtonText: 'Cancelar',
                                             }).then(r => r.isConfirmed && $wire.deleteDocument({{ $doc->id }}))"
                                             title="Eliminar"

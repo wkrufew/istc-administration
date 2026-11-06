@@ -14,9 +14,11 @@ class BienvenidaAspirante extends Mailable
 {
     use Queueable, SerializesModels;
 
+    /** @param bool $esReenvio Secretaría reenvía las credenciales (mismo contenido, otro asunto e introducción) */
     public function __construct(
         public readonly User   $user,
         public readonly string $password,
+        public readonly bool   $esReenvio = false,
     ) {}
 
     public function envelope(): Envelope
@@ -24,7 +26,9 @@ class BienvenidaAspirante extends Mailable
         $instituto = SettingService::get('instituto.nombre_corto', 'ISTC');
 
         return new Envelope(
-            subject: "Bienvenido al proceso de admisión — {$instituto}",
+            subject: $this->esReenvio
+                ? "Tus credenciales de acceso al proceso de admisión — {$instituto}"
+                : "Bienvenido al proceso de admisión — {$instituto}",
         );
     }
 
@@ -38,6 +42,7 @@ class BienvenidaAspirante extends Mailable
             with: [
                 'user'        => $this->user,
                 'password'    => $this->password,
+                'esReenvio'   => $this->esReenvio,
                 'resumenPago' => $resumenPago,
                 'portalUrl' => route('administracion.admision.dashboard'),
                 'instituto' => [

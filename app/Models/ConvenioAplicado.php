@@ -60,11 +60,24 @@ class ConvenioAplicado extends Model
     {
         if (! $this->periodo_id || ! $this->esSemestral()) return null;
 
-        $cp = DB::table('matriculas as m')
-            ->join('carrera_periodo as cp', fn($j) => $j->on('cp.carrera_id', '=', 'm.carrera_id')->on('cp.periodo_id', '=', 'm.periodo_id'))
-            ->where('m.user_id', $this->user_id)
-            ->where('m.periodo_id', $this->periodo_id)
-            ->select('cp.carrera_id', 'cp.fecha_inicio', 'cp.is_current')
+        // Carrera en la que se usó: su matrícula de ese período o, si solo pagó ahí un saldo de
+        // validación de conocimientos, la carrera de las cuotas que este convenio descontó
+        $carreraId = DB::table('matriculas')
+            ->where('user_id', $this->user_id)
+            ->where('periodo_id', $this->periodo_id)
+            ->value('carrera_id')
+            ?? DB::table('obligaciones_financieras as o')
+                ->join('matriculas as m', 'm.id', '=', 'o.matricula_id')
+                ->where('o.convenio_aplicado_id', $this->id)
+                ->where('o.periodo_id', $this->periodo_id)
+                ->where('o.estado', '!=', 'Invalidado')
+                ->value('m.carrera_id');
+        if (! $carreraId) return 'cumplido';
+
+        $cp = DB::table('carrera_periodo')
+            ->where('carrera_id', $carreraId)
+            ->where('periodo_id', $this->periodo_id)
+            ->select('carrera_id', 'fecha_inicio', 'is_current')
             ->first();
 
         if (! $cp) return 'cumplido';
@@ -93,6 +106,12 @@ class ConvenioAplicado extends Model
                 ->orWhereNull('periodo_id')
                 ->when($periodoId, fn($q2) => $q2->orWhere('periodo_id', $periodoId))
             );
+    }
+
+    /** Porcentaje para mostrar, sin ceros de más ni redondeo: 12.5 → "12.5%", 20.00 → "20%". */
+    public function porcentajeTexto(): string
+    {
+        return rtrim(rtrim(number_format((float) $this->porcentaje_aplicado, 2, '.', ''), '0'), '.') . '%';
     }
 
     public function estudiante()

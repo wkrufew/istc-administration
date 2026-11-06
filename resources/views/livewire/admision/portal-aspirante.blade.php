@@ -736,7 +736,7 @@
                 @php
                 $puedeSubir    = in_array($aspirante->estado, ['pendiente', 'proceso']);
                 $puedeSubirDoc = fn(string $campo) => $puedeSubir
-                    || ($aspirante->estado === 'verificacion' && $aspirante->{"${campo}_estado"} === 'rechazado');
+                    || ($aspirante->estado === 'verificacion' && $aspirante->{"{$campo}_estado"} === 'rechazado');
                 @endphp
                 <div class="p-4 space-y-3">
 
@@ -951,7 +951,8 @@
                             <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Comprobante de pago de matrícula <span class="text-red-500 text-xs">*</span></span>
                             @if($aspirante->pago_comprobante_path)
                             <span class="flex-shrink-0 text-xs px-2 py-0.5 rounded-full border font-medium {{ $docEstadoStyle[$aspirante->pago_estado] ?? 'bg-slate-50 border-slate-200 text-slate-500' }}">
-                                {{ ucfirst($aspirante->pago_estado) }}@if($aspirante->pago_monto) · ${{ number_format($aspirante->pago_monto, 2) }}@endif
+                                {{-- "Verificado" lleva el monto solo si secretaría lo confirmó; pendiente/rechazado muestran el que escribió el aspirante --}}
+                                {{ ucfirst($aspirante->pago_estado) }}@if($aspirante->pago_monto && ($aspirante->pagoConfirmado() || $aspirante->pago_estado !== 'verificado')) · ${{ number_format($aspirante->pago_monto, 2) }}@endif
                             </span>
                             @endif
                         </div>

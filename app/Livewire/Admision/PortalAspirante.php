@@ -412,6 +412,7 @@ class PortalAspirante extends Component
             'pago_estado'           => 'pendiente',
             'pago_monto'            => $this->pagoMonto ?: null,
             'pago_metodo'           => null,
+            'pago_fecha'            => null,
             'pago_verificado_at'    => null,
         ]);
         $this->archivoPago = null;

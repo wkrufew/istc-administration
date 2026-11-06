@@ -300,7 +300,7 @@
                             <option value="">— Seleccionar —</option>
                             @foreach ($tiposConvenio as $tipo)
                                 <option value="{{ $tipo->id }}">
-                                    {{ $tipo->nombre }} ({{ number_format($tipo->porcentaje_defecto, 0) }}% · {{ $tipo->tipo_alcance === 'anual' ? 'Anual' : 'Semestral' }})
+                                    {{ $tipo->nombre }} ({{ number_format($tipo->porcentaje_defecto, 0) }}% · {{ $tipo->tipo_alcance === 'semestral' ? 'Semestral' : 'Permanente' }})
                                 </option>
                             @endforeach
                         </select>

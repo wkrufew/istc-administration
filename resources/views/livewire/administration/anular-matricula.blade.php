@@ -128,6 +128,14 @@
                                         Pagos: ${{ number_format($m['total_pagado'], 2) }}
                                     </span>
                                     @endif
+                                    @if($m['bloqueo'] ?? null)
+                                    <span class="px-1.5 py-0.5 rounded text-[0.6rem] font-medium
+                                                 bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400
+                                                 border border-amber-200/60 dark:border-amber-500/20"
+                                          title="{{ $m['bloqueo'] }}">
+                                        No se puede anular
+                                    </span>
+                                    @endif
                                 </div>
                                 <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.68rem] text-slate-500 dark:text-slate-400">
                                     <span>{{ $m['periodo_code'] }} {{ $m['periodo_desc'] ? '· ' . $m['periodo_desc'] : '' }}</span>
@@ -198,6 +206,7 @@
                             <p class="text-xs font-semibold text-red-700 dark:text-red-400">Eliminación permanente e irreversible</p>
                             <p class="text-xs text-red-600/80 dark:text-red-400/70 leading-relaxed">
                                 Se eliminarán todos los registros: materias, obligaciones financieras, pagos y archivos.
+                                Si es del período en curso, sus becas y convenios quedarán desactivados (se conservan en el historial), salvo que tenga otra matrícula en curso.
                                 Esta acción <strong>no se puede deshacer</strong>.
                             </p>
                         </div>
@@ -290,6 +299,14 @@
                     </div>
                 </div>
 
+                @if($matriculaSeleccionada['bloqueo'] ?? null)
+                <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-500/30">
+                    <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">Esta matrícula no se puede anular</p>
+                    <p class="text-xs text-amber-700/80 dark:text-amber-400/80 leading-relaxed mt-1">
+                        {{ $matriculaSeleccionada['bloqueo'] }}
+                    </p>
+                </div>
+                @else
                 {{-- Input de confirmación --}}
                 <div class="space-y-2">
                     <label class="block text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -334,6 +351,7 @@
                     </p>
                     @endif
                 </div>
+                @endif
             </div>
 
             {{-- Footer paso 2 --}}
@@ -352,7 +370,7 @@
                 <button wire:click="anular"
                     wire:loading.attr="disabled"
                     wire:loading.class="opacity-70 cursor-wait"
-                    @disabled($codigoIngresado !== ($matriculaSeleccionada['code'] ?? '') || $procesando)
+                    @disabled($codigoIngresado !== ($matriculaSeleccionada['code'] ?? '') || $procesando || ($matriculaSeleccionada['bloqueo'] ?? null))
                     class="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-semibold text-white
                            bg-gradient-to-r from-red-600 to-rose-700 border border-red-500/30
                            hover:from-red-500 hover:to-rose-600

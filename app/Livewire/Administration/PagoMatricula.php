@@ -106,7 +106,7 @@ class PagoMatricula extends Component
             ->where('tipo', 'INSCRIPCION')
             ->whereIn('estado', ['Pendiente', 'Parcial'])
             ->first();
-        $this->montoInscripcion = $this->obligInscripcion?->monto_final ?? 0;
+        $this->montoInscripcion = $this->obligInscripcion?->saldo ?? 0;
     }
 
     // =========================================================================
@@ -171,13 +171,16 @@ class PagoMatricula extends Component
                 }
             }
 
-            // Auto-liquidar INSCRIPCION
-            if ($this->obligInscripcion) {
+            // Auto-liquidar INSCRIPCION por lo que le falte (re-consultada: no confiar en lo cargado al abrir)
+            $obligInscripcion = $this->obligInscripcion
+                ? ObligacionesFinanciera::whereKey($this->obligInscripcion->id)->whereIn('estado', ['Pendiente', 'Parcial'])->first()
+                : null;
+            if ($obligInscripcion && (float) $obligInscripcion->saldo > 0) {
                 $pagoInscripcion = Pago::create([
                     'numero_comprobante' => 'TEMP',
                     'codigo_referencia'  => $this->referencia ?: null,
-                    'obligacion_id'      => $this->obligInscripcion->id,
-                    'monto'              => $this->obligInscripcion->monto_final,
+                    'obligacion_id'      => $obligInscripcion->id,
+                    'monto'              => round((float) $obligInscripcion->saldo, 2),
                     'metodo_pago'        => $this->metodoPago,
                     'estado'             => Pago::ESTADO_APROBADO,
                     'fecha_pago'         => now(),

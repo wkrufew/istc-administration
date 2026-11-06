@@ -52,8 +52,14 @@ class SettingService
     // Crea el transporte Symfony directamente para poder deshabilitar la
     // verificación del peer SSL (necesario con Brevo en servidores regionales).
     // =========================================================================
-    public static function buildMailer(): \Illuminate\Mail\Mailer
+    public static function buildMailer(): \Illuminate\Contracts\Mail\Mailer
     {
+        // En las pruebas automáticas se usa el correo de Laravel (Mail::fake / array) en lugar
+        // del servidor SMTP real; en local y producción nunca entra aquí
+        if (app()->runningUnitTests()) {
+            return \Illuminate\Support\Facades\Mail::mailer();
+        }
+
         $encryption = static::get('smtp.encryption', 'tls');
 
         $transport = new \Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport(

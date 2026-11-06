@@ -6,6 +6,7 @@ use App\Models\AsignacionDocente as AsignacionDocenteModel;
 use App\Models\MateriaPeriodoParalelo;
 use App\Models\Periodo;
 use App\Models\User;
+use App\Services\AsignacionDocenteService;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
@@ -13,12 +14,17 @@ class AsignacionDocente extends Component
 {
     public User $docente;
 
+    // Paso 1 del formulario: período y carrera juntos ("periodoId:carreraId"); las materias
+    // que se ofrecen son solo las de esa carrera
+    public string $periodoCarrera = '';
     public ?int $periodoId  = null;
+    public ?int $carreraId  = null;
     public ?int $materiaId  = null;
     public ?int $paraleloId = null;
 
-    // Filtro de la tabla de asignaciones
-    public ?int $filtroPeriodoId = null;
+    // Filtro de la tabla de asignaciones: "periodoId:carreraId" ('' = todas). La carrera es la
+    // de la materia asignada (materia → semestre → carrera), no las del período general
+    public string $filtro = '';
 
     public function mount(User $docente): void
     {
@@ -33,8 +39,19 @@ class AsignacionDocente extends Component
         )->orderByDesc('fecha_inicio')->first();
 
         if ($periodoActivo) {
-            $this->periodoId      = $periodoActivo->id;
-            $this->filtroPeriodoId = $periodoActivo->id;
+            // Si en ese período hay una sola carrera vigente, el paso 1 queda elegido
+            $carrerasVigentes = $periodoActivo->carreras()->wherePivot('is_current', true)->pluck('carreras.id');
+            if ($carrerasVigentes->count() === 1) {
+                $this->periodoCarrera = $periodoActivo->id . ':' . $carrerasVigentes->first();
+                $this->updatedPeriodoCarrera();
+            }
+
+            // La tabla abre en ese período si el docente tiene ahí materias de una sola carrera;
+            // si son de varias, abre en "Todas" para no esconder ninguna
+            $delPeriodo = $this->opcionesFiltro()->where('periodo_id', $periodoActivo->id);
+            if ($delPeriodo->count() === 1) {
+                $this->filtro = $delPeriodo->first()['valor'];
+            }
         }
     }
 
@@ -42,8 +59,11 @@ class AsignacionDocente extends Component
     // ACTUALIZACIÓN EN CASCADA
     // =========================================================================
 
-    public function updatedPeriodoId(): void
+    public function updatedPeriodoCarrera(): void
     {
+        [$periodo, $carrera] = array_map('intval', explode(':', $this->periodoCarrera) + [1 => 0]);
+        $this->periodoId  = $periodo ?: null;
+        $this->carreraId  = $carrera ?: null;
         $this->materiaId  = null;
         $this->paraleloId = null;
     }
@@ -68,13 +88,24 @@ class AsignacionDocente extends Component
     {
         $this->validate([
             'periodoId'  => 'required|exists:periodos,id',
+            'carreraId'  => 'required|exists:carreras,id',
             'materiaId'  => 'required|exists:materias,id',
             'paraleloId' => 'required|exists:paralelos,id',
         ], [
             'periodoId.required'  => 'Selecciona un período.',
+            'carreraId.required'  => 'Selecciona el período y la carrera.',
             'materiaId.required'  => 'Selecciona una materia.',
             'paraleloId.required' => 'Selecciona un paralelo.',
         ]);
+
+        // La materia debe ser de la carrera elegida
+        $deLaCarrera = \App\Models\Materia::whereKey($this->materiaId)
+            ->whereHas('semestre', fn($s) => $s->where('carrera_id', $this->carreraId))
+            ->exists();
+        if (! $deLaCarrera) {
+            $this->addError('general', 'La materia elegida no pertenece a la carrera seleccionada.');
+            return;
+        }
 
         // Verificar que la combinación existe en MPP
         $mppExiste = MateriaPeriodoParalelo::where('periodo_id', $this->periodoId)
@@ -115,7 +146,8 @@ class AsignacionDocente extends Component
         $this->materiaId  = null;
         $this->paraleloId = null;
         $this->resetErrorBag();
-        $this->filtroPeriodoId = $this->periodoId;
+        // La tabla pasa al período y carrera de la materia recién asignada
+        $this->filtro = $this->periodoId . ':' . $this->carreraId;
 
         $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Asignación registrada correctamente.']);
     }
@@ -130,9 +162,75 @@ class AsignacionDocente extends Component
             ->where('docente_id', $this->docente->id)
             ->firstOrFail();
 
-        $asignacion->delete();
+        try {
+            AsignacionDocenteService::eliminar($asignacion);
+        } catch (\DomainException $e) {
+            $this->dispatch('toast', ['tipo' => 'error', 'mensaje' => $e->getMessage()]);
+            return;
+        }
+
+        // Si era la última de ese período y carrera, el filtro vuelve a "Todas"
+        if ($this->filtro !== '' && ! $this->opcionesFiltro()->contains('valor', $this->filtro)) {
+            $this->filtro = '';
+        }
 
         $this->dispatch('toast', ['tipo' => 'success', 'mensaje' => 'Asignación eliminada.']);
+    }
+
+    // =========================================================================
+    // CAMBIAR DOCENTE (reemplazo a mitad de período)
+    // =========================================================================
+
+    public ?int $cambioAsignacionId = null;
+    public $cambioDocenteId = '';
+    public string $cambioMotivo = '';
+
+    public function abrirCambio(int $asignacionId): void
+    {
+        $this->resetErrorBag(['cambioDocenteId', 'cambioMotivo']);
+        $this->cambioAsignacionId = $this->docente->asignacionesDocente()->whereKey($asignacionId)->value('id');
+        $this->cambioDocenteId    = '';
+        $this->cambioMotivo       = '';
+    }
+
+    public function cerrarCambio(): void
+    {
+        $this->reset(['cambioAsignacionId', 'cambioDocenteId', 'cambioMotivo']);
+        $this->resetErrorBag(['cambioDocenteId', 'cambioMotivo']);
+    }
+
+    public function confirmarCambio(): void
+    {
+        $this->validate([
+            'cambioDocenteId' => 'required|integer',
+            'cambioMotivo'    => 'required|string|min:5|max:500',
+        ], [
+            'cambioDocenteId.required' => 'Elige el docente que tomará la materia.',
+            'cambioMotivo.required'    => 'Indica el motivo del cambio.',
+            'cambioMotivo.min'         => 'Describe el motivo con un poco más de detalle.',
+        ]);
+
+        $asignacion = $this->docente->asignacionesDocente()->whereKey($this->cambioAsignacionId)->firstOrFail();
+
+        try {
+            $notas = AsignacionDocenteService::cambiarDocente($asignacion, (int) $this->cambioDocenteId, $this->cambioMotivo);
+        } catch (\DomainException $e) {
+            $this->addError('cambioDocenteId', $e->getMessage());
+            return;
+        }
+
+        $nombre = User::find($this->cambioDocenteId)?->name;
+        $this->cerrarCambio();
+
+        // La asignación ya no es de este docente: si era la última de la opción del filtro, vuelve a "Todas"
+        if ($this->filtro !== '' && ! $this->opcionesFiltro()->contains('valor', $this->filtro)) {
+            $this->filtro = '';
+        }
+
+        $this->dispatch('toast', [
+            'tipo'    => 'success',
+            'mensaje' => "La materia pasó a {$nombre}" . ($notas ? " con {$notas} nota" . ($notas > 1 ? 's' : '') : '') . '.',
+        ]);
     }
 
     // =========================================================================
@@ -154,11 +252,12 @@ class AsignacionDocente extends Component
 
     private function getMaterias()
     {
-        if (! $this->periodoId) return collect();
+        if (! $this->periodoId || ! $this->carreraId) return collect();
 
         return MateriaPeriodoParalelo::with('materia')
             ->where('periodo_id', $this->periodoId)
             ->where('is_active', true)
+            ->whereHas('materia.semestre', fn($s) => $s->where('carrera_id', $this->carreraId))
             ->get()
             ->pluck('materia')
             ->filter()
@@ -189,11 +288,64 @@ class AsignacionDocente extends Component
             ->asignacionesDocente()
             ->with(['materia', 'paralelo', 'periodo.carreras']);
 
-        if ($this->filtroPeriodoId) {
-            $q->where('periodo_id', $this->filtroPeriodoId);
+        if ($this->filtro !== '') {
+            [$periodoId, $carreraId] = array_map('intval', explode(':', $this->filtro) + [1 => 0]);
+            $q->where('periodo_id', $periodoId)
+              ->whereHas('materia', fn($m) => $carreraId
+                  ? $m->whereHas('semestre', fn($s) => $s->where('carrera_id', $carreraId))
+                  : $m->whereDoesntHave('semestre', fn($s) => $s->whereNotNull('carrera_id')));
         }
 
-        return $q->orderByDesc('created_at')->get();
+        // Para cada fila: si está vigente para su carrera y si se puede eliminar (y qué se borraría)
+        return $q->orderByDesc('created_at')->get()->each(function ($a) {
+            $impacto = AsignacionDocenteService::impacto($a);
+            $a->setAttribute('es_vigente', AsignacionDocenteService::esVigente($a));
+            $a->setAttribute('motivo_bloqueo', AsignacionDocenteService::motivoNoEliminar($a, $impacto));
+            $a->setAttribute('aviso_eliminar', AsignacionDocenteService::avisoEliminar($impacto));
+        });
+    }
+
+    /**
+     * Opciones del filtro: solo los períodos y carreras donde ESTE docente tiene materias
+     * asignadas (vigentes y pasados), una opción por cada carrera, del período más reciente
+     * al más antiguo.
+     */
+    private function opcionesFiltro()
+    {
+        return $this->docente->asignacionesDocente()
+            ->with(['periodo:id,code,fecha_inicio', 'materia:id,semestre_id', 'materia.semestre:id,carrera_id', 'materia.semestre.carrera:id,name'])
+            ->get()
+            ->filter(fn($a) => $a->periodo)
+            ->map(function ($a) {
+                $carrera = $a->materia?->semestre?->carrera;
+                return [
+                    'valor'        => $a->periodo_id . ':' . (int) $carrera?->id,
+                    'periodo_id'   => $a->periodo_id,
+                    'etiqueta'     => $a->periodo->code . ' — ' . ($carrera?->name ?? 'Sin carrera'),
+                    'fecha_inicio' => (string) $a->periodo->fecha_inicio,
+                    'carrera'      => (string) $carrera?->name,
+                ];
+            })
+            ->unique('valor')
+            ->sortBy([['fecha_inicio', 'desc'], ['carrera', 'asc']])
+            ->values();
+    }
+
+    /** Datos del modal "Cambiar docente" (null si está cerrado). */
+    private function datosCambio(): ?array
+    {
+        if (! $this->cambioAsignacionId) return null;
+
+        $a = AsignacionDocenteModel::with(['materia', 'paralelo', 'periodo'])->find($this->cambioAsignacionId);
+        if (! $a) return null;
+
+        return [
+            'asignacion' => $a,
+            'notas'      => AsignacionDocenteService::notasDelCurso($a),
+            'impacto'    => AsignacionDocenteService::impacto($a),
+            'docentes'   => \App\Support\PerfilUsuario::docentes()->where('is_active', true)
+                ->where('id', '!=', $this->docente->id)->orderBy('name')->get(['id', 'name', 'cedula']),
+        ];
     }
 
     private function checkYaExiste(): ?AsignacionDocenteModel
@@ -218,6 +370,8 @@ class AsignacionDocente extends Component
             'materias'    => $this->getMaterias(),
             'paralelos'   => $this->getParalelos(),
             'asignaciones' => $this->getAsignaciones(),
+            'opcionesFiltro' => $this->opcionesFiltro(),
+            'cambio'         => $this->datosCambio(),
             'yaExiste'    => $this->checkYaExiste(),
         ]);
     }

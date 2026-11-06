@@ -711,7 +711,7 @@
                                     <span
                                         class="absolute inset-y-0 left-3 flex items-center text-gray-500 dark:text-gray-400 font-medium">$</span>
                                     <input type="number" wire:model="montoPago" step="0.01" min="0.01"
-                                        max="{{ $obligacionSeleccionada->saldo + ($obligInscripcionModal?->monto_final ?? 0) }}"
+                                        max="{{ $obligacionSeleccionada->saldo + ($obligInscripcionModal?->saldo ?? 0) }}"
                                         class="w-full pl-8 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                                 </div>
                                 @error('montoPago')

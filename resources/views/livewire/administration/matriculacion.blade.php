@@ -257,8 +257,8 @@
                             <td class="px-5 py-3.5 text-center">
                                 @if ($matriculaActual)
                                     <div class="flex flex-col items-center gap-1">
-                                        <button type="button" wire:click="editarMatricula({{ $matriculaActual->id }})"
-                                            title="Editar matrícula"
+                                        <button type="button" wire:click="$dispatch('abrir-ver-matricula', { estudianteId: {{ $student->id }}, matriculaId: {{ $matriculaActual->id }} })"
+                                            title="Ver el detalle de la matrícula"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.72rem] font-medium
                                                    text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-slate-800
                                                    hover:text-sky-400 hover:border-sky-500/30 hover:bg-sky-500/[0.06]
@@ -266,12 +266,12 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                                <circle cx="12" cy="12" r="3" />
                                             </svg>
-                                            Editar
+                                            Ver matrícula
                                         </button>
-                                        @role('Administrador')
+                                        @hasanyrole('Administrador|Super Admin')
                                         <button type="button" wire:click="abrirAnulacion({{ $student->id }})"
                                             title="Anular matrícula"
                                             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.65rem] font-medium
@@ -288,7 +288,7 @@
                                             </svg>
                                             Anular
                                         </button>
-                                        @endrole
+                                        @endhasanyrole
                                         @can('cancelar_matriculas')
                                         @if (!in_array($matriculaActual->estado, ['Cancelada', 'Retirada']))
                                         <button type="button" wire:click="abrirRetiro({{ $matriculaActual->id }})"
@@ -325,9 +325,9 @@
                                             </svg>
                                             Nueva
                                         </button>
-                                        {{-- Contexto: si tiene matrícula en otro periodo, mostrar enlace para editar --}}
+                                        {{-- Contexto: si tiene matrícula en otro periodo, ver su historial (solo lectura) --}}
                                         @if ($selectedPeriodo && $student->ultimaMatricula)
-                                            <button type="button" wire:click="editarMatricula({{ $student->ultimaMatricula->id }})"
+                                            <button type="button" wire:click="$dispatch('abrir-ver-matricula', { estudianteId: {{ $student->id }}, matriculaId: {{ $student->ultimaMatricula->id }} })"
                                                 title="Ver matrícula anterior"
                                                 class="text-[0.6rem] text-slate-500 dark:text-slate-500 hover:text-sky-400 transition-colors underline underline-offset-2">
                                                 Ver período anterior
@@ -411,7 +411,7 @@
                             </div>
                             <div>
                                 <h3 class="text-sm font-semibold text-slate-800 dark:text-white/90 leading-none">
-                                    {{ $matriculaId ? 'Editar' : 'Nueva' }} Matrícula
+                                    Nueva Matrícula
                                 </h3>
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ $estudiante->name }} · #{{ $estudiante->id }}
                                 </p>
@@ -535,7 +535,7 @@
                                 @endif
 
                                 {{-- Bloqueo: aspirante de validación sin convalidación confirmada --}}
-                                @if ($pendienteConvalidacion && ! $matriculaId)
+                                @if ($pendienteConvalidacion)
                                     <div class="flex items-start gap-3 rounded-xl border border-red-300/60 dark:border-red-500/30 bg-red-50 dark:bg-red-900/15 px-4 py-3">
                                         <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
@@ -584,13 +584,19 @@
                                             class="block text-[0.65rem] font-medium tracking-[0.15em] uppercase text-lime-400/70 mb-1.5">
                                             Carrera <span class="text-red-400">*</span>
                                         </label>
-                                        <select wire:model="carrera_id"
-                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-slate-700 dark:text-white/80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all @error('carrera_id') border-red-500/50 @enderror">
+                                        @php $carreraAdmision = $this->carreraDeAdmision(); @endphp
+                                        <select wire:model="carrera_id" @disabled($carreraAdmision)
+                                            class="w-full px-4 py-2.5 rounded-xl text-sm text-slate-700 dark:text-white/80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/10 transition-all disabled:opacity-70 disabled:cursor-not-allowed @error('carrera_id') border-red-500/50 @enderror">
                                             <option value="">Seleccionar carrera</option>
                                             @foreach ($carreras as $carrera)
                                                 <option value="{{ $carrera->id }}">{{ $carrera->name }}</option>
                                             @endforeach
                                         </select>
+                                        @if ($carreraAdmision)
+                                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                                Carrera elegida en admisión. Para cambiarla, edítala primero en <strong>Aspirantes</strong>.
+                                            </p>
+                                        @endif
                                         @error('carrera_id')
                                             <p class="mt-1 text-xs text-red-400">{{ $message }}</p>
                                         @enderror
@@ -680,7 +686,119 @@
                         @endif
 
                         {{-- ── PASO 2: Materias ── --}}
-                        @if ($paso == 2)
+                        @if ($paso == 2 && $saldoValidacion)
+                            {{-- Saldo de validación: no quedan materias, solo la parte exonerada por pagar --}}
+                            <div class="pt-5 space-y-4">
+                                <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
+                                    Saldo por validación de conocimientos</h4>
+
+                                <div class="bg-amber-500/[0.06] border border-amber-500/20 rounded-xl p-4">
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                                        Cursó <strong>{{ $saldoValidacion['cursados'] }}</strong> de {{ $saldoValidacion['total'] }} semestres
+                                        y exoneró <strong>{{ $saldoValidacion['exonerados'] }}</strong> por validación de conocimientos.
+                                        Ya no tiene materias por inscribir, pero le falta pagar la parte de la carrera correspondiente
+                                        a los semestres exonerados. Las obligaciones se registran sobre su matrícula de validación
+                                        <span class="font-mono">{{ $saldoValidacion['codigo'] }}</span>; no se crea una matrícula nueva.
+                                    </p>
+                                </div>
+
+                                @if ($saldoValidacion['generado'] && ! empty($saldoValidacion['generados']))
+                                    {{-- Lo realmente registrado (puede diferir de un recálculo si cambió la beca, etc.) --}}
+                                    @php $gen = $saldoValidacion['generados']; @endphp
+                                    <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl divide-y divide-slate-200 dark:divide-white/[0.06] text-sm">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-slate-600 dark:text-slate-300">Período</span>
+                                            <span class="font-mono text-xs text-slate-700 dark:text-white/80">{{ $gen['periodo'] ?? '—' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-slate-600 dark:text-slate-300">Matrícula</span>
+                                            <span class="font-semibold tabular-nums text-slate-800 dark:text-white/90">${{ number_format($gen['matricula'], 2) }}</span>
+                                        </div>
+                                        @if ($gen['reintegro'] > 0)
+                                            <div class="flex items-center justify-between px-4 py-3">
+                                                <span class="text-slate-600 dark:text-slate-300">Reintegro por retiro</span>
+                                                <span class="font-semibold tabular-nums text-slate-800 dark:text-white/90">${{ number_format($gen['reintegro'], 2) }}</span>
+                                            </div>
+                                        @endif
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-slate-600 dark:text-slate-300">Colegiatura <span class="text-xs text-slate-400">(5 cuotas{{ $gen['descuento'] > 0 ? ', con descuento de $' . number_format($gen['descuento'], 2) : '' }})</span></span>
+                                            <span class="font-semibold tabular-nums text-slate-800 dark:text-white/90">${{ number_format($gen['colegiatura'], 2) }}</span>
+                                        </div>
+                                    </div>
+                                @else
+                                <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl divide-y divide-slate-200 dark:divide-white/[0.06] text-sm">
+                                    <div class="flex items-center justify-between px-4 py-3">
+                                        <span class="text-slate-600 dark:text-slate-300">Período</span>
+                                        <span class="font-mono text-xs text-slate-700 dark:text-white/80">{{ $periodos->firstWhere('id', (int) $periodo_id)?->code ?? '—' }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between px-4 py-3">
+                                        <span class="text-slate-600 dark:text-slate-300">Matrícula <span class="text-xs text-slate-400">(pago inmediato)</span></span>
+                                        <span class="font-semibold tabular-nums text-slate-800 dark:text-white/90">${{ number_format($montoMatricula, 2) }}</span>
+                                    </div>
+                                    @if ($montoReintegro > 0)
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-slate-600 dark:text-slate-300">Reintegro por retiro <span class="text-xs text-slate-400">(10%, pago inmediato)</span></span>
+                                            <span class="font-semibold tabular-nums text-slate-800 dark:text-white/90">${{ number_format($montoReintegro, 2) }}</span>
+                                        </div>
+                                    @endif
+                                    <div class="flex items-center justify-between px-4 py-3">
+                                        <span class="text-slate-600 dark:text-slate-300">Colegiatura</span>
+                                        <span class="tabular-nums text-slate-700 dark:text-white/80">${{ number_format($montoArancelBruto, 2) }}</span>
+                                    </div>
+                                    @if ($infoBeca && $descuentoBeca > 0)
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-slate-600 dark:text-slate-300">Beca {{ $infoBeca['nombre'] }} ({{ number_format($infoBeca['porcentaje'], 0) }}%)</span>
+                                            <span class="tabular-nums text-amber-600 dark:text-amber-400">−${{ number_format($descuentoBeca, 2) }}</span>
+                                        </div>
+                                    @endif
+                                    @if ($infoConvenio && $descuentoConvenio > 0)
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-slate-600 dark:text-slate-300">Convenio {{ $infoConvenio['nombre'] }} ({{ number_format($infoConvenio['porcentaje'], 0) }}%)</span>
+                                            <span class="tabular-nums text-violet-600 dark:text-violet-400">−${{ number_format($descuentoConvenio, 2) }}</span>
+                                        </div>
+                                    @endif
+                                    <div class="flex items-center justify-between px-4 py-3">
+                                        <span class="text-slate-600 dark:text-slate-300">Colegiatura a pagar <span class="text-xs text-slate-400">(5 cuotas)</span></span>
+                                        <span class="font-semibold tabular-nums text-slate-800 dark:text-white/90">${{ number_format($montoArancel, 2) }}</span>
+                                    </div>
+                                </div>
+                                @endif
+
+                                @if ($saldoValidacion['generado'])
+                                    <div class="bg-lime-500/[0.06] border border-lime-500/20 rounded-xl p-3 flex items-center justify-between gap-3">
+                                        <p class="text-xs text-lime-700 dark:text-lime-300">Saldo ya generado. El estudiante puede verlo y pagarlo desde su portal.</p>
+                                        <a href="{{ route('administracion.administrativa.obligaciones.index', ['estudiante' => $estudiante?->id]) }}"
+                                           class="text-xs font-medium text-lime-700 dark:text-lime-300 hover:underline whitespace-nowrap">Ver obligaciones</a>
+                                    </div>
+
+                                    @can('cancelar_matriculas')
+                                        <details class="group bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] rounded-xl">
+                                            <summary class="cursor-pointer select-none px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-red-500">
+                                                ¿Se generó por error? Revertir saldo
+                                            </summary>
+                                            <div class="px-4 pb-4 space-y-2">
+                                                <p class="text-xs text-slate-500 dark:text-slate-400">
+                                                    Solo es posible si aún no tiene pagos registrados. Las obligaciones quedan invalidadas
+                                                    (no se borran) y luego puedes volver a generar el saldo.
+                                                </p>
+                                                <textarea wire:model="motivoReversionSaldo" rows="2" placeholder="Motivo de la reversión (p. ej. período equivocado)"
+                                                    class="w-full px-3 py-2 rounded-lg text-xs text-slate-700 dark:text-white/80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/10 resize-none"></textarea>
+                                                @error('motivoReversionSaldo') <p class="text-xs text-red-400">{{ $message }}</p> @enderror
+                                                <div class="flex justify-end">
+                                                    <button type="button" wire:click="revertirSaldoValidacion"
+                                                        wire:confirm="¿Revertir el saldo de validación? Sus obligaciones quedarán invalidadas."
+                                                        wire:loading.attr="disabled" wire:target="revertirSaldoValidacion"
+                                                        class="px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                                                        <span wire:loading.remove wire:target="revertirSaldoValidacion">Revertir saldo</span>
+                                                        <span wire:loading wire:target="revertirSaldoValidacion">Revirtiendo…</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </details>
+                                    @endcan
+                                @endif
+                            </div>
+                        @elseif ($paso == 2)
                             <div class="pt-5">
                                 <div class="flex items-center justify-between mb-4">
                                     <h4 class="text-[0.65rem] font-medium tracking-[0.15em] uppercase text-slate-500 dark:text-slate-400">
@@ -929,7 +1047,14 @@
                                                 </p>
                                             @elseif ($admision['sin_monto'])
                                                 <p class="text-xs rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                                    Su pago se verificó sin registrar monto ni método, así que no se aplicará automáticamente. Regístralo al cobrar la matrícula.
+                                                    Su pago se verificó sin registrar monto ni método, así que no se aplicará automáticamente.
+                                                    @can('gestionar_aspirantes')
+                                                        <a href="{{ route('administracion.administrativa.aspirantes.index', ['q' => $admision['cedula']]) }}" target="_blank"
+                                                           class="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Registrar el monto en Aspirantes</a>
+                                                        y vuelve a este paso para que se aplique.
+                                                    @else
+                                                        Pide a Admisión que registre el monto y vuelve a este paso para que se aplique.
+                                                    @endcan
                                                 </p>
                                             @else
                                                 <p class="text-xs rounded-lg px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -939,7 +1064,7 @@
 
                                             @if ($admision['excedente'] > 0)
                                                 <p class="text-[0.7rem] text-amber-700 dark:text-amber-400">
-                                                    El pago de admisión supera la matrícula en ${{ number_format($admision['excedente'], 2) }}; ese excedente no se aplica automáticamente.
+                                                    El pago de admisión supera la matrícula en ${{ number_format($admision['excedente'], 2) }}; ese excedente se abonará a las primeras cuotas de colegiatura.
                                                 </p>
                                             @endif
                                         </div>
@@ -1288,9 +1413,22 @@
                                 Cancelar
                             </button>
 
-                            @if ($paso < $totalPasos)
+                            @if ($paso == 2 && $saldoValidacion)
+                                @unless ($saldoValidacion['generado'])
+                                    <button type="button" wire:click="generarSaldoValidacion" wire:loading.attr="disabled" wire:target="generarSaldoValidacion"
+                                        class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium tracking-wide uppercase
+                                           text-white/90
+                                           bg-gradient-to-r from-green-800/70 via-sky-800/60 to-purple-900/55
+                                           border border-lime-500/25
+                                           hover:from-green-700/80 hover:via-sky-700/70 hover:to-purple-800/65
+                                           transition-all duration-200 disabled:opacity-40">
+                                        <span wire:loading.remove wire:target="generarSaldoValidacion">Generar obligaciones del saldo</span>
+                                        <span wire:loading wire:target="generarSaldoValidacion">Generando…</span>
+                                    </button>
+                                @endunless
+                            @elseif ($paso < $totalPasos)
                                 <button type="button" x-on:click="avanzarPaso()"
-                                    @disabled($paso == 1 && $pendienteConvalidacion && ! $matriculaId)
+                                    @disabled($paso == 1 && $pendienteConvalidacion)
                                     class="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-medium tracking-wide uppercase
                                        text-white/90
                                        bg-gradient-to-r from-green-800/70 via-sky-800/60 to-purple-900/55
@@ -1320,7 +1458,7 @@
                                         stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M5 13l4 4L19 7" />
                                     </svg>
-                                    {{ $matriculaId ? 'Actualizar' : 'Guardar' }} Matrícula
+                                    Guardar Matrícula
                                 </button>
                             @endif
                         </div>
